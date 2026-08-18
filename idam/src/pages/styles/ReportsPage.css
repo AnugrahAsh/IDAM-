@@ -1,0 +1,20 @@
+/* Page-owned styles for ReportsPage. Shared primitives remain in src/styles. */
+
+.rep-grid{align-items:stretch}
+
+.rep-tile{display:flex;flex-direction:column;gap:8px;min-height:132px;padding:13px 14px 12px}
+
+.rep-tile-top{display:flex;align-items:center;gap:9px}
+.rep-tile-name{font-size:var(--t-sm);font-weight:var(--w-semi);letter-spacing:-.012em;color:var(--ink);line-height:1.25}
+
+/* `viol` has a pill variant but no feed-ic variant in the shared sheet. */
+.rep-tile .feed-ic[data-tone="viol"]{background:var(--viol-bg);color:var(--viol);border-color:var(--viol-line)}
+
+.rep-tile-desc{flex:1;font-size:var(--t-xs);line-height:1.5;color:var(--mut)}
+
+.rep-tile-foot{display:flex;align-items:center;gap:8px;padding-top:9px;border-top:1px solid var(--hair)}
+.rep-tile-go{display:inline-flex;color:var(--faint);transition:transform var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.rep-tile:hover .rep-tile-go{color:var(--accent);transform:translateX(2px)}
+
+.rep-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.rep-presets .chip{cursor:pointer}
