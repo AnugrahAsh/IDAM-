@@ -108,8 +108,8 @@ export const NAV_BADGES = {
 }
 
 export const LEGACY = {
-  '/iam': '/iam/myapps',
-  '/iam/': '/iam/myapps',
+  '/iam': '/iam/users',
+  '/iam/': '/iam/users',
   // The dictionary is a tab of the Password Policy section now, not a screen
   // of its own. Existing links and bookmarks land on the tab.
   '/iam/passwordDictionary': '/iam/passwordPolicy/dictionary',
