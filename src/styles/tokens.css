@@ -1,0 +1,104 @@
+:root{
+  --ink:#111827; --ink-2:#3B4453; --mut:#57606D; --faint:#636C7A;
+  --bg:#EFF1F4; --bg-2:#E9ECF1; --glass:#FFFFFF; --side-bg:#FCFCFD; --row-hover:#F4F7FC; --surface:#FFFFFF; --surface-2:#F7F8FA; --surface-3:#F1F3F6;
+
+  --shell:#101B30; --shell-2:#182742; --shell-line:#2A3A5A; --shell-ink:#E7ECF5; --shell-mut:#93A1BC;
+  --line:#DDE1E8; --line-2:#C9CFDA; --hair:#E9ECF1;
+
+  --accent:#0F62FE; --accent-h:#0353E9; --accent-a:#0043CE; --accent-deep:#002D9C;
+  /* Solid fills that carry white text. Separate from --accent because the
+     accent has to stay *light* on a dark surface to work as a link or a
+     border, while a filled button has to stay dark enough for white to read on
+     it. Both values clear 4.5:1 against #fff in their own theme. */
+  --accent-solid:#0F62FE; --accent-solid-h:#0353E9;
+  /* Inline link text. On a dark surface the accent is only just readable at
+     body size, so the link runs a step lighter than the accent there. */
+  --link:#0F62FE;
+  --accent-bg:#EDF4FF; --accent-bg-2:#DCE9FF; --accent-line:#B8D0FA;
+
+  --ok:#0E7A46; --ok-bg:#E5F5EC; --ok-line:#BFE6CF;
+  --warn:#9A5B00; --warn-bg:#FCF2DF; --warn-line:#F0D9A8; --warn-core:#E8A317;
+  --bad:#C21E2E; --bad-bg:#FCEAEC; --bad-line:#F4C2C7; --bad-solid:#C21E2E;
+  --info:#0B65B8; --info-bg:#E6F2FC; --info-line:#BBDCF6;
+  --viol:#6941C6; --viol-bg:#F1EBFC; --viol-line:#DCCEF8;
+  --teal:#0E7D74; --teal-bg:#E2F5F3;
+
+  --s1:#2a78d6; --s2:#1baf7a; --s3:#eda100; --s4:#008300;
+  --s5:#4a3aa7; --s6:#e34948; --s7:#e87ba4; --s8:#eb6834;
+  --grid:#E7EAF1; --axis:#C6CDDA;
+  --st-good:#0ca30c; --st-warn:#fab219; --st-serious:#ec835a; --st-crit:#d03b3b;
+
+  --sev-crit:#B3261E; --sev-crit-bg:#FCEAE8; --sev-crit-line:#F3C5BF;
+  --sev-high:#9C4713; --sev-high-bg:#FDEEE5; --sev-high-line:#F3D4BE;
+  --sev-med:#9A5B00;  --sev-med-bg:#FCF2DF;  --sev-med-line:#F0D9A8;
+  --sev-low:#5D6776;  --sev-low-bg:#F1F3F6;  --sev-low-line:#DDE1E8;
+
+  --t-display:24px; --t-display-lh:1.2;  --t-display-ls:-0.022em;
+  --t-h1:19px;      --t-h1-lh:1.26;      --t-h1-ls:-0.018em;
+  --t-h2:15px;      --t-h2-lh:1.34;      --t-h2-ls:-0.012em;
+  --t-h3:13.5px;    --t-h3-lh:1.4;       --t-h3-ls:-0.006em;
+  --t-body:13px;    --t-body-lh:1.54;
+  --t-sm:12.25px;   --t-sm-lh:1.5;
+  --t-xs:11.25px;   --t-xs-lh:1.45;
+  --t-micro:10.25px;--t-micro-ls:0.055em;
+  --t-num:13px;
+  --w-reg:400; --w-med:500; --w-semi:600; --w-bold:700;
+
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+  --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px;
+
+  --r-xs:2px; --r-sm:3px; --r:4px; --r-lg:6px; --r-xl:10px; --r-pill:999px;
+
+  --sh-xs:none; --sh-sm:none;
+  --sh:0 1px 2px rgba(17,24,39,.06);
+  --sh-md:0 2px 6px -1px rgba(17,24,39,.10),0 6px 16px -6px rgba(17,24,39,.14);
+  --sh-lg:0 4px 10px -2px rgba(17,24,39,.12),0 16px 36px -12px rgba(17,24,39,.22);
+  --sh-focus:0 0 0 2px rgba(15,98,254,.22);
+
+  --sans:'Inter','Inter var',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+
+  --dur-1:90ms; --dur-2:140ms; --dur-3:220ms; --dur-4:320ms;
+  --ease:cubic-bezier(.2,0,0,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease-spring:cubic-bezier(.34,1.4,.64,1);
+
+  --hdr-h:50px; --status-h:26px; --side-w:248px; --side-min:50px;
+  --canvas-px:22px;
+  --row-h:36px;
+  --td-py:6px;
+  --cell-gap:2px;
+  --z-nav:40; --z-hdr:60; --z-fly:85; --z-scrim:90; --z-drawer:100; --z-modal:120; --z-menu:140; --z-toast:200;
+}
+
+:root[data-density="compact"]{ --row-h:29px; --canvas-px:18px; --td-py:3px; --cell-gap:0px; }
+
+:root[data-theme="dark"]{
+  --ink:#E8ECF3; --ink-2:#B4BECE; --mut:#98A3B5; --faint:#8A94A8;
+  --bg:#0E1420; --bg-2:#0A0F19; --side-bg:#121A28; --row-hover:#1B2740; --surface:#161D2B; --surface-2:#1C2534; --surface-3:#232C3E;
+  --shell:#0B1220; --shell-2:#141E32; --shell-line:#26324B; --shell-ink:#E7ECF5; --shell-mut:#93A1BC;
+  --line:#2A3346; --line-2:#38435C; --hair:#212A3A;
+  --accent:#3E82FF; --accent-h:#5A95FF; --accent-a:#78A8FF; --accent-deep:#2258CC;
+  /* #3E82FF carries white text at only 3.59:1, so the filled button uses a
+     deeper blue of its own rather than borrowing the link colour. */
+  --accent-solid:#2B69DE; --accent-solid-h:#2359C4;
+  --link:#5E97FF;
+  --accent-bg:#15233C; --accent-bg-2:#1E3252; --accent-line:#2F4A78;
+  --ok:#3ED08A; --ok-bg:#112A1E; --ok-line:#205238;
+  --warn:#F0B429; --warn-bg:#2A2411; --warn-line:#524621; --warn-core:#E8A317;
+  --bad:#FF6B75; --bad-bg:#2B1519; --bad-line:#58282F; --bad-solid:#C4303C;
+  --info:#57A7F2; --info-bg:#122536; --info-line:#26496A;
+  --viol:#B79CF5; --viol-bg:#1F1A33; --viol-line:#392F5E;
+  --teal:#3FC2B4; --teal-bg:#0F2A2A;
+  --s1:#5A9BE6; --s2:#1baf7a; --s3:#eda100; --s4:#24A56B; --s5:#7C6BE0; --s6:#e34948; --s7:#e87ba4; --s8:#eb6834;
+  --grid:#232C3E; --axis:#3A4459;
+  --st-good:#24C56B; --st-warn:#FAB219; --st-serious:#F0885A; --st-crit:#F0555A;
+  --sev-crit:#FF7B72; --sev-crit-bg:#2B1512; --sev-crit-line:#5C2A24;
+  --sev-high:#F0885A; --sev-high-bg:#2A1810; --sev-high-line:#553022;
+  --sev-med:#F0B429;  --sev-med-bg:#2A2411;  --sev-med-line:#524621;
+  --sev-low:#8B95A7;  --sev-low-bg:#1C2534;  --sev-low-line:#2A3346;
+  --sh:0 1px 2px rgba(0,0,0,.5);
+  --sh-md:0 2px 8px -2px rgba(0,0,0,.55),0 8px 20px -8px rgba(0,0,0,.6);
+  --sh-lg:0 6px 16px -4px rgba(0,0,0,.6),0 18px 40px -12px rgba(0,0,0,.72);
+  --sh-focus:0 0 0 2px rgba(62,130,255,.4);
+}

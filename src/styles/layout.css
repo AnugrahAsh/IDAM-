@@ -1,0 +1,177 @@
+.app{
+  display:grid;
+  grid-template-columns:var(--side-w) 1fr;
+  grid-template-rows:var(--hdr-h) 1fr var(--status-h);
+  grid-template-areas:"hdr hdr" "side main" "status status";
+  height:100vh;
+  overflow:hidden;
+}
+.app[data-nav="min"]{--side-w:var(--side-min)}
+
+.topbar{
+  grid-area:hdr;
+  display:flex;align-items:center;gap:0;
+  padding:0 var(--sp-4) 0 0;
+  background:var(--shell);color:var(--shell-ink);
+  border-bottom:1px solid #0A1322;
+  position:relative;z-index:var(--z-hdr);
+}
+.side{
+  grid-area:side;
+  display:flex;flex-direction:column;min-height:0;
+  background:var(--side-bg);border-right:1px solid var(--line);
+  z-index:var(--z-nav);
+}
+.main{grid-area:main;display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+
+.canvas{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);scroll-behavior:smooth}
+.canvas-inner{max-width:1920px;padding:0 var(--canvas-px) var(--sp-10)}
+/* A sticky bar only pins while content overflows; on a short page it would sit
+   directly under the content. Making the scroll body a full-height flex column
+   and pushing the bar with margin-top:auto keeps it on the bottom edge either
+   way. Scoped with :has() so only pages that actually carry a bar change. */
+.canvas-inner:has(.sticky-actions){display:flex;flex-direction:column;min-height:100%;padding-bottom:0}
+/* the bar is often one wrapper deep (a tabbed shell); let that wrapper grow too */
+.canvas-inner:has(.sticky-actions) > .stack:has(.sticky-actions),
+.canvas-inner:has(.sticky-actions) > div:has(> .sticky-actions){
+  flex:1;display:flex;flex-direction:column;min-height:0;
+}
+/* On a detail page the bar sits two wrappers deep — .detail-body and the tab's
+   own .stack — so the growth chain has to continue through both or the bar
+   stops at the end of the content instead of the bottom edge. */
+.canvas-inner:has(.sticky-actions) .detail-body:has(.sticky-actions),
+.canvas-inner:has(.sticky-actions) .detail-body:has(.sticky-actions) > .stack{
+  flex:1;display:flex;flex-direction:column;min-height:0;
+}
+.canvas-inner:has(.sticky-actions) .sticky-actions{margin-top:auto}
+
+.pagebar{
+  position:sticky;top:0;z-index:12;
+  background:var(--bg);
+  padding:10px var(--canvas-px) 16px;
+  margin:0 calc(var(--canvas-px) * -1);
+  border-bottom:1px solid transparent;
+  transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);
+}
+.pagebar[data-stuck="true"]{border-bottom-color:var(--line);box-shadow:0 1px 0 rgba(17,24,39,.02)}
+.pagebar-top{display:flex;align-items:flex-start;gap:var(--sp-4);min-height:28px}
+.pagebar-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.pagebar-title{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.pagebar-title h1{font-size:22px;line-height:1.25;letter-spacing:-.02em}
+.pagebar-sub{color:var(--mut);font-size:var(--t-sm);line-height:var(--t-sm-lh);max-width:104ch}
+.pagebar-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;flex-wrap:wrap;justify-content:flex-end}
+.pagebar-rail{display:flex;align-items:center;gap:var(--sp-2);margin-top:7px;flex-wrap:wrap}
+.pagebar-rail:empty{display:none}
+
+/* Same shape as the detail header: the action cluster is `flex:none`, so at a
+   narrow width it cannot shrink and pushes the title off the screen instead of
+   wrapping. Below this width it takes its own row. */
+@media(max-width:820px){
+  .pagebar-top{flex-wrap:wrap;gap:var(--sp-3)}
+  .pagebar-top>:first-child{flex:1 1 200px;min-width:0}
+  .pagebar-actions{flex:1 0 100%;justify-content:flex-start}
+}
+
+.crumbs{display:flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--mut);padding:1px 0 0;margin-bottom:7px;min-width:0;line-height:1.4}
+.crumbs-sep{color:var(--line-2)}
+.crumbs-link{cursor:pointer;border-radius:var(--r-xs)}
+.crumbs-link:hover{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.crumbs-cur{color:var(--ink-2);font-weight:var(--w-med);
+  min-width:0;max-width:52ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.grid{display:grid;gap:var(--sp-3)}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid-hero{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+.grid-side{grid-template-columns:minmax(0,1fr) 340px}
+.stack{display:flex;flex-direction:column;gap:var(--sp-3)}
+.row{display:flex;align-items:center;gap:var(--sp-2)}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
+.spacer{flex:1}
+
+@media(max-width:1500px){ .grid-4{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:1240px){
+  .grid-hero,.grid-side,.grid-3{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:960px){
+  .app{grid-template-columns:0 1fr}
+  .side{position:fixed;top:var(--hdr-h);bottom:var(--status-h);left:0;width:var(--side-w);
+    transform:translateX(-100%);transition:transform var(--dur-3) var(--ease);z-index:var(--z-drawer)}
+  .app[data-nav-open="true"] .side{transform:none;box-shadow:var(--sh-lg)}
+  .nav-scrim{position:fixed;inset:var(--hdr-h) 0 var(--status-h) 0;
+    background:rgba(17,24,39,.28);z-index:calc(var(--z-drawer) - 1);animation:navScrimIn .18s ease-out}
+  @keyframes navScrimIn{from{opacity:0}to{opacity:1}}
+  .grid-2,.grid-4{grid-template-columns:minmax(0,1fr)}
+  .canvas-inner{padding-left:var(--sp-4);padding-right:var(--sp-4)}
+  .pagebar{padding-left:var(--sp-4);padding-right:var(--sp-4);margin:0 calc(var(--sp-4) * -1)}
+}
+
+.detail-head{position:sticky;top:0;z-index:12;background:var(--bg);
+  padding:6px var(--canvas-px) 0;margin:0 calc(var(--canvas-px) * -1);
+  border-bottom:1px solid var(--line)}
+/* The breadcrumb row sits directly above the title block and shares its left
+   edge with the media tile, so the header reads as one aligned column. */
+.detail-head .crumbs{margin-bottom:5px;padding-top:2px}
+.detail-top{display:flex;align-items:flex-start;gap:var(--sp-4);padding:2px 0 9px}
+.detail-media{flex:none}
+.detail-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.detail-eyebrow{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--mut)}
+.detail-title-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
+.detail-title{margin:0;min-width:0;overflow-wrap:anywhere;font-size:22px;line-height:1.24}
+.detail-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.detail-sub{font-size:var(--t-sm);color:var(--mut);max-width:100ch;line-height:1.45}
+.detail-facts{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;margin-top:4px}
+.detail-fact{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);min-width:0}
+.detail-fact svg{color:var(--faint);flex:none}
+.detail-fact-k{color:var(--mut)}
+.detail-fact-v{color:var(--ink);font-weight:var(--w-semi);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;flex-wrap:wrap;justify-content:flex-end;padding-top:2px}
+.detail-head .tabs{border-bottom:none;margin-bottom:0}
+
+/* Below this width the action cluster and the title are competing for the same
+   row, and `flex:none` means the actions always win — the title was wrapping to
+   one word per line while two buttons sat beside it. Give the actions their own
+   row instead, so the record still leads with its name. */
+@media(max-width:820px){
+  .detail-top{flex-wrap:wrap;gap:var(--sp-3)}
+  .detail-meta{flex:1 1 200px}
+  .detail-actions{flex:1 0 100%;justify-content:flex-start;padding-top:2px}
+  .detail-title{font-size:19px}
+}
+
+.detail-body{padding-top:var(--sp-4)}
+.detail-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--sp-4);align-items:start}
+@media(max-width:1200px){.detail-cols,.detail-cols-wide{grid-template-columns:minmax(0,1fr)}}
+
+.sticky-actions{position:sticky;bottom:0;z-index:11;display:flex;align-items:center;gap:var(--sp-3);
+  /* Horizontal padding matches the canvas gutter so the message lines up with
+     the page content and the buttons with its right edge. */
+  padding:11px var(--canvas-px);margin:var(--sp-4) calc(var(--canvas-px) * -1) 0;
+  background:var(--surface);border-top:1px solid var(--line);
+  transition:box-shadow var(--dur-2) var(--ease),border-top-color var(--dur-2) var(--ease),
+    background var(--dur-2) var(--ease)}
+.sticky-actions .btn{flex:none}
+/* Only lift while the bar is floating over content it has yet to scroll past. */
+.sticky-actions[data-stuck="true"]{box-shadow:0 -6px 16px -14px rgba(17,24,39,.5)}
+.sticky-actions[data-dirty="true"]{border-top-color:var(--accent-line);background:var(--accent-bg)}
+.sticky-msg{display:inline-flex;align-items:center;gap:7px;font-size:var(--t-xs);color:var(--mut)}
+.sticky-actions[data-dirty="true"] .sticky-msg{color:var(--accent-a);font-weight:var(--w-semi)}
+/* A quiet state marker: hollow while clean, filled once there is work to save. */
+.sticky-dot{flex:none;width:6px;height:6px;border-radius:50%;
+  border:1px solid var(--line-2);background:transparent}
+.sticky-actions[data-dirty="true"] .sticky-dot{border-color:var(--accent);background:var(--accent)}
+
+.section{display:flex;flex-direction:column;gap:var(--sp-3)}
+.section-head{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+/* Icons are display:block globally, so any container holding an icon beside
+   text must be a flex row or the icon breaks onto its own line. */
+.section-title{display:inline-flex;align-items:center;gap:7px;
+  font-size:var(--t-h2);font-weight:var(--w-semi);letter-spacing:var(--t-h2-ls);color:var(--ink)}
+.section-title svg{color:var(--mut)}
+.section-sub{font-size:var(--t-xs);color:var(--mut)}
+
+/* A route's chunk arriving over the network: the workbench skeleton holds the
+   layout so the page does not jump when it lands. */
+.page-fallback{padding-top:var(--sp-5)}

@@ -1,0 +1,355 @@
+/* ============================================================================
+   TANFLOW HORIZON v3.0 — design-system layer
+   Loaded last so it wins on equal specificity. Two jobs:
+     1. Define Horizon-native component classes (.kpi, .bdg, .fchip, .statusbar…)
+     2. Retrofit this app's existing class vocabulary onto the same visual
+        language, so every page inherits Horizon without being rewritten.
+   Law: hairlines not shadows · near-square corners · one accent · tabular nums.
+   ========================================================================== */
+
+/* --- 1. LAWS ------------------------------------------------------------- */
+/* Elevation is a 1px hairline. Only drawer, modal, chart tooltip and the
+   health popover may cast a shadow (they use --sh-lg explicitly). */
+.card, .kpi, .stat-cell, .inp, .sel, .tbl, .bdg, .tag, .chip, .fchip {
+  box-shadow: none;
+}
+
+/* --- 2. KPI TILES -------------------------------------------------------- */
+/* Horizon KPIs are discrete bordered tiles in a grid — not one fused bar. */
+.kpi-row, .stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  align-items: stretch;
+}
+.kpi, .stat-cell {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 10px 12px 9px;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: border-color .15s;
+}
+.kpi:hover, .stat-cell:hover { border-color: var(--line-2); }
+.stat-cell { border-right: 1px solid var(--line); }
+.stat-cell:last-child { border-right: 1px solid var(--line); }
+.stat-cell[data-nav="true"] { cursor: pointer; }
+.stat-cell[data-nav="true"]:hover { background: var(--surface-2); border-color: var(--line-2); }
+
+.kpi .k-label, .stat-k {
+  font-size: 11.25px;
+  font-weight: 550;
+  color: var(--mut);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kpi .k-label svg, .stat-k svg { width: 12px; height: 12px; color: var(--faint); flex: none; }
+
+.kpi .k-val, .stat-v {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -.02em;
+  color: var(--ink);
+  margin-top: 4px;
+  line-height: 1.1;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.kpi .k-val .k-unit, .stat-v .k-unit {
+  font-size: 11.75px; font-weight: 550; color: var(--mut); letter-spacing: 0;
+}
+.kpi .k-foot {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px;
+  font-size: 11.25px; color: var(--mut);
+  white-space: nowrap; overflow: hidden;
+}
+.kpi .k-spark { position: absolute; right: 10px; bottom: 27px; opacity: .85; }
+
+/* Delta chip — polarity is passed in, never inferred from sign alone. */
+.delta {
+  display: inline-flex; align-items: center; gap: 2.5px;
+  font-size: 11px; font-weight: 650;
+  padding: 1px 5px 1px 3.5px;
+  border-radius: var(--r-xs);
+  font-variant-numeric: tabular-nums;
+}
+.delta svg { width: 10px; height: 10px; }
+.delta.up   { color: var(--ok);  background: var(--ok-bg) }
+.delta.down { color: var(--bad); background: var(--bad-bg) }
+.delta.flat { color: var(--mut); background: var(--surface-3) }
+
+/* --- 3. BADGES, RISK, SEVERITY ------------------------------------------- */
+.bdg {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 20px; padding: 0 7px;
+  border-radius: var(--r-xs);
+  font-size: 11.5px; font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.bdg .b-dot { width: 5.5px; height: 5.5px; border-radius: 50%; background: currentColor; flex: none }
+.bdg-ok   { color: var(--ok);     background: var(--ok-bg);     border-color: var(--ok-line) }
+.bdg-warn { color: var(--warn);   background: var(--warn-bg);   border-color: var(--warn-line) }
+.bdg-bad  { color: var(--bad);    background: var(--bad-bg);    border-color: var(--bad-line) }
+.bdg-info { color: var(--info);   background: var(--info-bg);   border-color: var(--info-line) }
+.bdg-viol { color: var(--viol);   background: var(--viol-bg);   border-color: var(--viol-line) }
+.bdg-acc  { color: var(--accent-a); background: var(--accent-bg); border-color: var(--accent-line) }
+.bdg-mut  { color: var(--mut);    background: var(--surface-3);  border-color: var(--line) }
+
+/* Existing .tag adopts the badge treatment (square, hairline-bordered). */
+.tag { border-radius: var(--r-xs) }
+
+.risk-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 650;
+  padding: 1px 6px; border-radius: var(--r-xs); white-space: nowrap;
+}
+.risk-pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none }
+.rp-low  { color: var(--sev-low);  background: var(--sev-low-bg) }
+.rp-med  { color: var(--sev-med);  background: var(--sev-med-bg) }
+.rp-high { color: var(--sev-high); background: var(--sev-high-bg) }
+.rp-crit { color: var(--sev-crit); background: var(--sev-crit-bg) }
+
+/* --- 4. FILTER CHIPS — square, never pill (Horizon Law 2) ---------------- */
+.fchip, .chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  font-size: 11.5px; font-weight: 550;
+  color: var(--ink-2); background: var(--surface);
+  white-space: nowrap; cursor: pointer;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.fchip svg, .chip svg { width: 11.5px; height: 11.5px; color: var(--faint); flex: none }
+.fchip:hover, .chip:hover { border-color: var(--line-2); color: var(--ink) }
+.fchip.on, .chip[data-on="true"] {
+  border-color: var(--accent); background: var(--accent-bg); color: var(--accent-a);
+}
+.fchip.on svg, .chip[data-on="true"] svg { color: var(--accent) }
+.chip-x { border-radius: var(--r-xs) }
+
+/* --- 5. TOOLBAR ---------------------------------------------------------- */
+.toolbar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--hair);
+  flex-wrap: wrap; background: var(--surface);
+}
+.toolbar .tb-spacer { flex: 1 }
+
+/* --- 6. TABLES — 38px rows, 11px sticky heads, blue-tinted hover --------- */
+.tbl { font-size: 12.75px }
+.tbl th {
+  font-size: 11px; font-weight: 650; letter-spacing: .05em;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.tbl td { padding: 7px 10px; height: 38px }
+.tbl tbody tr:hover { background: var(--row-hover) }
+.tbl .td-sub { font-size: 11.75px; color: var(--mut) }
+.tbl .td-mono { font-size: 11.5px; color: var(--ink-2) }
+:root[data-density="compact"] .tbl td { height: 32px }
+
+.row-actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity .1s; justify-content: flex-end }
+tr:hover .row-actions, tr:focus-within .row-actions { opacity: 1 }
+.mini-btn {
+  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-xs); color: var(--mut); transition: background .1s, color .1s;
+}
+.mini-btn:hover { background: var(--accent-bg); color: var(--accent) }
+.mini-btn.danger:hover { background: var(--bad-bg); color: var(--bad) }
+.mini-btn svg { width: 13.5px; height: 13.5px }
+
+.tbl-foot {
+  display: flex; align-items: center; gap: 12px;
+  padding: 7px 14px; border-top: 1px solid var(--hair);
+  font-size: 11.75px; color: var(--mut);
+}
+.pager { margin-left: auto; display: flex; align-items: center; gap: 3px }
+.pg-btn {
+  min-width: 24px; height: 24px; padding: 0 6px; border-radius: var(--r-xs);
+  font-size: 11.5px; font-weight: 600; color: var(--ink-2);
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; transition: background .1s, border-color .1s;
+}
+.pg-btn:hover { background: var(--surface-3); border-color: var(--line) }
+.pg-btn.on { background: var(--accent); color: #fff }
+.pg-btn:disabled { opacity: .35; cursor: default }
+
+/* --- 7. METERS ----------------------------------------------------------- */
+.meter-row { display: flex; align-items: center; gap: 12px }
+.meter-row .m-label {
+  font-size: 12.5px; font-weight: 550; color: var(--ink-2);
+  width: 170px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.meter-row .meter { flex: 1 }
+.meter-row .m-val {
+  font-size: 12.5px; font-weight: 650; color: var(--ink);
+  width: 48px; text-align: right; flex: none; font-variant-numeric: tabular-nums;
+}
+
+/* --- 8. DEFINITION LIST (drawer records) --------------------------------- */
+.dl { display: grid; grid-template-columns: 160px 1fr; font-size: 12.75px }
+.dl > div { padding: 6px 0; border-bottom: 1px solid var(--hair) }
+.dl .dl-k { color: var(--mut); font-weight: 500 }
+.dl .dl-v { color: var(--ink); font-weight: 550 }
+
+/* --- 9. SMALL UTILITIES -------------------------------------------------- */
+.hrow { display: flex; align-items: center }
+.divider { height: 1px; background: var(--hair); margin: 11px 0 }
+.stat-inline { display: flex; align-items: baseline; gap: 6px }
+.stat-inline b {
+  font-size: 16px; font-weight: 650; letter-spacing: -.015em;
+  color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.stat-inline span { font-size: 11.25px; color: var(--mut) }
+
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); position: relative; flex: none }
+.live-dot::after {
+  content: ""; position: absolute; inset: -3.5px; border-radius: 50%;
+  border: 1.5px solid var(--ok); opacity: .5; animation: hzPulse 1.8s ease-out infinite;
+}
+@keyframes hzPulse {
+  0%   { transform: scale(.6);  opacity: .7 }
+  70%  { transform: scale(1.15); opacity: 0 }
+  100% { opacity: 0 }
+}
+
+/* --- 10. LAYOUT GRAMMAR -------------------------------------------------- */
+.grid-23 { display: grid; grid-template-columns: 1.9fr 1fr; gap: 10px }
+.grid-32 { display: grid; grid-template-columns: 1fr 1.9fr; gap: 10px }
+.cols-6 { grid-template-columns: repeat(6, minmax(0,1fr)) }
+.cols-5 { grid-template-columns: repeat(5, minmax(0,1fr)) }
+.cols-4 { grid-template-columns: repeat(4, minmax(0,1fr)) }
+.cols-3 { grid-template-columns: repeat(3, minmax(0,1fr)) }
+@media (max-width:1380px) { .cols-6, .cols-5 { grid-template-columns: repeat(3, minmax(0,1fr)) } }
+@media (max-width:1240px) { .grid-23, .grid-32 { grid-template-columns: minmax(0,1fr) } }
+@media (max-width:1060px) { .cols-6,.cols-5,.cols-4,.cols-3 { grid-template-columns: repeat(2, minmax(0,1fr)) } }
+@media (max-width:640px)  { .cols-6,.cols-5,.cols-4,.cols-3 { grid-template-columns: 1fr } }
+
+/* --- 11. CHARTS ---------------------------------------------------------- */
+.chart-box { position: relative }
+.chart-box svg { display: block; width: 100%; height: auto }
+.axis-t {
+  font-size: 10.5px; fill: var(--mut); font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.legend { display: flex; align-items: center; gap: 16px; flex-wrap: wrap }
+.lg-it {
+  display: inline-flex; align-items: center; gap: 6.5px;
+  font-size: 11.75px; font-weight: 550; color: var(--ink-2);
+}
+.lg-it .lg-sw { width: 9px; height: 9px; border-radius: 3px; flex: none }
+.lg-it .lg-ln { width: 14px; height: 2.5px; border-radius: 2px; flex: none }
+
+/* One shared tooltip instance for every chart in the app. */
+.viz-tip {
+  position: fixed; z-index: 200; pointer-events: none;
+  background: #1B2434; color: #fff;
+  border-radius: var(--r-sm); padding: 7px 10px;
+  font-size: 11.5px; line-height: 1.5;
+  box-shadow: var(--sh-lg); opacity: 0; transition: opacity .1s;
+  max-width: 260px; border: 1px solid #303C52;
+}
+.viz-tip.show { opacity: 1 }
+.viz-tip .vt-t { font-weight: 650; font-size: 11px; color: rgba(255,255,255,.72); margin-bottom: 3px }
+.viz-tip .vt-row { display: flex; align-items: center; gap: 7px; white-space: nowrap }
+.viz-tip .vt-row .sw { width: 8px; height: 8px; border-radius: 2.5px; flex: none }
+.viz-tip .vt-row b { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 650; padding-left: 14px }
+
+/* --- 12. STATUS BAR ------------------------------------------------------ */
+.statusbar {
+  grid-area: status;
+  display: flex; align-items: center;
+  height: var(--status-h);
+  background: var(--surface); border-top: 1px solid var(--line);
+  font-size: 11.5px; color: var(--mut);
+  white-space: nowrap; overflow: hidden;
+  z-index: 50; position: relative;
+}
+.sb-it { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; flex: none }
+.sb-it + .sb-it::before {
+  content: ""; position: absolute; left: 0; top: 6px; bottom: 6px;
+  width: 1px; background: var(--hair);
+}
+.sb-it b { color: var(--ink-2); font-weight: 600 }
+.sb-it .num, .sb-it .mono { font-size: 10.5px }
+.sb-it svg { width: 11px; height: 11px; color: var(--faint) }
+.sb-spacer { flex: 1 }
+.sb-btn { cursor: pointer; border-radius: var(--r-xs) }
+.sb-btn:hover { color: var(--ink-2); background: var(--surface-2) }
+@media (max-width: 1180px) { .sb-optional { display: none } }
+
+/* --- 13. COMMAND PALETTE ------------------------------------------------- */
+.modal-wrap {
+  position: fixed; inset: 0; z-index: 300;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 11vh 20px 20px;
+  opacity: 0; pointer-events: none; transition: opacity .14s;
+}
+.modal-wrap.show { opacity: 1; pointer-events: auto }
+.modal-wrap .m-scrim { position: absolute; inset: 0; background: rgba(17,24,39,.4) }
+.palette {
+  position: relative; width: 640px; max-width: 100%;
+  background: var(--surface); border-radius: var(--r-lg);
+  box-shadow: var(--sh-lg); border: 1px solid var(--line-2);
+  overflow: hidden; transform: translateY(-6px); transition: transform .14s ease-out;
+}
+.modal-wrap.show .palette { transform: none }
+.pal-inp { display: flex; align-items: center; gap: 9px; padding: 0 12px; height: 46px; border-bottom: 1px solid var(--line) }
+.pal-inp svg { width: 16px; height: 16px; color: var(--faint); flex: none }
+.pal-inp input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 14px }
+.pal-list { max-height: 380px; overflow-y: auto; padding: 5px }
+.pal-grp {
+  font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--faint); padding: 7px 11px 3px;
+}
+.pal-it {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 11px; border-radius: var(--r-sm);
+  font-size: 13.25px; color: var(--ink-2); cursor: pointer; width: 100%; text-align: left;
+}
+.pal-it svg { width: 14px; height: 14px; color: var(--faint); flex: none }
+.pal-it .pi-sub { margin-left: auto; font-size: 11px; color: var(--faint) }
+.pal-it.sel { background: var(--accent-bg); color: var(--accent-a) }
+.pal-it.sel svg { color: var(--accent) }
+.pal-foot {
+  display: flex; align-items: center; gap: 14px;
+  padding: 7px 12px; background: var(--surface-2); border-top: 1px solid var(--line);
+  font-size: 11px; color: var(--mut);
+}
+kbd {
+  font-family: var(--sans); font-size: 10.5px; font-weight: 600; color: var(--mut);
+  background: var(--surface); border: 1px solid var(--line-2);
+  border-radius: var(--r-sm); padding: 1px 5px;
+}
+
+/* --- 14. EMPTY STATE ----------------------------------------------------- */
+.empty .e-ic {
+  width: 38px; height: 38px; border-radius: var(--r);
+  background: var(--surface-3); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+}
+.empty .e-ic svg { width: 18px; height: 18px; color: var(--faint) }
+.empty .e-t { font-size: 13.5px; font-weight: 650; color: var(--ink) }
+.empty .e-s { font-size: 12.25px; color: var(--mut); margin-top: 2px; max-width: 38ch }
