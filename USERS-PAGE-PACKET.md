@@ -1,8 +1,16 @@
 # Tanflow IDAM — Users Page Packet
 
 A **runnable** Vite + React app. The full console shell and the complete navigation ship as
-they are; **Users** (`/iam/users`) is the screen that is built. Every other route renders the
-console's own "Screen in progress" card under its proper title.
+they are. Four screens are built:
+
+| Screen | Route |
+|--------|-------|
+| Users | `/iam/users` |
+| Organizations | `/iam/organizations` |
+| Multi-Factor Authentication | `/iam/mfa` |
+| Access Requests | `/iam/requests` |
+
+Every other route renders the console's own "Screen in progress" card under its proper title.
 
 Folder structure mirrors the main project exactly, so this can be run on its own or copied
 back over the main tree without a single path change.
@@ -29,12 +37,12 @@ Production build: `npm run build` (outputs to `dist-idam/`).
 
 ## Only two files differ from the main project
 
-Everything else — all 93 remaining files — is a **byte-identical copy** at its original path,
+Everything else — all 119 remaining files — is a **byte-identical copy** at its original path,
 including `data/nav.js`'s full route table and `store/AppContext.jsx`.
 
 | File | Change | Why |
 |------|--------|-----|
-| `idam/src/App.jsx` | `PAGES` maps `users` only; the other 46 lazy imports and the login branch removed | those page files are not in this packet, so importing them would break the build. Every route not in `PAGES` already falls through to `PlaceholderPage` — that is the "work in progress" screen, unchanged console behaviour |
+| `idam/src/App.jsx` | `PAGES` maps the four routes above; the other 43 lazy imports and the login branch removed | those page files are not in this packet, so importing them would break the build. Every route not in `PAGES` already falls through to `PlaceholderPage` — that is the "work in progress" screen, unchanged console behaviour |
 | `idam/src/data/nav.js` | two lines: `LEGACY['/iam']` and `LEGACY['/iam/']` point at `/iam/users` instead of `/iam/myapps` | so `/iam/` lands on the screen this packet delivers rather than a placeholder. The route table, nav groups and badges are otherwise untouched |
 
 The Users page itself, its feature folder, every component, hook, style, data module and image
@@ -49,7 +57,13 @@ Schedulers, Reports, Communications, Logging, System — with live badge counts 
 seed data (Approvals 22, Orphaned Accounts 18, Segregation of Duties 6, and so on). The
 command palette (`⌘K` / `Ctrl+K`) lists every route too.
 
-- **Users** opens the register, identity detail, the add-identity wizard and the CSV import.
+- **Users** — register, identity detail, the add-identity wizard, CSV import.
+- **Organizations** — register, organization detail with Overview / Identities / Child
+  organizations / Audit tabs and the hierarchy panel, add and edit.
+- **Multi-Factor Authentication** — enforcement screen with the sign-in preview, plus the MFA
+  Configuration sub-route (Factors, Providers, Policy, Enrollment).
+- **Access Requests** — register, request detail with the approval chain, and the request
+  forms (add user, modify user, application groups, MFA reset, other).
 - **Every other entry** opens that route's own title over the "Screen in progress" card —
   for example *Roles*, *Reports*, *Segregation of Duties*. Nothing errors, nothing dead-ends.
 
@@ -60,18 +74,24 @@ Each one lights up as its page joins a later packet: add the page files and one 
 
 ## What ships
 
-**Page** — `pages/DirectoryPage.jsx`, `pages/styles/DirectoryPage.css`, and the
-`pages/directory/` folder (AdvancedFilters, IdentityCard, IdentityDetail, IdentityForm,
-ResetPasswordForm, SelectionSync, UploadForm, UploadResult, identityData, posture, uploadData).
+**Pages** — `DirectoryPage`, `OrganizationsPage`, `AuthenticationPage`, `RequestsPage`, each
+with its own stylesheet in `pages/styles/`, plus their feature folders:
+
+- `pages/directory/` — AdvancedFilters, IdentityCard, IdentityDetail, IdentityForm,
+  ResetPasswordForm, SelectionSync, UploadForm, UploadResult, identityData, posture, uploadData
+- `pages/organizations/` — OrgDetail, OrgForm, OrgTabs, orgModel
+- `pages/authentication/` — Control, MethodConfig, MfaEnforcement, ProviderBlock, ProviderPage,
+  TestResult, authData, mfaData
+- `pages/requests/` — FormControls, RequestForm, RequestRail, RequestTracking, data
 
 **Shell** — TopBar, Sidebar, StatusBar, Toasts, CommandPalette, RouteBoundary, PageBar,
 DetailHeader, StickyActions, NavLink, TooltipProvider, PlaceholderPage.
 
-**Components** — 24 primitives, 3 workbench (DataWorkbench, ColumnPicker, StatCards).
+**Components** — 25 primitives, 4 workbench (DataWorkbench, ColumnPicker, StatCards, RecordCard).
 
 **Store / lib / data** — AppContext, format, useLocalState, useBadges, useDialogFocus,
 useHotkeys, seed, icons, brandMarks, nav, permissionCatalog, notifications/readStore,
-configurations/schemaStore.
+configurations/schemaStore, settings/settingsStore.
 
 **Styles** — 9 shared stylesheets (`idam/src/styles/`) plus the page's own. The data table's
 classes live in `workbench.css` and `components.css`, so the shared set is required.
@@ -99,15 +119,22 @@ preferences (column visibility, sidebar collapse, density, theme) persist, in `l
 ## Verified before hand-off
 
 - `npm install` from a clean folder — 29 packages, no warnings.
-- `npm run build` — succeeds, 286 kB shell + 174 kB page chunk.
+- `npm run build` — succeeds; 289 kB shell plus one chunk per page
+  (Users 154 kB, Requests 73 kB, MFA 58 kB, Organizations 39 kB).
 - Dev server started and driven in a browser:
   - `/iam/` opens on Users; the register renders all five stat cards, filters, saved views and
     46 seeded identities.
   - Identity detail opens (`/iam/users/:id`) with Overview, Access, Applications, Activity,
-    Security and Audit tabs.
-  - "Add User" opens the eight-step identity wizard; "Import Users" opens the CSV drawer.
+    Security and Audit tabs. "Add User" opens the eight-step wizard; "Import Users" opens the
+    CSV drawer.
+  - Organizations register and organization detail (Overview, Identities, Child organizations,
+    Audit) with the hierarchy panel.
+  - MFA enforcement screen with sign-in preview and sticky save bar; "MFA Configuration"
+    sub-route with Factors, Providers, Policy and Enrollment tabs.
+  - Access Requests register, request detail with the three-level approval chain, and the
+    "Add user" request form with routing and policy pre-check.
   - Full sidebar renders with all groups and live badge counts.
-  - Non-Users routes (Roles, My Apps) render their own title over "Screen in progress".
+  - Unbuilt routes (Roles, My Apps) render their own title over "Screen in progress".
 - **Browser console clean — zero errors across every route and flow exercised.**
 
-**95 files.**
+**121 files.**

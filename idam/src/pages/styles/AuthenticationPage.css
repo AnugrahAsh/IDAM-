@@ -1,0 +1,121 @@
+/* Page-owned styles for AuthenticationPage. Shared primitives remain in src/styles. */
+
+.mfa-tilegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:var(--sp-3)}
+.mfa-tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:14px 14px 12px;display:flex;flex-direction:column;gap:8px;min-width:0;
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.mfa-tile:hover{border-color:var(--accent-line);background:var(--surface-2)}
+.mfa-tile[data-off]{background:var(--surface-2)}
+.mfa-tile[data-off] .mfa-tile-name{color:var(--mut)}
+.mfa-tile-top{display:flex;align-items:center;gap:8px}
+.mfa-tile-ic{width:32px;height:32px;border-radius:var(--r-lg)}
+.mfa-tile-ic svg{width:15px;height:15px}
+.mfa-tile-badges{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px}
+.mfa-tile-name{font-size:var(--t-body);font-weight:var(--w-semi);color:var(--ink);line-height:1.3}
+.mfa-tile-sub{font-size:var(--t-xs);color:var(--mut);line-height:1.5;min-height:2.9em}
+.mfa-tile-meter{display:flex;flex-direction:column;gap:5px;margin-top:2px}
+.mfa-tile-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin-top:auto;padding-top:10px;border-top:1px solid var(--hair)}
+.mfa-tile-foot .trunc{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:640px){.mfa-tilegrid{grid-template-columns:minmax(0,1fr)}}
+
+/* --- MFA enforcement: the one decision, the methods behind it --------------- */
+/* The banner states the whole policy in a line and carries the switch that
+   changes it, so the page never needs to be read to know where it stands. */
+.mfa-enf{
+  display:flex;align-items:center;gap:var(--sp-4);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:16px var(--sp-5);margin-bottom:var(--sp-4);
+  transition:border-color var(--dur-2) var(--ease),background var(--dur-2) var(--ease);
+}
+.mfa-enf[data-on]{border-color:var(--accent-line);background:linear-gradient(90deg,var(--accent-bg),var(--surface) 42%)}
+.mfa-enf-ic{
+  display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:52px;height:52px;border-radius:var(--r-lg);
+  background:var(--surface-3);border:1px solid var(--line);color:var(--mut);
+  transition:background var(--dur-2) var(--ease),color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);
+}
+.mfa-enf[data-on] .mfa-enf-ic{background:var(--accent-bg-2);border-color:var(--accent-line);color:var(--accent)}
+.mfa-enf-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.mfa-enf-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;
+  font-size:var(--t-h1);line-height:1.25;letter-spacing:var(--t-h1-ls);font-weight:650;color:var(--ink)}
+.mfa-enf-s{margin:0;font-size:var(--t-body);color:var(--mut);max-width:80ch}
+.mfa-enf-tog{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.mfa-enf-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--mut)}
+.mfa-enf-v{display:inline-flex;align-items:center;gap:10px}
+.mfa-enf-v b{font-size:var(--t-h2);font-weight:650;color:var(--mut)}
+.mfa-enf-v b[data-on]{color:var(--accent-a)}
+
+.mfa-cols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:var(--sp-4);align-items:start}
+@media(max-width:1180px){.mfa-cols{grid-template-columns:minmax(0,1fr)}}
+
+.mfa-note{display:flex;align-items:flex-start;gap:8px;padding:10px var(--sp-4);
+  border-bottom:1px solid var(--hair);background:var(--surface-2);
+  font-size:var(--t-sm);color:var(--mut)}
+.mfa-note svg{color:var(--faint);flex:none;margin-top:2px}
+
+.mfa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:var(--sp-3);padding:var(--sp-4)}
+.mfa-method{
+  display:flex;flex-direction:column;gap:7px;min-width:0;cursor:pointer;position:relative;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  border-top:3px solid var(--line);padding:13px 14px;
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease),opacity var(--dur-2) var(--ease);
+}
+.mfa-method:hover{border-color:var(--line-2);box-shadow:var(--sh)}
+.mfa-method:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
+/* Selected reads from the top edge, the way a chosen tab does. */
+.mfa-method[data-on]{border-top-color:var(--accent)}
+.mfa-method[data-on]:hover{border-color:var(--accent-line);border-top-color:var(--accent)}
+/* Nothing is offered while enforcement is off, so the whole grid reads as inert. */
+.mfa-method[data-locked]{opacity:.5;cursor:default;box-shadow:none}
+.mfa-method[data-locked]:hover{border-color:var(--line);box-shadow:none}
+.mfa-method[data-locked][data-on]{border-top-color:var(--line-2)}
+.mfa-method-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.mfa-method-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:34px;height:34px;border-radius:var(--r);background:var(--accent-bg);color:var(--accent)}
+.mfa-method[data-locked] .mfa-method-ic{background:var(--surface-3);color:var(--mut)}
+.mfa-method-box{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:19px;height:19px;border-radius:var(--r-xs);
+  border:1px solid var(--line-2);background:var(--surface);color:#fff}
+.mfa-method[data-on] .mfa-method-box{background:var(--accent);border-color:var(--accent)}
+.mfa-method-n{margin:0;font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.mfa-method-d{margin:0;font-size:var(--t-sm);line-height:1.5;color:var(--mut)}
+.mfa-method-f{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  border-top:1px solid var(--hair);padding-top:9px;margin-top:auto}
+.mfa-method-spec{font-size:var(--t-xs);color:var(--mut)}
+.mfa-method-f .link{margin-left:auto;font-size:var(--t-xs)}
+
+/* A miniature of the sign-in the policy produces. */
+.mfa-prev{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface-2)}
+.mfa-prev-bar{display:flex;align-items:center;gap:5px;padding:7px 10px;
+  background:var(--surface-3);border-bottom:1px solid var(--line)}
+.mfa-prev-bar i{width:8px;height:8px;border-radius:50%;background:var(--line-2);flex:none}
+.mfa-prev-bar i[data-dot="r"]{background:#ED6A5E}
+.mfa-prev-bar i[data-dot="y"]{background:#F5BF4F}
+.mfa-prev-bar i[data-dot="g"]{background:#61C554}
+.mfa-prev-bar span{margin-left:6px;font-size:var(--t-xs);color:var(--mut)}
+.mfa-prev-body{display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:26px var(--sp-4);text-align:center;background:var(--surface)}
+.mfa-prev-body svg{color:var(--accent)}
+.mfa-prev-body b{font-size:var(--t-h2);font-weight:650;color:var(--ink)}
+.mfa-prev-body p{margin:0;font-size:var(--t-sm);line-height:1.5;color:var(--mut)}
+
+.mfa-scope{display:flex;flex-direction:column}
+.mfa-scope-row{display:flex;align-items:flex-start;gap:10px;padding:12px var(--sp-4);
+  border-bottom:1px solid var(--hair)}
+.mfa-scope-row:last-child{border-bottom:none}
+.mfa-scope-row > span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mfa-scope-row b{display:flex;align-items:center;gap:8px;font-size:var(--t-sm);
+  font-weight:var(--w-semi);color:var(--ink)}
+.mfa-scope-row b .link{font-size:var(--t-xs)}
+.mfa-scope-row span span{font-size:var(--t-xs);line-height:1.5;color:var(--mut)}
+
+/* The save bar states what will happen, not just that something changed. */
+.mfa-save{display:flex;align-items:center;gap:9px;min-width:0}
+.mfa-save > svg{color:var(--faint);flex:none}
+.sticky-actions[data-dirty] .mfa-save > svg{color:var(--warn-core)}
+.mfa-save > span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.mfa-save b{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.mfa-save span span{font-size:var(--t-xs);color:var(--mut)}

@@ -16,12 +16,18 @@ import { useHotkeys } from './lib/useHotkeys'
 // Every route is its own chunk: opening the console downloads the shell and the
 // page being viewed, not all forty-seven screens.
 const DirectoryPage = lazy(() => import('./pages/DirectoryPage'))
+const OrganizationsPage = lazy(() => import('./pages/OrganizationsPage'))
+const AuthenticationPage = lazy(() => import('./pages/AuthenticationPage'))
+const RequestsPage = lazy(() => import('./pages/RequestsPage'))
 
-// Users is the screen this packet delivers. Every other route in the navigation
-// falls through to PlaceholderPage, which renders the route's own title over a
-// "Screen in progress" card — the surfaces land in later packets.
+// The screens this packet delivers. Every other route in the navigation falls
+// through to PlaceholderPage, which renders the route's own title over a
+// "Screen in progress" card — those surfaces land in later packets.
 const PAGES = {
   users: DirectoryPage,
+  organizations: OrganizationsPage,
+  mfa: AuthenticationPage,
+  requests: RequestsPage,
 }
 
 // Shown only while a route's chunk is in flight — long enough to notice on a
