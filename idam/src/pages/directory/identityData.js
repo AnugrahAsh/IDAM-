@@ -198,7 +198,7 @@ export const recertHistoryFor = (user) => CAMPAIGNS.map((c, i) => {
 
 /* The values an attribute plausibly held before the change that replaced it. */
 const PRIOR_DESIGNATIONS = ['Engineer', 'Analyst', 'Senior Engineer', 'Lead', 'Architect']
-const PRIOR_OFFICE_LEVELS = ['Field', 'Sub-Divisional', 'Divisional', 'Zonal', 'Corporate']
+const PRIOR_OFFICE_LEVELS = ['Field', 'Branch', 'Divisional', 'Regional', 'Corporate']
 
 export const auditFor = (user) => {
   const h = healthFor(user)

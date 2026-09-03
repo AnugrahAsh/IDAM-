@@ -31,6 +31,12 @@
    and pushing the bar with margin-top:auto keeps it on the bottom edge either
    way. Scoped with :has() so only pages that actually carry a bar change. */
 .canvas-inner:has(.sticky-actions){display:flex;flex-direction:column;min-height:100%;padding-bottom:0}
+/* On a narrow canvas the message and the buttons stop sharing a line. */
+@media(max-width:640px){
+  .sticky-actions{flex-wrap:wrap;padding:12px 13px;margin:var(--sp-4) 0 var(--sp-5)}
+  .sticky-actions .spacer{display:none}
+  .sticky-actions .btn{flex:1 1 auto}
+}
 /* the bar is often one wrapper deep (a tabbed shell); let that wrapper grow too */
 .canvas-inner:has(.sticky-actions) > .stack:has(.sticky-actions),
 .canvas-inner:has(.sticky-actions) > div:has(> .sticky-actions){
@@ -43,7 +49,12 @@
 .canvas-inner:has(.sticky-actions) .detail-body:has(.sticky-actions) > .stack{
   flex:1;display:flex;flex-direction:column;min-height:0;
 }
-.canvas-inner:has(.sticky-actions) .sticky-actions{margin-top:auto}
+/* `margin-top:auto` used to pin the bar to the bottom edge, but auto collapses
+   to 0 the moment the page overflows — which is exactly when the bar ended up
+   flush against the content above it. A fixed top margin spaces it the same way
+   on every page; the growth chain above still fills a short page so the bar
+   closes it rather than floating mid-canvas. */
+.canvas-inner:has(.sticky-actions) .sticky-actions{margin-top:var(--sp-5)}
 
 .pagebar{
   position:sticky;top:0;z-index:12;
@@ -73,7 +84,7 @@
 }
 
 .crumbs{display:flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--mut);padding:1px 0 0;margin-bottom:7px;min-width:0;line-height:1.4}
-.crumbs-sep{color:var(--line-2)}
+.crumbs-sep{color:var(--faint)}
 .crumbs-link{cursor:pointer;border-radius:var(--r-xs)}
 .crumbs-link:hover{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 .crumbs-cur{color:var(--ink-2);font-weight:var(--w-med);
@@ -145,18 +156,28 @@
 .detail-cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--sp-4);align-items:start}
 @media(max-width:1200px){.detail-cols,.detail-cols-wide{grid-template-columns:minmax(0,1fr)}}
 
-.sticky-actions{position:sticky;bottom:0;z-index:11;display:flex;align-items:center;gap:var(--sp-3);
-  /* Horizontal padding matches the canvas gutter so the message lines up with
-     the page content and the buttons with its right edge. */
-  padding:11px var(--canvas-px);margin:var(--sp-4) calc(var(--canvas-px) * -1) 0;
-  background:var(--surface);border-top:1px solid var(--line);
-  transition:box-shadow var(--dur-2) var(--ease),border-top-color var(--dur-2) var(--ease),
+/* The bar closes the page rather than floating over it. It was `position:
+   sticky`, which on a wide desktop parked an opaque strip across live content —
+   cards behind it were cut in half and the page looked broken. It now sits in
+   normal flow as the last row; `margin-top:auto` (below) still pins it to the
+   bottom of the canvas when the page is shorter than the viewport, so a short
+   form keeps its actions on screen without a scroll. */
+.sticky-actions{position:static;z-index:11;display:flex;align-items:center;gap:var(--sp-3);
+  /* An inset panel rather than a full-bleed strip. Bled to the canvas edges it
+     ran straight into the status bar with nothing between them and read as a
+     second chrome bar; sitting inside the gutter it closes the page as its last
+     card, with room above it and below it. */
+  padding:14px 16px;margin:var(--sp-5) 0 var(--sp-6);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  transition:box-shadow var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease),
     background var(--dur-2) var(--ease)}
 .sticky-actions .btn{flex:none}
-/* Only lift while the bar is floating over content it has yet to scroll past. */
-.sticky-actions[data-stuck="true"]{box-shadow:0 -6px 16px -14px rgba(17,24,39,.5)}
-.sticky-actions[data-dirty="true"]{border-top-color:var(--accent-line);background:var(--accent-bg)}
-.sticky-msg{display:inline-flex;align-items:center;gap:7px;font-size:var(--t-xs);color:var(--mut)}
+/* In flow the bar never overlaps anything, so it needs no lift to read against
+   content — the top border alone separates it. */
+.sticky-actions[data-stuck="true"]{box-shadow:none}
+.sticky-actions[data-dirty="true"]{border-color:var(--accent-line);background:var(--accent-bg)}
+.sticky-msg{display:inline-flex;align-items:center;gap:9px;min-width:0;
+  font-size:var(--t-xs);color:var(--mut);line-height:var(--t-xs-lh)}
 .sticky-actions[data-dirty="true"] .sticky-msg{color:var(--accent-a);font-weight:var(--w-semi)}
 /* A quiet state marker: hollow while clean, filled once there is work to save. */
 .sticky-dot{flex:none;width:6px;height:6px;border-radius:50%;

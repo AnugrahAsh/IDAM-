@@ -57,7 +57,7 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
 
   const cards = [
     { id: 'all', icon: 'request', label: 'My requests', value: rows.length, chip: `${stats.open} open`, sub: 'raised from this account', hint: 'Every request you have raised' },
-    { id: 'open', icon: 'clock', label: 'In flight', value: stats.open, chip: 'awaiting a decision', sub: 'with an approver now', hint: 'Requests still moving through approval' },
+    { id: 'open', icon: 'clock', label: 'In flight', value: stats.open, chip: 'awaiting a decision', sub: 'with an approver', hint: 'Requests still moving through approval' },
     { id: 'escalated', icon: 'trendUp', label: 'Escalated', value: stats.escalated, chip: stats.escalated ? 'needs a nudge' : 'none', chipTone: stats.escalated ? 'warn' : undefined, sub: 'raised a level', hint: 'Requests escalated to a higher approver' },
     { id: 'approved', icon: 'checkC', label: 'Approved', value: stats.approved, chip: 'granted', chipTone: 'ok', sub: 'entitlement provisioned', hint: 'Requests that were granted' },
     { id: 'rejected', icon: 'ban', label: 'Rejected', value: stats.rejected, chip: stats.rejected ? 'refused' : 'none', chipTone: stats.rejected ? 'bad' : undefined, sub: 'with a stated reason', hint: 'Requests that were refused' },
@@ -92,16 +92,20 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
   )
 
   const columns = [
-    serialColumn('S.no'),
+    serialColumn('S.No'),
     { key: 'id', label: 'Request Id.', locked: true, cls: 'td-main td-mono' },
     { key: 'username', label: 'Username' },
     { key: 'type', label: 'Request type', render: (r) => <span className="tag">{r.type}</span> },
     { key: 'status', label: 'Approval Status', render: (r) => <Pill tone={statusTone(r.status)} dot>{r.status}</Pill> },
     { key: 'raised', label: 'Created on', cls: 'td-mono' },
     { key: 'requester', label: 'Created by' },
-    ...levelColumnDefs(levels).map((c) => ({
+    ...levelColumnDefs(levels).map((c, i) => ({
       key: c.key,
       label: c.label,
+      // Three levels is six audit columns, more than the register can hold at a
+      // desktop width. The first level opens with it; the rest are a tick away
+      // in the column control.
+      optional: i >= 2,
       render: c.kind === 'date'
         ? (r) => auditCell(r[c.key])
         : (r) => (r[c.key] || <span className="t-faint">—</span>),

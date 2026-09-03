@@ -1,11 +1,14 @@
 import { useMemo } from 'react'
-import { APPLICATIONS, JOBS, LOGS, NOTIFICATIONS, ORPHANS, REQUESTS, SOD_VIOLATIONS, CAMPAIGNS } from '../data/seed'
+import { APPLICATIONS, JOBS, LOGS, ORPHANS, REQUESTS, SOD_VIOLATIONS, CAMPAIGNS } from '../data/seed'
 import { useRead } from '../pages/notifications/readStore'
+import { usePublishedAnnouncements } from '../pages/notifications/announcementStore'
+import { unreadOf } from '../pages/notifications/inboxModel'
 
 export function useBadges() {
   // Read state is the operator's, not the seed's: marking everything read has
   // to clear the navigation badge, so the badge is derived from it.
   const read = useRead()
+  const announcements = usePublishedAnnouncements()
   return useMemo(() => {
     const pendingReq = REQUESTS.filter((r) => r.status === 'Pending' || r.status === 'Escalated')
     const breached = pendingReq.filter((r) => r.sla === 'breached').length
@@ -26,9 +29,9 @@ export function useBadges() {
       recert: { count: dueCampaigns, dot: dueCampaigns ? 'warn' : null },
       logs: { count: 0, dot: errors ? 'crit' : null },
       notifications: (() => {
-        // The register numbers its rows from 1 in seed order; read state is
-        // recorded against those ids.
-        const unread = NOTIFICATIONS.filter((n, i) => n.unread && !read.has(String(i + 1)))
+        // Counted from the same composition the register renders, so the badge,
+        // the bell and the UNREAD tile always agree.
+        const unread = unreadOf(announcements, read)
         return {
           count: unread.length,
           dot: unread.some((n) => n.severity === 'critical') ? 'crit' : null,
@@ -36,5 +39,5 @@ export function useBadges() {
       })(),
       provisioning: { count: 0, dot: APPLICATIONS.some((a) => a.status === 'Failed') ? 'crit' : null },
     }
-  }, [read])
+  }, [read, announcements])
 }

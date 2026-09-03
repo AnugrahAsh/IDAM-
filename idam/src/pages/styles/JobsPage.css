@@ -1,0 +1,63 @@
+/* Page-owned styles for JobsPage. Shared primitives remain in src/styles. */
+
+/* --- Payload and response ------------------------------------------------
+   The old detail panel used the .peek class, which had no stylesheet at all —
+   an unstyled <aside> is a block element, so the job response fell underneath
+   the table instead of sitting beside it. The detail is now its own route and
+   the JSON below is the only thing that needs page-owned styling. */
+
+.jsonbox {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  font-variant-ligatures: none;
+  /* JSON is pre-formatted and must not be reflowed, so it scrolls on its own
+     axis rather than forcing the page to scroll sideways. */
+  overflow-x: auto;
+  max-height: 340px;
+  overflow-y: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.jsonurl {
+  padding: 7px 10px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  color: var(--mut);
+  font-size: var(--t-xs);
+  overflow-wrap: anywhere;
+}
+
+/* A failure reason is the answer to "why did this record not apply", so it is
+   given its own tinted block rather than being buried in a key/value row. */
+.job-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid var(--bad-line);
+  border-radius: var(--r);
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-size: var(--t-sm);
+  line-height: 1.45;
+}
+.job-reason svg { flex: none; margin-top: 2px; }
+
+/* Flush cards in the exchange panel need their gutter back around the JSON. */
+.job-json-pad{padding:var(--sp-3) var(--sp-4)}
+
+/* Labelled blocks on the Information tab, matching how a job record is read:
+   what was asked for, then how it resolved. */
+.job-block-k{display:flex;align-items:center;gap:7px;margin:0 0 var(--sp-3);
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--mut)}
+.job-block-k svg{color:var(--faint)}

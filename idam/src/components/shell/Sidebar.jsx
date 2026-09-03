@@ -3,14 +3,14 @@ import Icon from '../primitives/Icon'
 import Avatar from '../primitives/Avatar'
 import Menu from '../primitives/Menu'
 import NavLink from './NavLink'
-import { NAV, NAV_BADGES, BY_ID } from '../../data/nav'
+import { NAV, NAV_BADGES, BY_ID, moduleFor } from '../../data/nav'
 import { useApp } from '../../store/AppContext'
 import { useLocalState } from '../../lib/useLocalState'
 import { ME } from '../../data/seed'
 import { useBadges } from '../../lib/useBadges'
 
 export default function Sidebar() {
-  const { route, navigate, navMin, setNavMin, toast } = useApp()
+  const { route, navigate, navMin, setNavMin, toast, can, role } = useApp()
   const [q, setQ] = useState('')
   const [closed, setClosed] = useLocalState('tf-idam-nav-closed', {})
   const [openParents, setOpenParents] = useLocalState('tf-idam-nav-open', {})
@@ -25,9 +25,19 @@ export default function Sidebar() {
   }, [route])
 
   const needle = q.trim().toLowerCase()
+
+  /* What the role being viewed as may actually reach. The account menu offered
+     to view the console as a narrower role and then changed nothing, which made
+     the toast a false claim; the navigation is now built from the same grants
+     the pages check. A route with no permission module stays reachable. */
+  const reachable = (id) => {
+    const mod = moduleFor(id)
+    return !mod || can(mod)
+  }
+
   const hit = (id, groupLabel) => {
     const r = BY_ID[id]
-    if (!r) return false
+    if (!r || !reachable(id)) return false
     return !needle || r.label.toLowerCase().includes(needle) || groupLabel.toLowerCase().includes(needle)
   }
 
@@ -59,9 +69,12 @@ export default function Sidebar() {
 
   const parent = (p, groupLabel) => {
     const here = typeof window !== 'undefined' ? window.location.pathname : ''
-    const kids = p.items.filter((id) => hit(id, groupLabel) || (!needle && true))
-    const visible = needle ? p.items.filter((id) => hit(id, groupLabel) || p.label.toLowerCase().includes(needle)) : p.items
-    if (needle && !visible.length) return null
+    const allowed = p.items.filter(reachable)
+    const kids = allowed.filter((id) => hit(id, groupLabel) || (!needle && true))
+    const visible = needle
+      ? allowed.filter((id) => hit(id, groupLabel) || p.label.toLowerCase().includes(needle))
+      : allowed
+    if (!visible.length) return null
     const open = needle ? true : openParents[p.id] || p.items.includes(route)
     const kidBadge = p.items.map((id) => (NAV_BADGES[id] ? badges[NAV_BADGES[id]] : null)).find((b) => b && b.dot)
     return (
@@ -131,8 +144,9 @@ export default function Sidebar() {
       <nav className="nav" aria-label="Primary">
         {NAV.map((group) => {
           const flat = (group.items || []).filter((id) => hit(id, group.label))
-          const parents = (group.parents || []).filter((p) =>
-            !needle || p.label.toLowerCase().includes(needle) || p.items.some((id) => hit(id, group.label)))
+          const parents = (group.parents || [])
+            .filter((p) => p.items.some(reachable))
+            .filter((p) => !needle || p.label.toLowerCase().includes(needle) || p.items.some((id) => hit(id, group.label)))
           if (!flat.length && !parents.length) return null
           const holdsActive = (group.items || []).includes(route)
             || (group.parents || []).some((p) => p.items.includes(route))
@@ -202,7 +216,7 @@ export default function Sidebar() {
           <Avatar first={ME.firstName} last={ME.lastName} size="lg" />
           <span className="side-user-meta">
             <span className="side-user-name">{ME.firstName} {ME.lastName}</span>
-            <span className="side-user-role">{ME.roleLabel}</span>
+            <span className="side-user-role" title={role.name}>{role.name}</span>
           </span>
         </NavLink>
         <button
@@ -213,7 +227,7 @@ export default function Sidebar() {
           onClick={(e) => setMenu({
             anchor: e.currentTarget,
             items: [
-              { label: ME.roleLabel, header: true },
+              { label: role.name, header: true },
               { id: 'profile', label: 'My profile', icon: 'user', onSelect: () => navigate('profile') },
               { id: 'pw', label: 'Change password', icon: 'lock', onSelect: () => toast('info', 'Change password', 'Opens the credential change dialog.') },
               { id: 'settings', label: 'Settings', icon: 'config', onSelect: () => navigate('settings') },

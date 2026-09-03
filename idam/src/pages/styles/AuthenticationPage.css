@@ -47,22 +47,13 @@
 .mfa-enf-v b{font-size:var(--t-h2);font-weight:650;color:var(--mut)}
 .mfa-enf-v b[data-on]{color:var(--accent-a)}
 
-.mfa-cols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:var(--sp-4);align-items:start}
-@media(max-width:1180px){.mfa-cols{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:1180px){}
 
 .mfa-note{display:flex;align-items:flex-start;gap:8px;padding:10px var(--sp-4);
   border-bottom:1px solid var(--hair);background:var(--surface-2);
   font-size:var(--t-sm);color:var(--mut)}
 .mfa-note svg{color:var(--faint);flex:none;margin-top:2px}
 
-.mfa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  gap:var(--sp-3);padding:var(--sp-4)}
-.mfa-method{
-  display:flex;flex-direction:column;gap:7px;min-width:0;cursor:pointer;position:relative;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  border-top:3px solid var(--line);padding:13px 14px;
-  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease),opacity var(--dur-2) var(--ease);
-}
 .mfa-method:hover{border-color:var(--line-2);box-shadow:var(--sh)}
 .mfa-method:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
 /* Selected reads from the top edge, the way a chosen tab does. */
@@ -102,16 +93,6 @@
 .mfa-prev-body b{font-size:var(--t-h2);font-weight:650;color:var(--ink)}
 .mfa-prev-body p{margin:0;font-size:var(--t-sm);line-height:1.5;color:var(--mut)}
 
-.mfa-scope{display:flex;flex-direction:column}
-.mfa-scope-row{display:flex;align-items:flex-start;gap:10px;padding:12px var(--sp-4);
-  border-bottom:1px solid var(--hair)}
-.mfa-scope-row:last-child{border-bottom:none}
-.mfa-scope-row > span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
-.mfa-scope-row b{display:flex;align-items:center;gap:8px;font-size:var(--t-sm);
-  font-weight:var(--w-semi);color:var(--ink)}
-.mfa-scope-row b .link{font-size:var(--t-xs)}
-.mfa-scope-row span span{font-size:var(--t-xs);line-height:1.5;color:var(--mut)}
-
 /* The save bar states what will happen, not just that something changed. */
 .mfa-save{display:flex;align-items:center;gap:9px;min-width:0}
 .mfa-save > svg{color:var(--faint);flex:none}
@@ -119,3 +100,57 @@
 .mfa-save > span{display:flex;flex-direction:column;gap:1px;min-width:0}
 .mfa-save b{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
 .mfa-save span span{font-size:var(--t-xs);color:var(--mut)}
+
+/* --- MFA: a fixed shell, not a scroll --------------------------------------
+   The page answers one question, so it is one viewport. Factors on the left,
+   all visible at once; the detail of the selected factor on the right.
+   Nothing here grows the page — the lists are sized, not stacked.          */
+
+.mfa-shell{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:var(--sp-4);
+  align-items:start;margin-top:var(--sp-4)}
+@media(max-width:1100px){.mfa-shell{grid-template-columns:minmax(0,1fr)}}
+
+.mfa-grid{display:flex;flex-direction:column}
+.mfa-grid[data-locked]{opacity:.72}
+/* A switch that cannot be moved has to look like one. The shared primitive
+   carries no disabled affordance, so the locked grid supplies it. */
+.mfa-grid[data-locked] .switch:disabled{opacity:.55;cursor:not-allowed}
+
+/* A row, not a card: five factors fit without scrolling and the on/off state
+   is a switch in a fixed column rather than a tick hidden in a corner. */
+.mfa-method{display:flex;align-items:center;gap:12px;padding:11px var(--sp-4);
+  border-bottom:1px solid var(--hair);cursor:pointer;position:relative;
+  transition:background var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.mfa-method:last-child{border-bottom:0}
+.mfa-method:hover{background:var(--surface-2)}
+.mfa-method:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent)}
+.mfa-method[data-focus]{background:var(--accent-bg);box-shadow:inset 3px 0 0 0 var(--accent)}
+.mfa-method[data-locked]{cursor:default}
+.mfa-method-ic{flex:none;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--r);background:var(--surface-3);border:1px solid var(--line);color:var(--mut)}
+.mfa-method[data-on] .mfa-method-ic{background:var(--accent-bg-2);border-color:var(--accent-line);color:var(--accent)}
+.mfa-method-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mfa-method-n{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.mfa-method-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mfa-method-spec{font-size:var(--t-xs);color:var(--faint)}
+
+.mfa-side{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0}
+
+.mfa-how{margin:0 0 12px;font-size:var(--t-sm);line-height:1.6;color:var(--ink-2)}
+.mfa-facts{display:flex;flex-direction:column;gap:1px;margin-bottom:12px}
+.mfa-facts > div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--hair)}
+.mfa-facts > div:last-child{border-bottom:0}
+.mfa-facts span{font-size:var(--t-xs);color:var(--mut)}
+.mfa-facts b{font-size:var(--t-sm);color:var(--ink);font-weight:var(--w-semi)}
+
+.mfa-readout{padding:0}
+.mfa-readout-row{display:flex;align-items:center;gap:10px;padding:10px var(--sp-4);
+  border-bottom:1px solid var(--hair);font-size:var(--t-xs);color:var(--mut)}
+.mfa-readout-row:last-child{border-bottom:0}
+.mfa-readout-row > span:first-child{flex:none;min-width:118px}
+.mfa-readout-row b{margin-left:auto;color:var(--ink);font-size:var(--t-sm)}
+.mfa-bar{flex:1;height:5px;border-radius:var(--r-pill);background:var(--surface-3);overflow:hidden}
+.mfa-bar i{display:block;height:100%;border-radius:var(--r-pill);background:var(--warn);
+  transition:width var(--dur-3) var(--ease)}
+.mfa-bar i[data-tone="ok"]{background:var(--ok)}

@@ -13,14 +13,13 @@ import Meter from '../components/primitives/Meter'
 import PageBar from '../components/shell/PageBar'
 import Pill from '../components/primitives/Pill'
 import Select from '../components/primitives/Select'
-import IconButton from '../components/primitives/IconButton'
 import TextInput from '../components/primitives/TextInput'
 import StickyActions from '../components/shell/StickyActions'
 import Switch from '../components/primitives/Switch'
 import Tabs from '../components/primitives/Tabs'
 import Tag from '../components/primitives/Tag'
 import { LOGS, MFA_METHODS } from '../data/seed'
-import { BASE_PATH, DIRECTORY, STRENGTH, fieldsOf, validateProvider } from './authentication/authData'
+import { BASE_PATH, DIRECTORY, ENROLLED_BY_FACTOR, STRENGTH, fieldsOf, validateProvider } from './authentication/authData'
 import { num, pct } from '../lib/format'
 import { useApp } from '../store/AppContext'
 import './styles/AuthenticationPage.css'
@@ -33,9 +32,11 @@ import { CONSOLE_TABS, ENROLMENTS, FACTOR_NAME, GRACE_PERIODS, PROVIDERS, REAUTH
 export default function AuthenticationPage({ segments = [] }) {
   const { toast, confirm, navigate, setDrawer } = useApp()
   // Exactly one enrolled method is primary: the one an identity is challenged
-  // with first. Held on the method itself so the invariant is enforceable.
+  // with first. Reported on the tiles rather than reassigned from them.
   const [methods, setMethods] = useState(() => MFA_METHODS.map((m, i) => ({
     ...m,
+    // Enrolment is a fact about the directory, not about the method record.
+    enrolled: ENROLLED_BY_FACTOR[m.id] ?? 0,
     primary: i === 0,
     config: blankConfig(m),
   })))
@@ -59,17 +60,6 @@ export default function AuthenticationPage({ segments = [] }) {
 
   const enabled = methods.filter((m) => m.enabled)
   const primary = methods.find((m) => m.primary)
-
-  /* One primary at a time, and it has to be a method that is actually offered
-     — a primary factor nobody can enrol is not a primary factor. */
-  const setPrimary = (method) => {
-    if (!method.enabled) {
-      toast('warn', 'Method is not enabled', `${method.name} is not offered at enrollment, so it cannot be the primary factor. Enable it first.`)
-      return
-    }
-    setMethods((ms) => ms.map((m) => ({ ...m, primary: m.id === method.id })))
-    toast('ok', 'Primary factor set', `${method.name} is challenged first at every sign-in.`)
-  }
 
   const testMethod = (method, cfg) => {
     const at = new Date().toISOString().slice(11, 19)
@@ -129,26 +119,6 @@ export default function AuthenticationPage({ segments = [] }) {
 
     render()
   }
-
-  const removeMethod = (method) => confirm({
-    title: `Remove ${method.name}?`,
-    body: method.enrolled
-      ? `${num(method.enrolled)} identities hold this factor. Removing it forces every one of them to enrol another method at their next sign-in.`
-      : 'Nobody holds this factor, so nothing is disrupted. It stops being offered at enrollment.',
-    confirmLabel: 'Remove method',
-    onConfirm: () => {
-      setMethods((ms) => {
-        const next = ms.filter((m) => m.id !== method.id)
-        // The primary cannot simply disappear — the first enabled survivor takes it.
-        if (method.primary && next.length) {
-          const heir = next.find((m) => m.enabled) || next[0]
-          return next.map((m) => ({ ...m, primary: m.id === heir.id }))
-        }
-        return next
-      })
-      toast('ok', 'Method removed', method.name)
-    },
-  })
 
   const addMethod = () => {
     const ref = { current: { name: '', sub: '', strength: 'strong', icon: 'shield' } }
@@ -245,19 +215,6 @@ export default function AuthenticationPage({ segments = [] }) {
     setConfig((c) => ({ ...c, [providerId]: { ...c[providerId], [key]: value } }))
   }
 
-  const toggleFactor = (m) => {
-    if (m.enabled && enabled.length === 1) {
-      toast('warn', 'At least one factor must stay enabled', `Disabling ${m.name} would leave the tenant with no way to satisfy a challenge.`)
-      return
-    }
-    setMethods((ms) => ms.map((x) => (x.id === m.id ? { ...x, enabled: !x.enabled } : x)))
-    toast(
-      m.enabled ? 'warn' : 'ok',
-      m.enabled ? 'Factor disabled' : 'Factor enabled',
-      `${m.name} ${m.enabled ? 'is no longer offered at enrollment or challenge.' : 'is now available to every identity in scope.'}`,
-    )
-  }
-
   const toggleProviderFactor = (p, next) => {
     const m = methods.find((x) => x.id === p.factor)
     if (!m) return
@@ -332,7 +289,7 @@ export default function AuthenticationPage({ segments = [] }) {
           <PageBar
             title="Provider not found"
             sub="No authentication provider is registered under that identifier."
-            crumbs={[{ label: 'MFA', to: BASE_PATH }, { label: 'Providers', to: `${BASE_PATH}/providers` }, { label: 'Not found' }]}
+            crumbs={[{ label: 'Multi-Factor Authentication', to: BASE_PATH }, { label: 'Providers', to: `${BASE_PATH}/providers` }, { label: 'Not found' }]}
           />
           <EmptyState
             icon="shield"
@@ -451,9 +408,9 @@ export default function AuthenticationPage({ segments = [] }) {
   return (
     <>
       <PageBar
-        title="Authentication"
+        title="MFA Configuration"
         sub="Which factors identities may enrol, how each provider is configured, how long a session survives, and when the platform demands another challenge."
-        crumbs={[{ label: 'Core' }, { label: 'MFA' }]}
+        crumbs={[{ label: 'Core' }, { label: 'Multi-Factor Authentication' }]}
         badge={<Pill tone={phishingPct >= 70 ? 'ok' : 'warn'} dot>{pct(phishingPct)} phishing-resistant</Pill>}
         actions={
           <>
@@ -542,7 +499,6 @@ export default function AuthenticationPage({ segments = [] }) {
                         <Pill tone={m.enabled ? strength.tone : 'mut'} dot>{strength.label}</Pill>
                         {m.primary && <Pill tone="acc">Primary</Pill>}
                       </span>
-                      <Switch checked={m.enabled} onChange={() => toggleFactor(m)} label={`Enable ${m.name}`} />
                     </div>
                     <div className="mfa-tile-name">{m.name}</div>
                     <div className="mfa-tile-sub">{m.sub}</div>
@@ -555,19 +511,11 @@ export default function AuthenticationPage({ segments = [] }) {
                     </div>
                     <div className="mfa-tile-foot">
                       <span className="t-xs t-mut trunc">{m.enabled ? provider ? provider.vendor : 'Built-in' : 'Not offered at enrollment'}</span>
-                      <span className="row" style={{ gap: 6 }}>
-                        <Button
-                          size="sm"
-                          icon="star"
-                          disabled={m.primary}
-                          title={m.primary ? 'Already the primary factor' : `Challenge ${m.name} first`}
-                          onClick={() => setPrimary(m)}
-                        >
-                          {m.primary ? 'Primary' : 'Set primary'}
-                        </Button>
+                      {/* Email is the only factor the platform delivers itself, so it is the
+                          only one with a connection to configure from here. */}
+                      {m.id === 'email' && (
                         <Button size="sm" icon="sliders" onClick={() => openMethodConfig(m)}>Configure</Button>
-                        <IconButton icon="trash" size="sm" label={`Remove ${m.name}`} onClick={() => removeMethod(m)} />
-                      </span>
+                      )}
                     </div>
                     {methodProbe[m.id] && !methodProbe[m.id].ok && (
                       <div className="banner" data-tone="bad" style={{ marginTop: 10 }}>

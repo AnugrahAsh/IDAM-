@@ -60,6 +60,13 @@
   background:var(--surface-3);border:1px solid var(--line);
   font-size:var(--t-xs);font-weight:var(--w-med);color:var(--ink-2);white-space:nowrap}
 .tag[data-tone="acc"]{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent-a)}
+/* The rest of the tone set, so a tag no longer has to be re-toned per page. */
+.tag[data-tone="ok"]{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
+.tag[data-tone="warn"]{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.tag[data-tone="bad"]{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
+.tag[data-tone="info"]{background:var(--info-bg);border-color:var(--info-line);color:var(--info)}
+.tag[data-tone="viol"]{background:var(--viol-bg);border-color:var(--viol-line);color:var(--viol)}
+.tag[data-tone="mut"]{background:var(--surface-3);border-color:var(--line);color:var(--mut)}
 .code{font-family:var(--mono);font-size:var(--t-xs);background:var(--surface-3);border:1px solid var(--line);
   border-radius:var(--r-xs);padding:1px 5px;color:var(--ink-2)}
 kbd{font-family:var(--sans);font-size:10px;font-weight:var(--w-semi);color:var(--mut);background:var(--surface);
@@ -108,6 +115,8 @@ textarea.inp{height:auto;min-height:76px;padding:8px 10px;line-height:1.55;resiz
 .switch[data-on="true"]{background:var(--accent)}
 .switch[data-on="true"]::after{transform:translateX(13px)}
 :root[data-theme="dark"] .switch{background:#38435C}
+.switch:disabled{opacity:.5;cursor:not-allowed}
+.switch:disabled::after{box-shadow:none}
 
 .check{width:15px;height:15px;border:1.5px solid var(--line-2);border-radius:var(--r-xs);background:var(--surface);
   flex:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
@@ -120,16 +129,40 @@ textarea.inp{height:auto;min-height:76px;padding:8px 10px;line-height:1.55;resiz
 
 .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden}
 /* A long category row scrolls horizontally instead of squeezing labels. */
-.seg-wrap{max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+/* A tab strip wider than the page scrolled, but the first label was simply cut
+   in half with nothing to say the rest existed. The same edge-shadow technique
+   the registers use marks whichever side still has tabs on it. */
+.seg-wrap{max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+  background:
+    linear-gradient(to right, var(--bg), transparent) 0 0/20px 100% no-repeat local,
+    linear-gradient(to left, var(--bg), transparent) 100% 0/20px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--line-2), transparent) 0 0/10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--line-2), transparent) 100% 0/10px 100% no-repeat scroll}
 .seg-wrap::-webkit-scrollbar{height:6px}
-.seg button{height:28px;padding:0 11px;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--mut);
-  white-space:nowrap;flex:none;
+.seg button{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:28px;padding:0 11px;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--mut);
+  white-space:nowrap;flex:none;line-height:1;
   border-right:1px solid var(--hair);transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
 .seg button:last-child{border-right:none}
+.seg button svg{flex:none;width:12px;height:12px;margin:0 !important}
+.seg button[disabled]{opacity:.45;cursor:not-allowed}
+/* Inside a form field the control takes the field's width and shares it equally,
+   so a long label ellipses rather than wrapping under its icon. */
+.field .seg{display:flex;max-width:100%}
+.field .seg button{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .seg button:hover{color:var(--ink-2);background:var(--surface-2)}
 .seg button[data-on="true"]{background:var(--accent-bg);color:var(--accent-a)}
 
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+/* The strip scrolls with the scrollbar hidden, so a tab past the right edge was
+   simply invisible — eight tabs in a 978px panel left two unreachable-looking.
+   The same edge shadow the registers use marks whichever side still has tabs,
+   and it disappears the moment that side is fully scrolled. */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;
+  background:
+    linear-gradient(to right, var(--surface), transparent) 0 0/18px 100% no-repeat local,
+    linear-gradient(to left, var(--surface), transparent) 100% 0/18px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--line-2), transparent) 0 0/9px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--line-2), transparent) 100% 0/9px 100% no-repeat scroll}
 .tabs::-webkit-scrollbar{display:none}
 .tab{display:inline-flex;align-items:center;gap:6px;padding:7px 13px 8px;font-size:var(--t-body);
   font-weight:var(--w-med);color:var(--mut);border-bottom:2px solid transparent;margin-bottom:-1px;
@@ -189,16 +222,23 @@ textarea.inp{height:auto;min-height:76px;padding:8px 10px;line-height:1.55;resiz
 .kv-v{display:block;font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink);margin-top:2px;overflow-wrap:anywhere}
 @media(max-width:840px){.kv{grid-template-columns:minmax(0,1fr)}}
 
-.otree{display:flex;flex-direction:column;gap:1px;padding:8px var(--sp-3) 12px}
+.otree{display:flex;flex-direction:column;gap:1px;padding:10px var(--sp-3) 14px}
 .otree-node{display:flex;flex-direction:column}
-.otree-kids{display:flex;flex-direction:column;gap:1px}
-.otree-row{display:flex;align-items:center;gap:8px;height:30px;padding-right:10px;border-radius:var(--r-sm);
+/* Depth is drawn, not padded: each child group carries the rail its siblings
+   hang off, and each row a short tick out to it. The guides then line up at
+   every level instead of drifting with a computed indent. */
+.otree-kids{display:flex;flex-direction:column;gap:1px;
+  margin-left:16px;padding-left:14px;border-left:1px solid var(--line);position:relative}
+.otree-kids > .otree-node > .otree-row::before{
+  content:"";position:absolute;left:-14px;width:10px;height:1px;background:var(--line)}
+.otree-row{position:relative;display:flex;align-items:center;gap:9px;min-height:34px;
+  padding:3px 10px 3px 6px;border-radius:var(--r-sm);
   cursor:pointer;transition:background var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease),opacity var(--dur-1) var(--ease)}
 .otree-row:hover{background:var(--surface-2)}
 .otree-row[data-dragging="true"]{opacity:.4}
 .otree-row[data-drop="ok"]{background:var(--ok-bg);box-shadow:inset 0 0 0 1px var(--ok-line)}
 .otree-row[data-drop="ok"] .ot-n{color:var(--ok);font-weight:var(--w-semi)}
-.otree-row[data-on="true"]{background:var(--accent-bg)}
+.otree-row[data-on="true"]{background:var(--accent-bg);box-shadow:inset 2px 0 0 0 var(--accent)}
 .otree-row[data-on="true"] .ot-n{color:var(--accent-a);font-weight:var(--w-semi)}
 .otree-row[data-on="true"] .ot-ic{background:var(--accent-bg-2);border-color:var(--accent-line);color:var(--accent)}
 .otree-row[data-on="true"] .ot-c{background:var(--accent-bg-2);border-color:var(--accent-line);color:var(--accent-a)}
@@ -211,7 +251,21 @@ textarea.inp{height:auto;min-height:76px;padding:8px 10px;line-height:1.55;resiz
 .ot-ic{width:20px;height:20px;flex:none;display:inline-flex;align-items:center;justify-content:center;
   border-radius:var(--r-xs);background:var(--surface-3);border:1px solid var(--line);color:var(--mut)}
 .ot-ic svg{width:13px;height:13px}
-.ot-n{flex:1;min-width:0;font-size:var(--t-sm);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-id{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ot-n{min-width:0;font-size:var(--t-sm);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-sub{font-size:var(--t-micro);letter-spacing:.01em;color:var(--faint)}
+.otree-row[data-on="true"] .ot-sub{color:var(--accent-a)}
+/* Share of the tenant under this unit. Decorative on its own — the exact
+   figure is the count button beside it — so it is aria-hidden in the markup. */
+.ot-share{flex:none;width:56px;height:4px;border-radius:var(--r-pill);
+  background:var(--surface-3);overflow:hidden}
+.ot-share-fill{display:block;height:100%;border-radius:var(--r-pill);
+  background:var(--line-2);transition:width var(--dur-3) var(--ease)}
+.otree-row:hover .ot-share-fill{background:var(--accent-line)}
+.otree-row[data-on="true"] .ot-share{background:var(--accent-bg-2)}
+.otree-row[data-on="true"] .ot-share-fill{background:var(--accent)}
+.otree-row[data-kind="organization"] .ot-ic{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent)}
+@media(max-width:700px){.ot-share{display:none}}
 .ot-c{flex:none;min-width:36px;height:18px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;
   font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--mut);
   background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-pill)}
@@ -309,10 +363,16 @@ button.legend-it:hover{border-color:var(--line-2)}
 :root[data-theme="dark"] .applogo{background:#fff}
 :root[data-theme="dark"] .applogo-fallback{background:inherit}
 
-.appgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1px;
-  background:var(--hair);border-top:1px solid var(--hair)}
+/* Separators are drawn on the tiles, not by letting a background show through
+   1px gaps. The gap technique paints every unused cell in the last row as a
+   card-shaped grey block, so a group of five in a four-column grid looked like
+   it had three broken tiles after it. A cell with no tile in it now draws
+   nothing at all. */
+.appgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0;
+  border-top:1px solid var(--hair)}
 .apptile{background:var(--surface);padding:14px 14px 11px;display:flex;flex-direction:column;gap:10px;
-  position:relative;transition:background var(--dur-1) var(--ease)}
+  position:relative;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);
+  transition:background var(--dur-1) var(--ease)}
 .apptile:hover{background:var(--surface-2)}
 .apptile-main{display:flex;flex-direction:column;align-items:flex-start;gap:9px;text-align:left;width:100%;min-width:0}
 .apptile-name{font-size:var(--t-body);font-weight:var(--w-semi);color:var(--ink);line-height:1.3;
@@ -441,6 +501,70 @@ button.legend-it:hover{border-color:var(--line-2)}
   .rcard-meta{grid-template-columns:minmax(0,1fr)}
 }
 
+/* --- Record card by density ------------------------------------------------
+   Comfortable: a proper card. More padding, a larger name, and facts set at
+   body size rather than the small scale, so the card is readable at a glance
+   from across the desk.
+   Compact: the card grid becomes a list. Each record is one row — media, name,
+   status, closing figure — with the fact grid and the full-width line folded
+   away, because a list earns its density by dropping the second read, not by
+   shrinking it.                                                             */
+
+:root[data-density="comfortable"] .rcard{padding:16px 17px;gap:11px;border-radius:var(--r-lg)}
+:root[data-density="comfortable"] .rcard-top{gap:11px}
+:root[data-density="comfortable"] .rcard-name{font-size:var(--t-h2);line-height:1.32}
+:root[data-density="comfortable"] .rcard-sub{font-size:var(--t-sm)}
+:root[data-density="comfortable"] .rcard-meta{gap:10px 14px;padding:12px 0}
+:root[data-density="comfortable"] .rcard-meta dd{font-size:var(--t-body)}
+:root[data-density="comfortable"] .rcard-line{font-size:var(--t-body)}
+:root[data-density="comfortable"] .rcard-foot{font-size:var(--t-sm)}
+
+:root[data-density="compact"] .rcard{
+  flex-direction:row;align-items:center;gap:var(--sp-3);
+  padding:5px var(--sp-4);border:0;border-radius:0;
+  border-bottom:1px solid var(--hair);background:var(--surface)}
+:root[data-density="compact"] .rcard:last-child{border-bottom:0}
+:root[data-density="compact"] .rcard:hover{background:var(--row-hover);box-shadow:none;border-color:var(--hair)}
+:root[data-density="compact"] .rcard[data-selected],
+:root[data-density="compact"] .rcard[data-active]{background:var(--accent-bg)}
+/* The header dissolves so its parts become columns of the row: checkbox, media
+   and name on the left, then tags, then the closing figures, and the row menu
+   last against the right edge — instead of the menu sitting stranded in the
+   middle where the card header used to end. */
+/* `display:contents` promotes the header's children to flex items of the row.
+   They stay DOM children of .rcard-top, so these are descendant selectors, not
+   child ones — the order below is what turns them into columns: checkbox,
+   media and name on the left, then tags, the closing figures, and the row menu
+   last against the right edge. */
+:root[data-density="compact"] .rcard-top{display:contents}
+:root[data-density="compact"] .rcard .check{order:0}
+:root[data-density="compact"] .rcard-top .feed-ic,
+:root[data-density="compact"] .rcard-top .applogo,
+:root[data-density="compact"] .rcard-top .av{order:1;flex:none}
+:root[data-density="compact"] .rcard .rcard-id{order:2;flex:1 1 220px;min-width:0;
+  flex-direction:row;align-items:baseline;gap:8px}
+:root[data-density="compact"] .rcard .rcard-sub{flex:0 1 auto;min-width:0}
+:root[data-density="compact"] .rcard .rcard-tags{order:3;flex:0 0 210px;justify-content:flex-start;
+  flex-wrap:nowrap;overflow:hidden}
+:root[data-density="compact"] .rcard .rcard-tags .spacer{display:none}
+:root[data-density="compact"] .rcard-top .btn-icon{order:9;flex:none;margin-left:4px}
+:root[data-density="compact"] .rcard-line,
+:root[data-density="compact"] .rcard-meta{display:none}
+/* Fixed columns so the figures line up down the list; the name column absorbs
+   the slack. `flex:none` on the parts keeps a long figure from being clipped. */
+:root[data-density="compact"] .rcard .rcard-foot{order:4;flex:0 0 212px;gap:14px;
+  justify-content:flex-end;flex-wrap:nowrap;white-space:nowrap}
+:root[data-density="compact"] .rcard .rcard-stat,
+:root[data-density="compact"] .rcard .rcard-when{flex:none;white-space:nowrap}
+@media(max-width:1080px){
+  :root[data-density="compact"] .rcard .rcard-foot{flex:0 0 auto}
+  :root[data-density="compact"] .rcard .rcard-when{display:none}
+}
+:root[data-density="compact"] .rcard-foot .spacer{display:none}
+@media(max-width:700px){
+  :root[data-density="compact"] .rcard-tags{display:none}
+}
+
 /* --- Stat cards: headline metrics above a register -------------------------- */
 .scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
   gap:var(--sp-3);margin-bottom:var(--sp-3)}
@@ -462,7 +586,11 @@ button.legend-it:hover{border-color:var(--line-2)}
 .scard[data-on] .scard-k,.scard[data-on] .scard-k svg{color:var(--accent-a)}
 .scard-v{font-size:26px;line-height:1.1;font-weight:var(--w-bold);color:var(--ink);
   letter-spacing:-.028em;font-variant-numeric:tabular-nums}
-.scard-f{display:flex;align-items:center;gap:7px;min-width:0}
+/* The chip and the caption used to share one line, and on a narrow card the
+   chip took most of it — so the caption ellipsed on nearly every register in
+   the console rather than on the odd long one. The caption drops to its own
+   full-width line when the chip crowds it. */
+.scard-f{display:flex;align-items:center;gap:7px;min-width:0;flex-wrap:wrap;row-gap:2px}
 .scard-chip{
   display:inline-flex;align-items:center;gap:3px;flex:none;height:19px;padding:0 6px;
   border-radius:var(--r-xs);background:var(--surface-3);border:1px solid var(--line);
@@ -472,7 +600,7 @@ button.legend-it:hover{border-color:var(--line-2)}
 .scard-chip[data-tone="ok"]{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok)}
 .scard-chip[data-tone="warn"]{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
 .scard-chip[data-tone="bad"]{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
-.scard-s{font-size:var(--t-xs);color:var(--mut);min-width:0}
+.scard-s{font-size:var(--t-xs);color:var(--mut);flex:1 1 auto;min-width:15ch}
 
 /* --- Saved views: a filter set the administrator named and kept ------------- */
 .views{display:flex;align-items:center;gap:7px;flex-wrap:wrap;
@@ -615,3 +743,110 @@ button.legend-it:hover{border-color:var(--line-2)}
 /* An avatar carrying a photograph: the image replaces the tinted initials. */
 .av-img{background:var(--surface-3);overflow:hidden}
 .av-img img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* --- JSON view: a recorded response, rendered as the document it is ---------
+   Typed by colour rather than by label — a reader scanning a gateway response
+   is looking for the code and the identifiers, and those read faster when the
+   string, the number and the null are visually distinct.                    */
+
+.jsonv{font-family:var(--mono);font-size:var(--t-sm);line-height:1.7;
+  padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r);overflow-x:auto}
+.jsonv-node{display:flex;flex-direction:column;min-width:0}
+.jsonv-row{display:flex;align-items:baseline;gap:7px;min-width:0;white-space:nowrap}
+.jsonv-branch{background:none;border:0;padding:0;font:inherit;cursor:pointer;text-align:left;
+  border-radius:var(--r-xs)}
+.jsonv-branch:hover .jsonv-k{color:var(--accent-a)}
+.jsonv-branch:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+.jsonv-branch svg{flex:none;color:var(--faint);align-self:center}
+.jsonv-k{font-weight:var(--w-bold);color:var(--ink)}
+.jsonv-count{font-size:var(--t-xs);color:var(--faint);font-family:var(--sans)}
+.jsonv-empty{color:var(--faint)}
+/* The rail is what keeps a nested payload readable once it is three deep. */
+.jsonv-kids{display:flex;flex-direction:column;
+  margin-left:5px;padding-left:13px;border-left:1px solid var(--line-2)}
+.jsonv-s[data-kind="string"]{color:var(--bad)}
+.jsonv-s[data-kind="number"]{color:var(--ok)}
+.jsonv-s[data-kind="boolean"]{color:var(--accent-a);font-weight:var(--w-semi)}
+.jsonv-s[data-kind="null"]{color:var(--faint);font-style:italic}
+.jsonv-s[data-kind="undefined"]{color:var(--faint);font-style:italic}
+.jsonv-none{font-size:var(--t-sm);color:var(--mut);padding:12px 14px;
+  background:var(--surface-2);border:1px dashed var(--line-2);border-radius:var(--r)}
+
+/* --- Audience picker -------------------------------------------------------
+   Shared by announcements and quick links. The three ways of answering "who
+   sees this" are shown as a choice rather than folded into one dropdown,
+   because they are different kinds of answer, not more entries in a list. */
+.aud{gap:var(--sp-3)}
+/* auto-fit resolved to two columns inside a detail card, which left the third
+   option alone on a row beside a gap the width of a whole card. Three abreast
+   where they fit, stacked where they do not — never two and a remainder. */
+.aud-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-2)}
+@media(max-width:1420px){.aud-modes{grid-template-columns:minmax(0,1fr)}}
+.aud-mode{display:flex;align-items:flex-start;gap:9px;padding:10px 11px;text-align:left;
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.aud-mode:hover{border-color:var(--line-2)}
+.aud-mode[data-on]{border-color:var(--accent-line);background:var(--accent-bg);box-shadow:var(--sh)}
+.aud-mode:focus-visible{outline:none;box-shadow:var(--sh-focus);border-color:var(--accent)}
+.aud-mode-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:26px;height:26px;
+  border-radius:var(--r-sm);background:var(--surface-3);border:1px solid var(--line);color:var(--mut)}
+.aud-mode[data-on] .aud-mode-ic{background:var(--surface);border-color:var(--accent-line);color:var(--accent-a)}
+.aud-mode-m{display:flex;flex-direction:column;gap:2px;min-width:0}
+.aud-mode-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.aud-mode[data-on] .aud-mode-t{color:var(--accent-a)}
+.aud-mode-s{font-size:var(--t-xs);color:var(--mut);line-height:1.4}
+
+.aud-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.aud-chip{display:inline-flex;align-items:center;gap:7px;padding:3px 4px 3px 6px;
+  border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface-2)}
+.aud-chip-m{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.aud-chip-m b{font-size:var(--t-xs);color:var(--ink);font-weight:var(--w-semi)}
+.aud-chip-m .mono{font-size:var(--t-micro);color:var(--mut)}
+.aud-clear{font-size:var(--t-xs)}
+
+.aud-reach{display:flex;align-items:center;gap:10px;padding:9px 12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2)}
+.aud-reach-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;
+  border-radius:var(--r-sm);background:var(--accent-bg);border:1px solid var(--accent-line);color:var(--accent-a)}
+.aud-reach-m{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1 1 auto;flex-wrap:wrap}
+.aud-reach-m b{font-size:var(--t-h2);color:var(--ink);letter-spacing:var(--t-h2-ls)}
+.aud-reach-m span{font-size:var(--t-xs);color:var(--mut)}
+
+/* --- Settings form primitives ----------------------------------------------
+   A labelled toggle row and an in-card sub-heading. They live here rather than
+   on the settings page sheet because more than one route renders them, and a
+   page sheet is code-split with its page — so keeping them there meant copying
+   them wherever else the primitive appeared. */
+.settings-toggle{padding:11px 0;border-top:1px solid var(--hair);gap:16px}
+.settings-toggle > div{min-width:0}
+.settings-toggle .t-sm{font-weight:var(--w-semi)}
+/* Sub-heading inside a settings card, for a block that is not its own section. */
+.set-sub-k{margin:var(--sp-5) 0 var(--sp-3);font-size:var(--t-h3);font-weight:var(--w-semi);
+  color:var(--ink);padding-bottom:var(--sp-2);border-bottom:1px solid var(--hair)}
+
+/* --- Attribute mapping table -----------------------------------------------
+   Shared by the provisioning tab and by trust reconciliation. It used to live
+   on the applications page sheet and reach reconciliation only because a
+   component there imported that sheet — an implicit dependency between two
+   pages that would break the moment the import moved. */
+.map-tbl{table-layout:fixed;min-width:900px}
+.map-tbl td,.map-tbl th{white-space:normal}
+.map-tbl td .inp,.map-tbl td .sel{width:100%;min-width:0}
+.map-tbl th.map-flag,.map-tbl td.map-flag{text-align:center}
+.map-tbl td.map-flag .check{display:inline-flex;vertical-align:middle}
+.map-tbl th.td-act,.map-tbl td.td-act{width:80px}
+.map-tbl tr.map-edit td{padding-top:9px;padding-bottom:9px;background:var(--surface-2)}
+.map-tbl tr.map-edit:hover td{background:var(--surface-2)}
+.map-tbl tbody tr.map-edit:last-child td{border-bottom:1px solid var(--hair)}
+.map-unique{
+  display:flex;flex-direction:column;gap:12px;
+  padding:14px var(--sp-4);
+  border-bottom:1px solid var(--hair);background:var(--surface-2);
+}
+.map-unique .grid{max-width:720px}
+.map-idam{display:flex;align-items:center;gap:6px;min-width:0}
+.map-idam>.tag{flex:none}
+.map-tbl tr.map-add td{background:var(--surface-2)}
+.map-tbl tr.map-add:hover td{background:var(--surface-2)}
+.map-tbl tr.map-add .row{align-items:center;flex-wrap:wrap}

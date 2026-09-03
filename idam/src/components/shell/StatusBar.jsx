@@ -1,16 +1,13 @@
-import { useEffect, useState } from 'react'
 import Icon from '../primitives/Icon'
 import { LICENSE } from '../../data/seed'
+import { NOW_MS, clockText, dateText } from '../../lib/clock'
 
-const utc = (d) => `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')} UTC`
-
+// The clock reads from the platform clock, not the browser. It used to tick
+// against real time while every figure in the console was measured from the
+// instant the dataset represents, so the footer quietly contradicted the rest
+// of the screen — a scheduler "due in 6 hours" beside a clock a month past it.
 export default function StatusBar() {
-  const [now, setNow] = useState(() => utc(new Date()))
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(utc(new Date())), 1000)
-    return () => clearInterval(t)
-  }, [])
+  const now = clockText()
 
   return (
     <footer className="statusbar" role="contentinfo">
@@ -43,7 +40,8 @@ export default function StatusBar() {
         <span className="mono">{LICENSE.edition} v1.2.2</span>
       </span>
       <span className="sb-it">
-        <Icon name="clock" /><span className="mono num">{now}</span>
+        <Icon name="clock" />
+        <span className="mono num" title={`Platform time · ${dateText(new Date(NOW_MS))}`}>{now}</span>
       </span>
       <span className="sb-it" title="Connected">
         <span className="live-dot" aria-hidden="true" />

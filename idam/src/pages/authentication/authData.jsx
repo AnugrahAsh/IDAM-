@@ -1,8 +1,32 @@
-import { MFA_METHODS } from '../../data/seed'
+import { MFA_METHODS, USERS } from '../../data/seed'
+import { mfaOf } from '../directory/posture'
 
 export const BASE_PATH = '/iam/mfa'
 
-export const DIRECTORY = 3892
+/**
+ * The population this screen reports on.
+ *
+ * It used to be a fixed 3,892 against per-factor enrolment counts in the
+ * thousands, while the directory it describes holds 46 identities of which the
+ * register says five have no second factor. The two screens then contradicted
+ * each other on the same page load — "coverage 100%" beside "5 not enrolled".
+ * Both now count the same identities the same way.
+ *
+ * Service accounts authenticate with a stored secret, so a second factor does
+ * not apply to them and they are not part of the denominator.
+ */
+export const DIRECTORY = USERS.filter((u) => mfaOf(u).state !== 'na').length
+
+const FACTOR_ID_BY_NAME = { Passkey: 'passkey', TOTP: 'totp', Push: 'push', 'Email OTP': 'email' }
+
+/* How many identities hold each factor, taken from the directory rather than
+   from a standalone constant that could drift away from it. */
+export const ENROLLED_BY_FACTOR = USERS.reduce((acc, u) => {
+  const { state, factor } = mfaOf(u)
+  const id = state === 'on' ? FACTOR_ID_BY_NAME[factor] : null
+  if (id) acc[id] = (acc[id] || 0) + 1
+  return acc
+}, Object.fromEntries(MFA_METHODS.map((m) => [m.id, 0])))
 
 export const STRENGTH = {
   strongest: { tone: 'ok', label: 'Phishing-resistant' },

@@ -4,7 +4,10 @@ import Sidebar from './components/shell/Sidebar'
 import Toasts from './components/shell/Toasts'
 import StatusBar from './components/shell/StatusBar'
 import CommandPalette from './components/shell/CommandPalette'
+import { TITLES, moduleFor } from './data/nav'
 import RouteBoundary from './components/shell/RouteBoundary'
+import EmptyState from './components/primitives/EmptyState'
+import Button from './components/primitives/Button'
 import Drawer from './components/primitives/Drawer'
 import Modal from './components/primitives/Modal'
 import { SkeletonTable } from './components/primitives/Skeleton'
@@ -15,19 +18,36 @@ import { useHotkeys } from './lib/useHotkeys'
 
 // Every route is its own chunk: opening the console downloads the shell and the
 // page being viewed, not all forty-seven screens.
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const DirectoryPage = lazy(() => import('./pages/DirectoryPage'))
 const OrganizationsPage = lazy(() => import('./pages/OrganizationsPage'))
-const AuthenticationPage = lazy(() => import('./pages/AuthenticationPage'))
+const RolesPage = lazy(() => import('./pages/RolesPage'))
+const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'))
+const HierarchyPage = lazy(() => import('./pages/HierarchyPage'))
+const OrphanedPage = lazy(() => import('./pages/OrphanedPage'))
 const RequestsPage = lazy(() => import('./pages/RequestsPage'))
+const AuthenticationPage = lazy(() => import('./pages/AuthenticationPage'))
+const PasswordPolicyPage = lazy(() => import('./pages/PasswordPolicyPage'))
+const JobsPage = lazy(() => import('./pages/JobsPage'))
+const LicensePage = lazy(() => import('./pages/LicensePage'))
+const LdapApplicationsPage = lazy(() => import('./pages/LdapApplicationsPage'))
+const SsoConfigurationsPage = lazy(() => import('./pages/SsoConfigurationsPage'))
 
-// The screens this packet delivers. Every other route in the navigation falls
-// through to PlaceholderPage, which renders the route's own title over a
-// "Screen in progress" card — those surfaces land in later packets.
 const PAGES = {
+  notifications: NotificationsPage,
   users: DirectoryPage,
   organizations: OrganizationsPage,
-  mfa: AuthenticationPage,
+  roles: RolesPage,
+  approvals: ApprovalsPage,
+  organizationHierarchy: HierarchyPage,
+  orphanedpolicy: OrphanedPage,
   requests: RequestsPage,
+  mfa: AuthenticationPage,
+  ldapapplications: LdapApplicationsPage,
+  passwordPolicy: PasswordPolicyPage,
+  jobs: JobsPage,
+  ssoConfigurations: SsoConfigurationsPage,
+  licenses: LicensePage,
 }
 
 // Shown only while a route's chunk is in flight — long enough to notice on a
@@ -42,7 +62,7 @@ function PageFallback() {
 
 export default function App() {
   const { route, segments, navMin, navOpen, setNavOpen, drawer, setDrawer, modal, setModal,
-    closeOverlays, paletteOpen, setPaletteOpen } = useApp()
+    closeOverlays, paletteOpen, setPaletteOpen, can, role, navigate } = useApp()
 
   useHotkeys(useMemo(() => ({
     'mod+k': () => setPaletteOpen((v) => !v),
@@ -50,6 +70,10 @@ export default function App() {
   }), [closeOverlays, setPaletteOpen, setNavOpen]))
 
   const Page = PAGES[route] || PlaceholderPage
+  /* Hiding a link is not access control: the route was still reachable by URL
+     while the console was being viewed as a role that holds nothing for it. */
+  const routeModule = moduleFor(route)
+  const allowed = !routeModule || can(routeModule)
 
   return (
     <div className="app" data-nav={navMin ? 'min' : undefined} data-nav-open={navOpen || undefined}>
@@ -70,7 +94,16 @@ export default function App() {
           <div className="canvas-inner">
             <RouteBoundary route={route} key={route}>
               <Suspense fallback={<PageFallback />}>
-                <Page route={route} segments={segments} />
+                {allowed
+                  ? <Page route={route} segments={segments} />
+                  : (
+                    <EmptyState
+                      icon="noentry"
+                      title={`${role.name} cannot open ${TITLES[route] || 'this module'}`}
+                      body="The console is being viewed as a role that holds no permission for this module. Switch back from the account menu to reach it."
+                      actions={<Button variant="pri" icon="apps" onClick={() => navigate('myapps')}>Go to My Apps</Button>}
+                    />
+                  )}
               </Suspense>
             </RouteBoundary>
           </div>

@@ -39,7 +39,7 @@ const ATTR_ICON = {
   organization: 'layers', mobileNo: 'phone', manager: 'users', retirementDate: 'calendar',
   empCode: 'file', designation: 'roles', department: 'building', officeLevel: 'hierarchy',
   reportingEmpId: 'file', address: 'mapPin', country: 'globe', state: 'globe', city: 'mapPin',
-  postalCode: 'mapPin', discom: 'bolt', zone: 'target', division: 'layers',
+  postalCode: 'mapPin',
 }
 
 
@@ -544,7 +544,11 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
                   hint={strongest ? strongest.name : undefined}
                   tone={strongest ? STRENGTH_TONE[strongest.strength] : 'bad'}
                 />
-                <StatRow label="Password age" value={`${health.passwordAge} days`} hint={`expires in ${health.passwordExpiresIn}d`} />
+                <StatRow
+                  label="Password age"
+                  value={`${health.passwordAge} days`}
+                  hint={health.passwordExpiresIn > 0 ? `expires in ${health.passwordExpiresIn}d` : 'past its expiry'}
+                />
                 <StatRow label="Sign-ins (30d)" value={num(health.signIns30d)} />
                 <StatRow label="Failed sign-ins (30d)" value={num(health.failed30d)} tone={health.failed30d > 3 ? 'warn' : undefined} />
                 <StatRow label="Lockouts (90d)" value={num(health.lockouts90d)} tone={health.lockouts90d ? 'warn' : undefined} />

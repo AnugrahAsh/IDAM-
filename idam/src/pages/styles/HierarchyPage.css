@@ -1,0 +1,131 @@
+/* Page-owned styles for HierarchyPage. Shared primitives remain in src/styles. */
+
+/* Clickable user count on each tree row */
+.hier-count{appearance:none;font-family:inherit;gap:4px;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+.hier-count svg{opacity:.7}
+.hier-count:hover,.hier-count:focus-visible{background:var(--accent-bg-2);border-color:var(--accent-line);color:var(--accent-a)}
+.hier-count:hover svg,.hier-count:focus-visible svg{opacity:1}
+
+/* Inline add / edit / delete actions, revealed on hover or focus */
+.hier-row-act{display:none;align-items:center;gap:2px;flex:none}
+.otree-row:hover .hier-row-act,
+.otree-row:focus-within .hier-row-act,
+.otree-row[data-on="true"] .hier-row-act{display:inline-flex}
+
+/* User list inside the unit drawer */
+.hier-users{display:flex;flex-direction:column}
+.hier-user{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.hier-user:last-child{border-bottom:none}
+.hier-user-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.hier-user-n{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.hier-user-s{font-size:var(--t-xs);color:var(--mut)}
+
+/* --- Navigating a large tree ----------------------------------------------- */
+
+.hier-levels{display:inline-flex;align-items:center;gap:7px}
+.hier-levels-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut)}
+
+/* Where the selection sits, root-first. Each step is a jump back out. */
+.hier-path{display:flex;align-items:center;gap:2px;flex-wrap:wrap;
+  padding:8px var(--sp-3);border-bottom:1px solid var(--hair);background:var(--surface-2)}
+.hier-path-step{display:inline-flex;align-items:center;gap:2px;min-width:0}
+.hier-path-step svg{color:var(--faint);flex:none}
+.hier-path button{background:none;border:0;padding:3px 7px;border-radius:var(--r-xs);font:inherit;
+  font-size:var(--t-xs);color:var(--mut);cursor:pointer;max-width:180px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.hier-path button:hover{background:var(--surface-3);color:var(--ink)}
+.hier-path button[data-on]{color:var(--accent-a);font-weight:var(--w-semi);background:var(--accent-bg)}
+
+/* Filtered matches are a list to jump to, not a shape to read. */
+.hier-results{padding:10px var(--sp-3);border-bottom:1px solid var(--hair);background:var(--surface-2)}
+.hier-results-k{display:block;font-size:var(--t-xs);color:var(--mut);margin-bottom:7px}
+.hier-results-list{display:flex;flex-direction:column;gap:2px}
+.hier-results-list button{display:flex;align-items:center;gap:8px;width:100%;min-width:0;
+  padding:5px 8px;border:0;border-radius:var(--r-xs);background:none;font:inherit;
+  font-size:var(--t-sm);color:var(--ink);cursor:pointer;text-align:left}
+.hier-results-list button:hover{background:var(--accent-bg)}
+.hier-results-list svg{flex:none;color:var(--faint)}
+.hier-results-p{flex:none;max-width:44%;margin-left:auto;font-size:var(--t-xs);color:var(--faint)}
+
+/* The chain from the root to the selection, so a deep unit keeps its context. */
+.otree-row[data-lineage]{background:var(--accent-bg);opacity:.75}
+.otree-row[data-lineage] .ot-n{color:var(--accent-a);font-weight:var(--w-semi)}
+.otree-kids[data-lineage]{border-left-color:var(--accent-line)}
+
+/* The configuration drawer. */
+.hier-cfg{padding:var(--sp-3) var(--sp-4)}
+.hier-cfg-links{display:flex;flex-direction:column}
+.hier-cfg-links button{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  padding:11px var(--sp-4);border:0;border-bottom:1px solid var(--hair);background:none;
+  font:inherit;cursor:pointer}
+.hier-cfg-links button:last-child{border-bottom:0}
+.hier-cfg-links button:hover{background:var(--surface-2)}
+.hier-cfg-links button > span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hier-cfg-links b{font-size:var(--t-sm);color:var(--ink)}
+.hier-cfg-links span span{font-size:var(--t-xs);color:var(--mut)}
+.hier-cfg-links > button > svg:last-child{flex:none;color:var(--faint)}
+
+/* Immediate relationships: parent above, this unit, children below. The
+   vertical rail is the point — it draws the direction the tree runs. */
+.hier-rel{display:flex;flex-direction:column;padding:var(--sp-3) var(--sp-4)}
+.hier-rel-row{display:flex;flex-direction:column;gap:5px;padding:9px 0;position:relative}
+.hier-rel-row[data-kind="self"]{padding-left:14px;border-left:2px solid var(--accent)}
+.hier-rel-row[data-kind="children"]{padding-left:14px;border-left:2px solid var(--line-2)}
+.hier-rel-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--faint)}
+.hier-rel-row button,.hier-rel-self{display:flex;align-items:center;gap:8px;min-width:0;
+  padding:6px 9px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);
+  font:inherit;font-size:var(--t-sm);color:var(--ink);text-align:left}
+.hier-rel-row button{cursor:pointer;width:100%}
+.hier-rel-row button:hover{border-color:var(--accent-line);background:var(--accent-bg)}
+.hier-rel-self{background:var(--accent-bg);border-color:var(--accent-line);font-weight:var(--w-semi)}
+.hier-rel-row svg{flex:none;color:var(--faint)}
+.hier-rel-self svg{color:var(--accent)}
+.hier-rel-n{margin-left:auto;flex:none;font-size:var(--t-xs);color:var(--mut)}
+.hier-rel-none{font-size:var(--t-xs);color:var(--faint);font-style:italic}
+.hier-rel-kids{display:flex;flex-direction:column;gap:4px;max-height:210px;overflow-y:auto}
+
+/* --- Configure hierarchy ---------------------------------------------------- */
+
+/* Level to attribute, one row each. A table would be lighter to write and
+   harder to read: the pairing is the whole point, so each row states the level
+   on the left and the attribute that fills it on the right. */
+.hier-bind{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.hier-bind-h{display:grid;grid-template-columns:1fr 190px;gap:var(--sp-3);align-items:center;
+  padding:7px var(--sp-3);background:var(--surface-2);border-bottom:1px solid var(--hair)}
+.hier-bind-h span{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--faint)}
+.hier-bind-row{display:grid;grid-template-columns:1fr 190px;gap:var(--sp-3);align-items:center;
+  padding:9px var(--sp-3);border-bottom:1px solid var(--hair)}
+.hier-bind-row:last-child{border-bottom:0}
+.hier-bind-row[data-off]{background:var(--warn-bg)}
+.hier-bind-lv{display:flex;align-items:center;gap:9px;min-width:0}
+.hier-bind-n{flex:none;width:20px;height:20px;display:grid;place-items:center;border-radius:var(--r-pill);
+  background:var(--accent-bg-2);color:var(--accent-a);font-size:var(--t-micro);font-weight:var(--w-semi)}
+.hier-bind-row[data-off] .hier-bind-n{background:var(--warn-line);color:var(--warn)}
+.hier-bind-m{display:flex;flex-direction:column;gap:1px;min-width:0}
+.hier-bind-m b{font-size:var(--t-sm);color:var(--ink)}
+.hier-bind-m span{font-size:var(--t-xs);color:var(--mut)}
+
+/* Keeping unmatched identities is a choice with a consequence, so it reads as a
+   sentence with a switch rather than a bare checkbox. */
+.hier-opt{display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3);
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2)}
+.hier-opt-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hier-opt-m b{font-size:var(--t-sm);color:var(--ink)}
+.hier-opt-m span{font-size:var(--t-xs);color:var(--mut)}
+
+/* What the selection would do, before it is applied. */
+.hier-cmp{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);
+  border:1px solid var(--line);border-radius:var(--r-lg)}
+.hier-cmp > svg{flex:none;color:var(--faint)}
+.hier-cmp-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hier-cmp-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--faint)}
+.hier-cmp-v{font-size:var(--t-h1);font-weight:var(--w-semi);color:var(--ink);line-height:1.1}
+.hier-cmp-col[data-next="true"] .hier-cmp-v{color:var(--accent-a)}
+.hier-cmp-s{font-size:var(--t-xs);color:var(--mut)}
+
+/* The bound attributes, read as a chain on the record. */
+.hier-bound{display:flex;flex-wrap:wrap;gap:4px}

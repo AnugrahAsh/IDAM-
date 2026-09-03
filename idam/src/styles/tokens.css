@@ -1,5 +1,5 @@
 :root{
-  --ink:#111827; --ink-2:#3B4453; --mut:#57606D; --faint:#636C7A;
+  --ink:#111827; --ink-2:#3B4453; --mut:#57606D; --faint:#636C7A; --mut-solid:#57606D;
   --bg:#EFF1F4; --bg-2:#E9ECF1; --glass:#FFFFFF; --side-bg:#FCFCFD; --row-hover:#F4F7FC; --surface:#FFFFFF; --surface-2:#F7F8FA; --surface-3:#F1F3F6;
 
   --shell:#101B30; --shell-2:#182742; --shell-line:#2A3A5A; --shell-ink:#E7ECF5; --shell-mut:#93A1BC;
@@ -16,7 +16,7 @@
   --link:#0F62FE;
   --accent-bg:#EDF4FF; --accent-bg-2:#DCE9FF; --accent-line:#B8D0FA;
 
-  --ok:#0E7A46; --ok-bg:#E5F5EC; --ok-line:#BFE6CF;
+  --ok:#0E7A46; --ok-bg:#E5F5EC; --ok-line:#BFE6CF; --ok-solid:#0E7A46;
   --warn:#9A5B00; --warn-bg:#FCF2DF; --warn-line:#F0D9A8; --warn-core:#E8A317;
   --bad:#C21E2E; --bad-bg:#FCEAEC; --bad-line:#F4C2C7; --bad-solid:#C21E2E;
   --info:#0B65B8; --info-bg:#E6F2FC; --info-line:#BBDCF6;
@@ -71,10 +71,15 @@
   --z-nav:40; --z-hdr:60; --z-fly:85; --z-scrim:90; --z-drawer:100; --z-modal:120; --z-menu:140; --z-toast:200;
 }
 
-:root[data-density="compact"]{ --row-h:29px; --canvas-px:18px; --td-py:3px; --cell-gap:0px; }
+/* The two densities are a real choice, not a two-pixel one. Comfortable is the
+   base scale below; compact tightens the row box, the gutter and the cell
+   padding together so a register reads as a dense list rather than a loosened
+   table. Card geometry lives with the card, in components.css. */
+:root[data-density="comfortable"]{ --row-h:42px; --canvas-px:22px; --td-py:10px; --cell-gap:3px; }
+:root[data-density="compact"]{ --row-h:28px; --canvas-px:16px; --td-py:2px; --cell-gap:0px; }
 
 :root[data-theme="dark"]{
-  --ink:#E8ECF3; --ink-2:#B4BECE; --mut:#98A3B5; --faint:#8A94A8;
+  --ink:#E8ECF3; --ink-2:#B4BECE; --mut:#98A3B5; --faint:#8A94A8; --mut-solid:#4B5567;
   --bg:#0E1420; --bg-2:#0A0F19; --side-bg:#121A28; --row-hover:#1B2740; --surface:#161D2B; --surface-2:#1C2534; --surface-3:#232C3E;
   --shell:#0B1220; --shell-2:#141E32; --shell-line:#26324B; --shell-ink:#E7ECF5; --shell-mut:#93A1BC;
   --line:#2A3346; --line-2:#38435C; --hair:#212A3A;
@@ -84,7 +89,7 @@
   --accent-solid:#2B69DE; --accent-solid-h:#2359C4;
   --link:#5E97FF;
   --accent-bg:#15233C; --accent-bg-2:#1E3252; --accent-line:#2F4A78;
-  --ok:#3ED08A; --ok-bg:#112A1E; --ok-line:#205238;
+  --ok:#3ED08A; --ok-bg:#112A1E; --ok-line:#205238; --ok-solid:#1C7A4E;
   --warn:#F0B429; --warn-bg:#2A2411; --warn-line:#524621; --warn-core:#E8A317;
   --bad:#FF6B75; --bad-bg:#2B1519; --bad-line:#58282F; --bad-solid:#C4303C;
   --info:#57A7F2; --info-bg:#122536; --info-line:#26496A;

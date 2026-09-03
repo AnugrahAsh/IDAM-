@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { BASE, BY_PATH, DETAIL_ROUTES, LEGACY, pathFor } from '../data/nav'
 import { useLocalState } from '../lib/useLocalState'
+import { can as canWith, grantsFor, roleFor } from '../lib/access'
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
@@ -30,6 +31,9 @@ export function AppProvider({ children }) {
   const [route, setRoute] = useState(initial.id)
   const [segments, setSegments] = useState(initial.segments || [])
   const [density, setDensity] = useLocalState('tf-idam-density', 'comfortable')
+  /* Which role the console is being viewed as. Screens that fold an admin
+     surface into a user-facing page read this to decide whether to offer it. */
+  const [roleId, setRoleId] = useLocalState('tf-idam-roleid', 1)
   const [navMin, setNavMin] = useLocalState('tf-idam-navmin', false)
   const [navOpen, setNavOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -96,6 +100,10 @@ export function AppProvider({ children }) {
     return id
   }, [])
 
+  const grants = useMemo(() => grantsFor(roleId), [roleId])
+  const role = useMemo(() => roleFor(roleId), [roleId])
+  const can = useCallback((module, perm) => canWith(grants, module, perm), [grants])
+
   const confirm = useCallback((cfg) => setModal({ kind: 'confirm', tone: 'bad', ...cfg }), [])
   const closeOverlays = useCallback(() => {
     setDrawer(null)
@@ -105,13 +113,14 @@ export function AppProvider({ children }) {
   const value = useMemo(() => ({
     route, segments, navigate,
     density, setDensity,
+    roleId, setRoleId, role, grants, can,
     navMin, setNavMin, navOpen, setNavOpen,
     paletteOpen, setPaletteOpen,
     theme, toggleTheme,
     toasts, toast, dismissToast,
     drawer, setDrawer, modal, setModal, confirm,
     closeOverlays,
-  }), [route, segments, navigate, density, setDensity, navMin, setNavMin,
+  }), [route, segments, navigate, density, setDensity, roleId, setRoleId, role, grants, can, navMin, setNavMin,
     navOpen, paletteOpen, theme, toggleTheme,
     toasts, toast, dismissToast, drawer, modal, confirm, closeOverlays])
 

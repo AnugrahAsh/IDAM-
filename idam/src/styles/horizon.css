@@ -236,8 +236,8 @@ tr:hover .row-actions, tr:focus-within .row-actions { opacity: 1 }
 }
 
 /* --- 10. LAYOUT GRAMMAR -------------------------------------------------- */
-.grid-23 { display: grid; grid-template-columns: 1.9fr 1fr; gap: 10px }
-.grid-32 { display: grid; grid-template-columns: 1fr 1.9fr; gap: 10px }
+.grid-23 { display: grid; grid-template-columns: minmax(0,1.9fr) minmax(0,1fr); gap: 10px }
+.grid-32 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.9fr); gap: 10px }
 .cols-6 { grid-template-columns: repeat(6, minmax(0,1fr)) }
 .cols-5 { grid-template-columns: repeat(5, minmax(0,1fr)) }
 .cols-4 { grid-template-columns: repeat(4, minmax(0,1fr)) }

@@ -1,0 +1,39 @@
+/* Page-owned styles for ApprovalsPage. Shared primitives remain in src/styles. */
+
+/* Requested-changes panel: highlighted old → new rows for every request type */
+.apv-diffs{display:flex;flex-direction:column;gap:8px;min-width:0}
+.apv-diff{border:1px solid var(--line);border-left-width:3px;border-radius:var(--r-sm);
+  background:var(--surface);padding:8px 11px;min-width:0}
+.apv-diff[data-kind="add"]{border-left-color:var(--ok)}
+.apv-diff[data-kind="remove"]{border-left-color:var(--bad)}
+.apv-diff[data-kind="modify"]{border-left-color:var(--warn-core)}
+.apv-diff-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.apv-diff-ic{display:inline-flex;color:var(--mut)}
+.apv-diff-ic[data-kind="add"]{color:var(--ok)}
+.apv-diff-ic[data-kind="remove"]{color:var(--bad)}
+.apv-diff-ic[data-kind="modify"]{color:var(--warn)}
+.apv-diff-field{font-size:var(--t-sm);font-weight:var(--w-semi)}
+.apv-diff-vals{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+.apv-old{font-size:var(--t-xs);padding:1px 6px;border-radius:var(--r-xs);
+  background:var(--bad-bg);border:1px solid var(--bad-line);color:var(--bad);text-decoration:line-through}
+.apv-arr{display:inline-flex;color:var(--mut)}
+.apv-new{font-size:var(--t-xs);padding:1px 6px;border-radius:var(--r-xs);
+  background:var(--ok-bg);border:1px solid var(--ok-line);color:var(--ok)}
+.apv-new[data-edited="true"]{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent-deep)}
+.apv-edit-ctl{display:flex;align-items:center;gap:6px;flex:1;min-width:220px}
+.apv-edit-ctl .sel,.apv-edit-ctl .inp{flex:1;min-width:0}
+.apv-diff-notes{margin-top:8px;padding-top:7px;border-top:1px dashed var(--line);
+  display:flex;flex-direction:column;gap:4px}
+.apv-note{display:flex;align-items:flex-start;gap:6px;font-size:var(--t-xs);color:var(--ink-2);min-width:0}
+.apv-note svg{flex:none;margin-top:2px;color:var(--warn)}
+.apv-note[data-you="true"]{color:var(--accent-deep)}
+.apv-note[data-you="true"] svg{color:var(--accent)}
+.apv-note .mono{font-size:var(--t-xs)}
+.apv-note-time{margin-left:auto;flex:none;color:var(--faint);white-space:nowrap}
+
+/* Approver timeline: level-by-level workflow with roles, decisions and edits */
+.apv-lvl-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.apv-lvl-role{margin-top:2px}
+.apv-lvl-note{margin-top:4px;font-style:italic}
+.apv-lvl-edits{margin-top:6px;display:flex;flex-direction:column;gap:4px;
+  padding:6px 8px;border-radius:var(--r-sm);background:var(--surface-2)}

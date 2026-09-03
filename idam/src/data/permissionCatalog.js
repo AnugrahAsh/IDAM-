@@ -111,32 +111,37 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
-    name: 'IP Restriction Policy',
-    legacy: ['Network Restrictions'],
+    name: 'Network Access Policies',
+    legacy: ['Network Restrictions', 'IP Restriction Policy'],
     desc: 'Network ranges an identity or application is allowed to authenticate from.',
     perms: [
-      'Add IP Restriction Policy', 'Modify IP Restriction Policy', 'Delete IP Restriction Policy',
-      'Bulk Delete IP Restriction Policies', 'Bulk Modify IP Restriction Policies',
-      'Change Status', 'Import IP Restriction Policies', 'Export IP Restriction Policies',
-      'View IP Restriction Policies List',
+      'Add Network Access Policy', 'Modify Network Access Policy', 'Delete Network Access Policy',
+      'Bulk Delete Network Access Policies', 'Bulk Modify Network Access Policies',
+      'Change Status', 'Import Network Access Policies', 'Export Network Access Policies',
+      'View Network Access Policies List',
     ],
   },
   {
-    name: 'Jobs Management',
-    legacy: ['Jobs'],
+    name: 'Background Jobs',
+    legacy: ['Jobs', 'Jobs Management'],
     desc: 'The asynchronous work queue and its per-job evidence.',
     perms: ['Close Job', 'Remove Job', 'View and Download Job Details', 'View Jobs List'],
   },
   {
     name: 'LDAP Applications',
     legacy: ['LDAP Directories'],
-    desc: 'Directory connections the platform binds to and reads.',
+    desc: 'Directory connections the platform binds to and reads, and the rules that write identities into them.',
     perms: [
       ...CRUD('LDAP Application', 'LDAP Applications'),
       'Add Configuration', 'Modify Configuration', 'Delete Configuration',
       'Test Connection', 'Test Authentication',
       'Sync LDAP Application Users', 'View LDAP Application Dashboard',
       'View LDAP Application Users', 'Export LDAP Application Users',
+      // A provisioning rule is a child of the directory it writes into, so the
+      // capability is named here rather than as an estate-wide grant of its
+      // own — "edit this directory's rules" is now a thing a role can say.
+      'Add Provisioning Rule', 'Modify Provisioning Rule', 'Delete Provisioning Rule',
+      'View Provisioning Rules',
     ],
   },
   {
@@ -146,8 +151,9 @@ export const PERMISSION_MODULES = [
   },
   { name: 'License', desc: 'Entitlement and expiry of the platform licence.', perms: ['View License Details'] },
   {
-    name: 'Logging',
-    desc: 'What the platform captures and where it ships it.',
+    name: 'Security Events',
+    legacy: ['Logging', 'SIEM Logs'],
+    desc: 'What the platform captures as a security event, and where it ships it.',
     perms: ['Configure Access Approval Logs', 'View System Logs'],
   },
   {
@@ -157,23 +163,26 @@ export const PERMISSION_MODULES = [
   },
   { name: 'My Apps', desc: 'The self-service application catalog.', perms: ['View My Apps List'] },
   { name: 'My profile', legacy: ['My Profile'], desc: 'The signed-in identity’s own record.', perms: ['My profile', 'Change Password', 'Give Consent'] },
-  { name: 'Notifications', desc: 'Announcements delivered to the signed-in identity.', perms: ['View User Notifications List'] },
   {
-    name: 'Notifications Management',
-    desc: 'Authoring the announcements every identity sees.',
-    perms: [...CRUD('Notification', 'Notifications'), 'Change Status'],
+    // One page, one module: the viewer permission and the authoring
+    // permissions gate two views of the same Notification Center.
+    name: 'Notification Center',
+    legacy: ['Notifications', 'Notifications Management', 'Notification Management'],
+    desc: 'Announcements delivered to the signed-in identity, and the authoring of them.',
+    perms: ['View User Notifications List', ...CRUD('Notification', 'Notifications'), 'Change Status'],
   },
   {
-    name: 'Organizational Hierarchy',
-    legacy: ['Org Hierarchy'],
+    name: 'Organization Structure',
+    legacy: ['Org Hierarchy', 'Organizational Hierarchy', 'Organization Hierarchy'],
     desc: 'The reporting tree and the lookup it is built from.',
     perms: ['Configure', 'Modify Configuration', 'Delete Configuration', 'View Hierarchy', 'View User', 'Export User'],
   },
   { name: 'Organizations', desc: 'Tenant organizations and their inheritance.', perms: CRUD('Organization', 'Organizations') },
   {
-    name: 'Orphaned Accounts',
+    name: 'Orphan Accounts',
+    legacy: ['Orphaned Accounts'],
     desc: 'Detection rules for target accounts with no matching identity.',
-    perms: ['Add Orphaned Rule', 'Modify Orphaned Rule', 'Delete Orphaned Rule', 'View Details', 'View Rules'],
+    perms: ['Add Orphan Rule', 'Modify Orphan Rule', 'Delete Orphan Rule', 'View Details', 'View Rules'],
   },
   { name: 'Password Dictionary', desc: 'The banned-substring register credentials are checked against.', perms: ['Configure Password Dictionary'] },
   {
@@ -209,7 +218,7 @@ export const PERMISSION_MODULES = [
       'View Reports List', 'View Admin Audit Trail Report', 'View User Access Report',
       'View Application Access Report', 'View Role Mapping Report', 'View User-Group Report',
       'View SMS-OTP Report', 'View Login Activity Report', 'View Recertification Report',
-      'View Orphaned Accounts Report', 'View Pam Access Report List',
+      'View Orphan Accounts Report', 'View Pam Access Report List',
     ],
   },
   {
@@ -289,7 +298,7 @@ export const PERMISSION_MODULES = [
     perms: [
       'Organization Logo', 'Username Casing', 'Set/Reset Email Link Expire Time', 'OTP Expire Time',
       'Default Redirect after logout', 'Password Flow Configuration', 'Region flows',
-      'Manage Approval Level', 'SMS Service', "Redirect Uri's", 'Device Based Authentication',
+      'Manage Approval Level', 'SMS Service', "Redirect Uri's", 'Device Trust',
       'Password Creation Link SMS', 'Manage API Payload Encryption',
     ],
   },
@@ -301,11 +310,12 @@ export const PERMISSION_MODULES = [
       'Import User', 'Modify User', 'Sync User', 'Trust Reconciliation User',
     ],
   },
-  { name: 'Useful Links', desc: 'The published link list end users see.', perms: ['View Useful Links'] },
   {
-    name: 'Useful Links Management',
-    desc: 'Authoring the published link list.',
-    perms: [...CRUD('Useful Link', 'Useful Links'), 'Change Status'],
+    // Same merge as the Notification Center: one page, one module.
+    name: 'Quick Links',
+    legacy: ['Useful Links', 'Useful Links Management'],
+    desc: 'The published shortcut list end users see, and the authoring of it.',
+    perms: ['View Quick Links', ...CRUD('Quick Link', 'Quick Links'), 'Change Status'],
   },
   {
     name: 'Users',
@@ -355,7 +365,7 @@ export const isWritePerm = (p) => !/^(View|Export)\b/i.test(String(p))
 const BANDS = [
   { id: 'read', label: 'Read and visibility', test: (p) => /^View\b/i.test(p) },
   { id: 'create', label: 'Create', test: (p) => /^(Add|Create|Raise|Initiate|Import)\b/i.test(p) && !/^Import Bulk|^Import Groups/i.test(p) },
-  { id: 'modify', label: 'Modify and configure', test: (p) => /^(Modify|Edit|Update|Change|Configure|Set|Assign|Publish|Enable|Activate|Application Ip|Password Flow|Region flows|Organization Logo|Username Casing|OTP Expire|Default Redirect|Manage|Employee Type|Email Creation|Username Creation|Consent Attribute|Device Based|SMS Service|Password Creation|My profile|Redirect Uri)/i.test(p) },
+  { id: 'modify', label: 'Modify and configure', test: (p) => /^(Modify|Edit|Update|Change|Configure|Set|Assign|Publish|Enable|Activate|Application Ip|Password Flow|Region flows|Organization Logo|Username Casing|OTP Expire|Default Redirect|Manage|Employee Type|Email Creation|Username Creation|Consent Attribute|Device Trust|SMS Service|Password Creation|My profile|Redirect Uri)/i.test(p) },
   { id: 'remove', label: 'Remove and revoke', test: (p) => /^(Delete|Remove|Reject|Revoke|Close)\b/i.test(p) },
   { id: 'bulk', label: 'Bulk and data', test: (p) => /(Bulk|^Import|^Export)/i.test(p) },
   { id: 'ops', label: 'Operations', test: () => true },
@@ -384,7 +394,7 @@ export const PERMISSION_CATALOG = PERMISSION_MODULES.map((m) => ({
  * module's own equivalents.
  */
 const GENERIC_EXPANSION = {
-  'View list': (m) => m.perms.filter((p) => /^View .*(List|Hierarchy|Configuration|Attributes|Roles|Useful Links)$/i.test(p) || /^View (My Apps List|Reports List|System Logs|List|Rules|Details)$/i.test(p)),
+  'View list': (m) => m.perms.filter((p) => /^View .*(List|Hierarchy|Configuration|Attributes|Roles|Quick Links)$/i.test(p) || /^View (My Apps List|Reports List|System Logs|List|Rules|Details)$/i.test(p)),
   View: (m) => m.perms.filter((p) => /Details$|^View Specific|^View Hierarchy$|^View User$|^My profile$/i.test(p)),
   Create: (m) => m.perms.filter((p) => /^(Add|Create|Raise)\b/i.test(p)),
   Edit: (m) => m.perms.filter((p) => /^(Modify|Edit|Update|Configure|Change)\b/i.test(p)),

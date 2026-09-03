@@ -14,38 +14,42 @@ export const ORGS = ['Tanflow','Tanflow · Finance','Tanflow · Engineering','Ta
 export const DEPARTMENTS = ['Engineering','Finance','Human Resources','IT Operations','Sales','Security','Compliance','Support']
 export const LOCATIONS = ['Mumbai','Bengaluru','New Delhi','Chennai','Dehradun','Singapore','Dubai','London']
 
+/* The console works at two scales and used to leave that unsaid, so figures
+   that were never comparable read as contradictions: the identity register
+   below holds a 46-record working sample, while the tenant the platform
+   actually governs is this size. Everything platform-wide is measured from
+   here rather than from a literal repeated in a dozen files. */
+export const PLATFORM_IDENTITIES = 3892
+
 const day = (n) => {
   const d = new Date(Date.UTC(2026, 7, 5) - n * 86400000)
   return d.toISOString().slice(0, 10)
 }
-const stamp = (n, h = 9) => `${day(n)} ${String(h % 24).padStart(2, '0')}:${String((n * 7) % 60).padStart(2, '0')}`
+// `n` may be negative for a future stamp, and a negative modulus produced
+// minutes like `01:-7` that every reader then had to sanitise.
+const stamp = (n, h = 9) => `${day(n)} ${String(((h % 24) + 24) % 24).padStart(2, '0')}:${String((((n * 7) % 60) + 60) % 60).padStart(2, '0')}`
 export const relTime = (n) => (n === 0 ? 'just now' : n < 60 ? `${n}m ago` : n < 1440 ? `${Math.floor(n / 60)}h ago` : `${Math.floor(n / 1440)}d ago`)
 
 export const SECTIONS = [
   { id: 'general', name: 'General Details', internal: 'general_details', order: 1, system: true },
   { id: 'professional', name: 'Professional Details', internal: 'professional_details', order: 2, system: true },
   { id: 'residential', name: 'Residential Details', internal: 'residential_details', order: 3, system: true },
-  { id: 'location', name: 'User Location', internal: 'Vlgg', order: 4, system: false },
+  { id: 'location', name: 'Work Location', internal: 'work_location', order: 4, system: false },
 ]
 
 export const LOOKUPS = {
   employee_type: ['Internal', 'External', 'Contractor', 'Service Account'],
-  office_level: ['Corporate', 'Zonal', 'Divisional', 'Sub-Divisional', 'Field'],
+  office_level: ['Corporate', 'Regional', 'Divisional', 'Branch', 'Field'],
   department: DEPARTMENTS,
   country: ['India', 'Singapore', 'United Arab Emirates', 'United Kingdom'],
   state: ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Uttarakhand'],
   city: LOCATIONS,
-  discom: ['UPCL', 'PVVNL', 'MVVNL', 'DVVNL'],
-  zone: ['North Zone', 'South Zone', 'East Zone', 'West Zone'],
-  division: ['Division I', 'Division II', 'Division III'],
   // Regions are tenant configuration: Settings → Regions is the register, and
   // this lookup is what the identity form offers.
-  regions: ['India', 'Pakistan', 'UAE', 'UK', 'USA'],
-  sdo: ['SDO North', 'SDO South', 'SDO East', 'SDO West', 'SDO Central'],
-  sub_division: ['Sub Division A', 'Sub Division B', 'Sub Division C', 'Sub Division D'],
-  posting_loc: [...LOCATIONS],
+  regions: ['APAC', 'EMEA', 'Americas', 'LATAM'],
+  business_unit: ['Corporate', 'Technology', 'Operations', 'Commercial', 'Shared Services'],
+  site: [...LOCATIONS],
   role_name: ['Global Identity Administrator', 'Access Approver', 'Auditor', 'Helpdesk Operator', 'Provisioning Engineer', 'Resource Owner', 'Standard User'],
-  register_type: ['Primary', 'Secondary', 'Provisional'],
 }
 
 const ATTR_DEFS = [
@@ -68,30 +72,18 @@ const ATTR_DEFS = [
   { id: 'state', label: 'State', type: 'select', src: 'state', section: 'residential', col: false, order: 3 },
   { id: 'city', label: 'City', type: 'select', src: 'city', section: 'residential', col: false, order: 4 },
   { id: 'postalCode', label: 'Postal code', type: 'text', section: 'residential', col: false, order: 5 },
-  { id: 'discom', label: 'Discom', type: 'select', src: 'discom', section: 'location', col: false, order: 1 },
-  { id: 'zone', label: 'Zone', type: 'select', src: 'zone', section: 'location', col: false, order: 2 },
-  { id: 'division', label: 'Division', type: 'select', src: 'division', section: 'location', col: false, order: 3 },
   // ---------------------------------------------------------------------
   // Tenant-defined attributes. These are not platform attributes: they were
   // created through Configurations → Attributes by the tenant, and they are
   // carried here so existing identity records round-trip rather than losing
   // the columns they are stored under.
   // ---------------------------------------------------------------------
-  { id: 'regions', label: 'Regions', type: 'lookup', src: 'regions', section: 'location', col: true, order: 4, adminPerm: 'Read & write' },
-  { id: 'sdo', label: 'SDO', type: 'lookup', src: 'sdo', section: 'location', col: true, order: 5, adminPerm: 'Read & write' },
-  { id: 'sub_division', label: 'Sub Division', type: 'lookup', src: 'sub_division', section: 'location', col: true, order: 6, adminPerm: 'Read & write' },
-  { id: 'posting_loc', label: 'Posting Loc', type: 'lookup', src: 'posting_loc', section: 'location', col: true, order: 7, adminPerm: 'Read & write' },
+  { id: 'region', label: 'Region', type: 'lookup', src: 'regions', section: 'location', col: true, order: 1, adminPerm: 'Read & write' },
+  { id: 'businessUnit', label: 'Business unit', type: 'lookup', src: 'business_unit', section: 'location', col: true, order: 2, adminPerm: 'Read & write' },
+  { id: 'site', label: 'Site', type: 'lookup', src: 'site', section: 'location', col: true, order: 3, adminPerm: 'Read & write' },
+  { id: 'costCenter', label: 'Cost centre', type: 'text', section: 'location', col: true, order: 4, adminPerm: 'Read & write', unique: false },
   { id: 'office_id', label: 'Office Id', type: 'text', section: 'professional', col: true, order: 6, adminPerm: 'Read & write', unique: true },
-  { id: 'designation_id', label: 'Designation Id', type: 'text', section: 'professional', col: true, order: 7, adminPerm: 'Read & write' },
-  { id: 'rolename', label: 'Rolename', type: 'lookup', src: 'role_name', section: 'professional', col: true, order: 8, adminPerm: 'Read only' },
-  { id: 'role', label: 'Role', type: 'lookup', src: 'role_name', section: 'professional', col: true, order: 9, adminPerm: 'Read only' },
-  { id: 're_employee_rol', label: 'RE_EMPLOYEE_ROL', type: 'text', section: 'professional', col: false, order: 10, adminPerm: 'Hide' },
-  { id: 'empmobile', label: 'Empmobile', type: 'tel', telFormat: 'National (10 digits)', section: 'general', col: true, order: 10, adminPerm: 'Read & write' },
-  { id: 'resgister', label: 'Resgister', type: 'lookup', src: 'register_type', section: 'general', col: false, order: 11, adminPerm: 'Read & write' },
-  { id: 'titan_test', label: 'TITAN_TEST', type: 'text', section: 'general', col: false, order: 12, adminPerm: 'Read only' },
-  { id: 'testing', label: 'Testing', type: 'text', section: 'general', col: false, order: 13, adminPerm: 'Read only' },
-  { id: 'rpjbqozbsn', label: 'Rpjbqozbsn', type: 'text', section: 'general', col: false, order: 14, adminPerm: 'Read only' },
-  { id: 'testnew', label: 'testnew', type: 'text', section: 'general', col: false, order: 15, adminPerm: 'Read only' },
+  { id: 'role', label: 'Role', type: 'lookup', src: 'role_name', section: 'professional', col: true, order: 7, adminPerm: 'Read only' },
 ]
 
 /** Administrator visibility of an attribute, as the schema editor defines it. */
@@ -108,8 +100,21 @@ export const ATTRS = ATTR_DEFS.map((a) => ({
 }))
 
 const STATUSES = ['Active','Active','Active','Active','Locked','Disabled','Active','Pending']
+/* Two identities sharing an email address is not a fixture quirk, it is a
+   duplicate identity — the one thing an identity store must not contain. The
+   pair is therefore derived from the index and advanced until it is unused,
+   rather than drawn at random and left to collide. */
+const usedNames = new Set()
+const namePair = (i) => {
+  const fi = i % FIRST.length
+  let li = (i * 7) % LAST.length
+  for (let n = 0; n < LAST.length && usedNames.has(`${fi}:${li}`); n += 1) li = (li + 1) % LAST.length
+  usedNames.add(`${fi}:${li}`)
+  return [FIRST[fi], LAST[li]]
+}
+
 export const USERS = Array.from({ length: 46 }, (_, i) => {
-  const f = pick(FIRST), l = pick(LAST)
+  const [f, l] = namePair(i)
   const status = STATUSES[i % STATUSES.length]
   const type = i % 11 === 0 ? 'Service Account' : i % 7 === 0 ? 'Contractor' : i % 5 === 0 ? 'External' : 'Internal'
   return {
@@ -127,20 +132,16 @@ export const USERS = Array.from({ length: 46 }, (_, i) => {
     reportingEmpId: 'EMP' + (1000 + (i % 12)),
     address: `${int(1, 90)} Sector ${int(2, 18)}`,
     country: 'India', state: pick(LOOKUPS.state), city: pick(LOCATIONS), postalCode: '4000' + int(10, 89),
-    discom: pick(LOOKUPS.discom), zone: pick(LOOKUPS.zone), division: pick(LOOKUPS.division),
     // Tenant-defined attributes. Populated so the restored columns and filters
     // have something to show rather than a directory of empty cells.
-    regions: pick(LOOKUPS.regions), sdo: pick(LOOKUPS.sdo),
-    sub_division: pick(LOOKUPS.sub_division), posting_loc: pick(LOOKUPS.posting_loc),
+    region: pick(LOOKUPS.regions),
+    businessUnit: pick(LOOKUPS.business_unit),
+    site: pick(LOOKUPS.site),
+    costCenter: 'CC' + (1000 + (i % 12)),
     office_id: 'OFC' + (100 + (i % 40)),
-    designation_id: 'DSG' + (10 + (i % 7)),
-    rolename: pick(LOOKUPS.role_name), role: pick(LOOKUPS.role_name),
-    re_employee_rol: i % 3 ? '' : 'RE' + (2000 + i),
-    empmobile: '9' + int(500000000, 999999999),
-    resgister: pick(LOOKUPS.register_type),
-    titan_test: '', testing: '', rpjbqozbsn: '', testnew: '',
+    role: pick(LOOKUPS.role_name),
     retirementDate: '',
-    lastLogin: stamp(i % 30, 8 + (i % 10)),
+    lastLogin: stamp(Math.floor((i * 29) / 45), 8 + (i % 10)),
     createdOn: stamp(60 + (i % 120)),
     createdBy: 'admin',
   }
@@ -174,7 +175,7 @@ export const ROLES = [
   { id: 4, name: 'Helpdesk Operator', description: 'Credential and MFA recovery for end users. No entitlement changes.', members: 18, risk: 'medium', scope: 'Global' },
   { id: 5, name: 'Provisioning Engineer', description: 'Manages target connectors, reconciliation and provisioning pipelines.', members: 6, risk: 'high', scope: 'Applications' },
   { id: 6, name: 'Resource Owner', description: 'Owns an application and attests to who holds access to it.', members: 31, risk: 'medium', scope: 'Delegated' },
-  { id: 7, name: 'Standard User', description: 'Baseline self-service entitlements for every directory identity.', members: 3892, system: true, risk: 'low', scope: 'Global' },
+  { id: 7, name: 'Standard User', description: 'Baseline self-service entitlements available to any directory identity.', members: PLATFORM_IDENTITIES, system: true, risk: 'low', scope: 'Global' },
 ]
 
 export const ROLE_PERMS = {
@@ -188,10 +189,10 @@ export const ROLE_PERMS = {
     only('Application Groups', 'View Application Group Details', 'View Application Groups List'),
   ]),
   3: Object.fromEntries([
-    only('Logging', 'View System Logs'),
+    only('Security Events', 'View System Logs'),
     only('Reports', 'View Reports List', 'View Admin Audit Trail Report', 'View User Access Report',
       'View Application Access Report', 'View Role Mapping Report', 'View User-Group Report',
-      'View Login Activity Report', 'View Recertification Report', 'View Orphaned Accounts Report'),
+      'View Login Activity Report', 'View Recertification Report', 'View Orphan Accounts Report'),
     only('Recertification', 'View Campaign Details', 'View Campaigns List', 'Export Campaign Users Status'),
     only('Users', 'View User Details', 'View Users List', 'Recent Activity'),
     only('Organizations', 'View Organization Details', 'View Organizations List'),
@@ -207,7 +208,7 @@ export const ROLE_PERMS = {
     only('Trust Reconciliation', 'View Trust Source Details', 'View Trust Sources List', 'Sync User'),
     only('LDAP Applications', 'View LDAP Application Details', 'View LDAP Applications List',
       'Test Connection', 'Test Authentication', 'Sync LDAP Application Users', 'View LDAP Application Dashboard'),
-    only('Jobs Management', 'View Jobs List', 'View and Download Job Details', 'Close Job'),
+    only('Background Jobs', 'View Jobs List', 'View and Download Job Details', 'Close Job'),
     only('Schedulers', 'View Scheduler Details', 'View Schedulers List', 'View Scheduler logs', 'Start or stop'),
   ]),
   6: Object.fromEntries([
@@ -219,8 +220,8 @@ export const ROLE_PERMS = {
     only('My Apps', 'View My Apps List'),
     only('My profile', 'My profile', 'Change Password', 'Give Consent'),
     only('Access Requests', 'Add Access Request', 'View Access Requests List', 'Raise Other Request', 'Track Request'),
-    only('Useful Links', 'View Useful Links'),
-    only('Notifications', 'View User Notifications List'),
+    only('Quick Links', 'View Quick Links'),
+    only('Notification Center', 'View User Notifications List'),
   ]),
 }
 
@@ -240,7 +241,7 @@ export const CONNECTOR_TYPES = [
 ]
 
 export const APPLICATIONS = [
-  { id: 1, name: 'AD_CORP', displayName: 'Active Directory · Corporate', connector: 'ad', method: 'Active Directory', status: 'Healthy', accounts: 3892, orphans: 42, lastSync: stamp(0, 4), owner: 'IT Operations', host: 'dc01.tanflow.internal', port: '636' },
+  { id: 1, name: 'AD_CORP', displayName: 'Active Directory · Corporate', connector: 'ad', method: 'Active Directory', status: 'Healthy', accounts: PLATFORM_IDENTITIES, orphans: 42, lastSync: stamp(0, 4), owner: 'IT Operations', host: 'dc01.tanflow.internal', port: '636' },
   { id: 2, name: 'WORKDAY_HR', displayName: 'Workday HR', connector: 'scim', method: 'SCIM 2.0', status: 'Healthy', accounts: 4120, orphans: 6, lastSync: stamp(0, 6), owner: 'Human Resources', host: 'api.workday.com', port: '443' },
   { id: 3, name: 'SALESFORCE', displayName: 'Salesforce CRM', connector: 'api', method: 'REST API', status: 'Degraded', accounts: 310, orphans: 9, lastSync: stamp(1, 22), owner: 'Sales', host: 'tanflow.my.salesforce.com', port: '443' },
   { id: 4, name: 'ENTRA_TENANT', displayName: 'Microsoft Entra ID', connector: 'msentra', method: 'Entra ID', status: 'Healthy', accounts: 1135, orphans: 3, lastSync: stamp(0, 5), owner: 'IT Operations', host: 'graph.microsoft.com', port: '443' },
@@ -257,11 +258,11 @@ export const SSO_APPS = [
   { id: 4, name: 'servicedesk', displayName: 'Service Desk', protocol: 'OAuth', clientId: 'tanflow-servicedesk', status: 'Active', enabled: true, users: 2260, signIns7d: 9120, owner: 'IT Operations', createdOn: stamp(190) },
   { id: 5, name: 'analytics_portal', displayName: 'Analytics Portal', protocol: 'JWT', clientId: 'tanflow-analytics', status: 'Active', enabled: true, users: 420, signIns7d: 1180, owner: 'Engineering', createdOn: stamp(120) },
   { id: 6, name: 'vendor_portal', displayName: 'Vendor Portal', protocol: 'SAML', clientId: 'tanflow-vendor', status: 'Disabled', enabled: false, users: 96, signIns7d: 0, owner: 'Procurement', createdOn: stamp(90) },
-  { id: 7, name: 'legacy_intranet', displayName: 'Legacy Intranet', protocol: 'Link', clientId: 'tanflow-intranet', status: 'Active', enabled: true, users: 3892, signIns7d: 4400, owner: 'Corporate', createdOn: stamp(410) },
+  { id: 7, name: 'legacy_intranet', displayName: 'Legacy Intranet', protocol: 'Link', clientId: 'tanflow-intranet', status: 'Active', enabled: true, users: PLATFORM_IDENTITIES, signIns7d: 4400, owner: 'Corporate', createdOn: stamp(410) },
 ]
 
 export const DIRECTORIES = [
-  { id: 1, name: 'IDAM_PRIMARY', displayName: 'Corporate Directory', url: 'ldaps://ldap-01.tanflow.internal:636', baseDn: 'dc=tanflow,dc=com', bindDn: 'cn=idam,ou=svc,dc=tanflow,dc=com', entries: 3892, tls: true, status: 'Healthy', lastSync: stamp(0, 6) },
+  { id: 1, name: 'IDAM_PRIMARY', displayName: 'Corporate Directory', url: 'ldaps://ldap-01.tanflow.internal:636', baseDn: 'dc=tanflow,dc=com', bindDn: 'cn=idam,ou=svc,dc=tanflow,dc=com', entries: PLATFORM_IDENTITIES, tls: true, status: 'Healthy', lastSync: stamp(0, 6) },
   { id: 2, name: 'PARTNER_DMZ', displayName: 'Partner Directory (DMZ)', url: 'ldap://ldap-dmz.tanflow.io:389', baseDn: 'dc=partners,dc=tanflow,dc=io', bindDn: 'cn=bind,dc=partners,dc=tanflow,dc=io', entries: 640, tls: false, status: 'Degraded', lastSync: stamp(1, 14) },
   { id: 3, name: 'AD_FOREST', displayName: 'AD Forest', url: 'ldaps://dc01.tanflow.internal:636', baseDn: 'dc=corp,dc=tanflow,dc=com', bindDn: 'cn=svc_bind,ou=Service,dc=corp,dc=tanflow,dc=com', entries: 1135, tls: true, status: 'Healthy', lastSync: stamp(0, 5) },
 ]
@@ -310,7 +311,7 @@ export const POLICIES = [
   { id: 1, name: 'Contractor 90-day expiry', description: 'Revokes contractor entitlements 90 days after start unless renewed.', condition: "employeeType = 'Contractor' AND days_since(startDate) > 90", groupType: 'Access', group: 'SUP_TIER2', active: true, matched: 38, lastRun: stamp(0, 3) },
   { id: 2, name: 'Finance read baseline', description: 'Every Finance identity receives ledger read access.', condition: "department = 'Finance'", groupType: 'Application', group: 'FIN_GL_POST', active: true, matched: 58, lastRun: stamp(0, 3) },
   { id: 3, name: 'Engineering repository access', description: 'Engineering staff receive repository access on join.', condition: "department = 'Engineering' AND status = 'Active'", groupType: 'Application', group: 'ENG_REPO_ADMIN', active: true, matched: 132, lastRun: stamp(0, 3) },
-  { id: 4, name: 'Field staff onboarding', description: 'Field-level identities in UPCL receive the field bundle.', condition: "discom = 'UPCL' AND officeLevel = 'Field'", groupType: 'SSO', group: 'SUP_TIER2', active: false, matched: 76, lastRun: stamp(6, 3) },
+  { id: 4, name: 'Field staff onboarding', description: 'Field-level identities receive the field bundle.', condition: "officeLevel = 'Field' AND status = 'Active'", groupType: 'SSO', group: 'SUP_TIER2', active: false, matched: 76, lastRun: stamp(6, 3) },
 ]
 
 /**
@@ -352,7 +353,7 @@ export const CAMPAIGNS = [
   { id: 1, name: 'Q3 2026 Finance Access Review', scope: 'Tanflow · Finance', auditor: 'Vansh Makhija', status: 'Active', progress: 62, items: 1284, decided: 796, revoked: 71, dueIn: 9, levels: 'Manager → Resource Owner → Auditor', started: stamp(21) },
   { id: 2, name: 'Privileged Access Attestation', scope: 'Privileged identities', auditor: 'Shubham Jain', status: 'Active', progress: 34, items: 412, decided: 140, revoked: 22, dueIn: 4, levels: 'Manager → Security', started: stamp(14) },
   { id: 3, name: 'SOX Quarterly Certification', scope: 'SOX-in-scope applications', auditor: 'Vansh Makhija', status: 'Active', progress: 88, items: 640, decided: 563, revoked: 34, dueIn: 2, levels: 'Manager → Auditor', started: stamp(30) },
-  { id: 4, name: 'Q2 2026 Access Review', scope: 'All organizations', auditor: 'Shubham Jain', status: 'Closed', progress: 100, items: 3892, decided: 3892, revoked: 210, dueIn: 0, levels: 'Manager → Auditor', started: stamp(120) },
+  { id: 4, name: 'Q2 2026 Access Review', scope: 'All organizations', auditor: 'Shubham Jain', status: 'Closed', progress: 100, items: PLATFORM_IDENTITIES, decided: PLATFORM_IDENTITIES, revoked: 210, dueIn: 0, levels: 'Manager → Auditor', started: stamp(120) },
 ]
 
 export const CERT_ITEMS = Array.from({ length: 26 }, (_, i) => {
@@ -364,7 +365,11 @@ export const JOBS = Array.from({ length: 31 }, (_, i) => {
   const status = ['Succeeded', 'Succeeded', 'Failed', 'Running', 'Succeeded', 'Succeeded'][i % 6]
   const total = int(40, 4200)
   const failed = status === 'Failed' ? int(3, 90) : status === 'Running' ? 0 : i % 5 === 0 ? int(1, 6) : 0
-  return { id: i + 1, jobId: 'JOB-' + (7100 + i), module: pick(['Provisioning', 'Reconciliation', 'Recertification', 'Policy', 'Directory Sync', 'Notification']), operation: pick(['Full sync', 'Delta sync', 'Evaluate policy', 'Dump attestation', 'Deprovision batch', 'Send digest']), target: pick(APPLICATIONS).displayName, status, progress: status === 'Running' ? int(20, 85) : 100, total, succeeded: total - failed, failed, durationMs: int(1200, 900000), started: stamp(i % 7, 3 + (i % 18)), triggeredBy: i % 3 === 0 ? 'Scheduler' : 'admin' }
+  // A run that is 36% through cannot have processed every record. Counts are a
+  // function of progress, so an in-flight row adds up on its own terms.
+  const progress = status === 'Running' ? int(20, 85) : 100
+  const processed = Math.max(failed, Math.round((total * progress) / 100))
+  return { id: i + 1, jobId: 'JOB-' + (7100 + i), module: pick(['Provisioning', 'Reconciliation', 'Recertification', 'Policy', 'Directory Sync', 'Notification']), operation: pick(['Full sync', 'Delta sync', 'Evaluate policy', 'Dump attestation', 'Deprovision batch', 'Send digest']), target: pick(APPLICATIONS).displayName, status, progress, total, succeeded: processed - failed, failed, durationMs: int(1200, 900000), started: stamp(i % 7, 3 + (i % 18)), triggeredBy: i % 3 === 0 ? 'Scheduler' : 'admin' }
 })
 
 export const SCHEDULERS = [
@@ -397,7 +402,7 @@ export const MFA_METHODS = [
   { id: 'passkey', name: 'Passkey / FIDO2', sub: 'Phishing-resistant hardware or platform authenticator.', icon: 'key', enabled: true, enrolled: 2840, strength: 'strongest' },
   { id: 'totp', name: 'Authenticator app', sub: 'Time-based one-time passcode.', icon: 'device', enabled: true, enrolled: 3120, strength: 'strong' },
   { id: 'push', name: 'Push notification', sub: 'Approve a prompt in the Tanflow mobile app.', icon: 'bell', enabled: true, enrolled: 1980, strength: 'strong' },
-  { id: 'email', name: 'Email one-time code', sub: 'Code delivered to the registered mailbox.', icon: 'mail', enabled: true, enrolled: 3892, strength: 'weak' },
+  { id: 'email', name: 'Email one-time code', sub: 'Code delivered to the registered mailbox.', icon: 'mail', enabled: true, enrolled: PLATFORM_IDENTITIES, strength: 'weak' },
   { id: 'sms', name: 'SMS one-time code', sub: 'Code delivered by SMS. Not recommended.', icon: 'sms', enabled: false, enrolled: 410, strength: 'weakest' },
 ]
 
@@ -512,7 +517,7 @@ export const LICENSE = {
   termDays: daysBetween(LICENSE_ISSUED, LICENSE_EXPIRES),
   daysElapsed: daysBetween(LICENSE_ISSUED, TODAY),
   seats: 5000,
-  seatsUsed: 3892,
+  seatsUsed: PLATFORM_IDENTITIES,
   modules: ['Lifecycle', 'RBAC', 'Provisioning', 'Single Sign-On', 'Governance', 'MFA', 'Reporting', 'Consent'],
   // Who the licence is issued to, as it appears on the contract.
   contact: {

@@ -4,13 +4,19 @@ import Avatar from '../primitives/Avatar'
 import Menu from '../primitives/Menu'
 import { useApp } from '../../store/AppContext'
 import NavLink from './NavLink'
-import { ME, NOTIFICATIONS } from '../../data/seed'
+import { ME } from '../../data/seed'
+import { usePublishedAnnouncements } from '../../pages/notifications/announcementStore'
+import { useRead } from '../../pages/notifications/readStore'
+import { unreadOf } from '../../pages/notifications/inboxModel'
+import { ROLE_OPTIONS } from '../../lib/access'
 import wordmark from '../../assets/tanflow-wordmark-white.png'
 
 export default function TopBar() {
-  const { navigate, setNavOpen, toast, setPaletteOpen, theme, toggleTheme } = useApp()
+  const { navigate, setNavOpen, toast, setPaletteOpen, theme, toggleTheme, roleId, setRoleId, role } = useApp()
   const [menu, setMenu] = useState(null)
-  const unread = NOTIFICATIONS.filter((n) => n.unread).length
+  // The bell used to count the seed flag alone, so it disagreed with both the
+  // navigation badge and the register the moment anything was read.
+  const unread = unreadOf(usePublishedAnnouncements(), useRead()).length
 
   return (
     <header className="topbar">
@@ -58,9 +64,24 @@ export default function TopBar() {
           onClick={(e) => setMenu({
             anchor: e.currentTarget,
             items: [
-              { label: `${ME.username} · ${ME.roleLabel}`, header: true },
+              { label: `${ME.username} · ${role.name}`, header: true },
               { label: `Last Login: ${ME.lastLogin}`, header: true },
               { id: 'profile', label: 'My profile', icon: 'user', onSelect: () => navigate('profile') },
+              { divider: true },
+              /* Pages that fold an administrative surface into a user-facing
+                 one — the Notification Center and Quick Links both do — decide
+                 what to offer from the signed-in role. Switching it here is how
+                 that gate is exercised without a second account. */
+              { label: 'View console as', header: true },
+              ...ROLE_OPTIONS.map((r) => ({
+                id: `role-${r.id}`,
+                label: r.name,
+                icon: String(r.id) === String(roleId) ? 'check' : 'roles',
+                onSelect: () => {
+                  setRoleId(r.id)
+                  toast('info', 'Role switched', `The console now renders what ${r.name} may reach.`)
+                },
+              })),
               { id: 'pw', label: 'Change password', icon: 'lock', onSelect: () => toast('info', 'Change password', 'Opens the credential change dialog.') },
               { id: 'settings', label: 'Settings', icon: 'config', onSelect: () => navigate('settings') },
               { divider: true },

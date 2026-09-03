@@ -1,7 +1,19 @@
 .wb{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden}
 
-.wb-bar{display:flex;align-items:center;gap:var(--sp-2);padding:9px var(--sp-3);flex-wrap:wrap;
-  border-bottom:1px solid var(--hair)}
+/* Two clusters, not a loose row of controls: the search side and the view side.
+   Above 1100px they share one line with the view side flush right; below it,
+   each takes a full row and both start at the same left edge, so the bar never
+   leaves a control stranded mid-line. */
+.wb-bar{display:flex;align-items:center;gap:var(--sp-2) var(--sp-3);padding:9px var(--sp-3);
+  flex-wrap:wrap;border-bottom:1px solid var(--hair)}
+.wb-bar-search{display:flex;align-items:center;flex:1 1 260px;min-width:0;max-width:460px}
+.wb-bar-search .wb-search{flex:1 1 auto;min-width:0}
+/* The chips are their own group so they can take a full row rather than
+   wrapping inside the search group and leaving the bar ragged. */
+.wb-bar-filters{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;min-width:0}
+/* Kept for the few call sites that still compose their own left cluster. */
+.wb-bar-l{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  flex:1 1 320px;min-width:0}
 .wb-search{display:flex;align-items:center;gap:7px;height:29px;padding:0 9px;min-width:230px;flex:0 1 300px;
   border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);
   transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
@@ -28,7 +40,18 @@
 .chip-x:hover{background:var(--accent-bg-2)}
 .chip-x svg{width:9px;height:9px}
 
-.wb-scroll{overflow:auto;position:relative;flex:1;min-height:0}
+/* A register wider than its card scrolls, but nothing said so: four columns
+   could sit off the right edge with no scrollbar, no shadow and no hint. The
+   two edge shadows are painted with `background-attachment: scroll` while the
+   two masking panels next to them are `local`, so each shadow is revealed only
+   while there is content still hidden on that side — an affordance that
+   appears exactly when it is true and costs no markup. */
+.wb-scroll{overflow:auto;position:relative;flex:1;min-height:0;
+  background:
+    linear-gradient(to right, var(--surface), transparent) 0 0/24px 100% no-repeat local,
+    linear-gradient(to left, var(--surface), transparent) 100% 0/24px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--line-2), transparent) 0 0/12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--line-2), transparent) 100% 0/12px 100% no-repeat scroll}
 /* Opt-in bounded body. Without a height the workbench grows to fit every row,
    so a 250-row page scrolls the whole document and the sticky header — which is
    sticky against .wb-scroll, not the viewport — travels off screen with it.
@@ -54,6 +77,12 @@
 .tbl th .th-in{display:flex;align-items:center;gap:4px}
 .tbl th.td-num .th-in{justify-content:flex-end}
 .tbl th svg{width:11px;height:11px;opacity:.45}
+/* That rule dims the sort indicator, but it also reaches the select-all
+   checkbox in the header, where it lifted the unchecked tick from opacity 0 to
+   0.45 — invisible against a white control in light mode, plainly a tick
+   against a dark one. The control's own states win here. */
+.tbl th .check svg{width:10px;height:10px;opacity:0}
+.tbl th .check[data-on="true"] svg{opacity:1}
 .tbl th[data-sorted]{color:var(--ink)}
 .tbl th[data-sorted] svg{opacity:1;color:var(--accent)}
 .tbl td{
@@ -173,10 +202,15 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{o
   border-radius:var(--r-xl);box-shadow:var(--sh-lg);overflow:hidden;animation:modalIn var(--dur-3) var(--ease-out)}
 @keyframes modalIn{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
 .modal[data-size="lg"]{width:680px}
+/* A modal that hosts a side-by-side editor needs more than the large size. */
+.modal[data-size="xl"]{width:1040px}
 .modal-h{display:flex;align-items:flex-start;gap:11px;padding:var(--sp-4) var(--sp-4) 6px}
 .modal-ic{width:34px;height:34px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;flex:none}
 .modal-b{padding:4px var(--sp-4) var(--sp-4) 61px;font-size:var(--t-sm);color:var(--mut);line-height:1.55}
 .modal-b.wide{padding-left:var(--sp-4)}
+/* A long form scrolls its own body so the action bar stays put, rather than
+   the whole dialog growing past the viewport. */
+.modal-b[data-scroll]{overflow:auto;max-height:min(64vh,600px)}
 .modal-f{display:flex;justify-content:flex-end;gap:8px;padding:11px var(--sp-4);background:var(--surface-2);border-top:1px solid var(--hair)}
 
 .menu{position:fixed;z-index:var(--z-menu);background:var(--surface);border:1px solid var(--line);
@@ -219,7 +253,22 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{o
 /* Right-hand toolbar controls travel together: when the bar wraps they move to
    the next line as one right-aligned cluster rather than scattering. */
 .wb-bar-r{display:flex;align-items:center;gap:var(--sp-2);margin-left:auto;flex-wrap:wrap;
-  justify-content:flex-end}
+  justify-content:flex-end;flex:0 0 auto}
+/* Below this the first row is search plus the view and action controls, and
+   the chips take the whole of the second row — ordered explicitly so the two
+   rows are always complete rather than whatever the wrap happens to produce. */
+@media(max-width:1180px){
+  .wb-bar-search{order:1;flex:1 1 100%;max-width:none}
+  .wb-bar-r{order:2;margin-left:auto}
+  .wb-bar-filters{order:3;flex:1 1 100%}
+}
+@media(max-width:1100px){
+  .wb-bar-l,.wb-bar-r{flex:1 1 100%}
+  .wb-bar-r{margin-left:0;justify-content:flex-start}
+}
+@media(max-width:560px){
+  .wb-bar-l .wb-search{flex:1 1 100%}
+}
 .wb-bar .seg button{display:inline-flex;align-items:center;gap:6px}
 .wb-views svg{flex:none}
 .wb-groupby,.wb-sortby{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--mut);
@@ -273,3 +322,117 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{o
 .colpick-it:hover{background:var(--surface-2);color:var(--ink)}
 .colpick-it[data-locked]{cursor:default;color:var(--mut)}
 .colpick-f{display:flex;align-items:center;gap:6px;padding:9px 10px;border-top:1px solid var(--hair);background:var(--surface-2)}
+
+
+/* --- Density ---------------------------------------------------------------
+   The two densities are two different readings of the same register, not the
+   same layout at two row heights. Comfortable gives every record a card with
+   room for its facts; compact collapses the grid into a single-column list
+   where each record is one line. Both are driven from `data-density` on the
+   root, so every page that uses the workbench picks the change up.          */
+
+:root[data-density="comfortable"] .wb-cards{
+  grid-template-columns:repeat(auto-fill,minmax(304px,1fr));
+  gap:var(--sp-4);padding:var(--sp-4)}
+
+:root[data-density="compact"] .wb-cards{
+  grid-template-columns:minmax(0,1fr);gap:0;padding:0}
+
+/* --- Register summary: anchor panel + segmented filter ----------------------
+   Replaces a flat row of equal cards where one of them was the total and the
+   rest were filters. The anchor states the size of the register; the segment
+   to its right is unmistakably a control, and only the kinds that divide the
+   register appear in it.                                                    */
+
+.rsum{display:flex;align-items:stretch;gap:var(--sp-3);margin-bottom:var(--sp-4);
+  flex-wrap:wrap}
+
+.rsum-anchor{display:flex;flex-direction:column;justify-content:center;gap:2px;
+  flex:0 0 auto;min-width:196px;padding:12px 16px;text-align:left;font:inherit;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease)}
+.rsum-anchor:hover{border-color:var(--accent-line);box-shadow:var(--sh)}
+.rsum-anchor:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
+.rsum-anchor[data-on="true"]{border-color:var(--accent-line);background:var(--accent-bg)}
+.rsum-k{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-micro);
+  letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-semi);color:var(--mut)}
+.rsum-k svg{color:var(--faint)}
+.rsum-anchor[data-on="true"] .rsum-k,.rsum-anchor[data-on="true"] .rsum-k svg{color:var(--accent-a)}
+.rsum-v{font-size:var(--t-display);line-height:1.1;font-weight:var(--w-bold);color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:var(--t-display-ls)}
+.rsum-c{font-size:var(--t-xs);color:var(--mut)}
+
+/* Secondary figures that qualify the total but are not filters.
+
+   Alongside a segmented filter they stay compact, because the filter is the
+   thing that needs the room. With no filter beside them they used to be told
+   to stretch, which turned one small number into a panel the width of the
+   page — so instead each figure becomes a panel of its own, sharing the row
+   with the anchor as an equal. A header of two or three even panels reads as
+   deliberate; one tile beside an empty box does not. */
+.rsum-facts{display:flex;align-items:center;gap:var(--sp-4);margin:0;padding:12px 16px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);flex:0 0 auto}
+.rsum-facts dt{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--faint);margin-bottom:2px}
+.rsum-facts dd{margin:0;font-size:var(--t-h2);font-weight:var(--w-bold);color:var(--ink);
+  font-variant-numeric:tabular-nums}
+
+/* Standalone figures: siblings of the anchor, matching its weight. */
+.rsum[data-plain] .rsum-anchor{flex:1 1 0}
+.rsum-stats{display:flex;flex:1 1 0;min-width:0;gap:var(--sp-3)}
+.rsum-stat{display:flex;flex-direction:column;justify-content:center;gap:2px;flex:1 1 0;min-width:0;
+  padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.rsum-stat dt{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-micro);
+  letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-semi);color:var(--mut)}
+.rsum-stat dd{margin:0;font-size:var(--t-display);line-height:1.1;font-weight:var(--w-bold);
+  color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:var(--t-display-ls)}
+.rsum-stat-c{font-size:var(--t-xs);color:var(--mut)}
+@media (max-width:720px){
+  .rsum-stats{flex-wrap:wrap}
+  .rsum-stat{flex:1 1 140px}
+}
+
+/* One connected control: shared border, dividers between segments. */
+.rsum-seg{display:flex;flex:1 1 380px;min-width:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.rsum-seg button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;
+  padding:12px 16px;text-align:left;font:inherit;cursor:pointer;background:none;border:0;
+  border-left:1px solid var(--hair);
+  transition:background var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.rsum-seg button:first-child{border-left:0}
+.rsum-seg button:hover{background:var(--surface-2)}
+.rsum-seg button:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent)}
+.rsum-seg button[data-on="true"]{background:var(--accent-bg);
+  box-shadow:inset 0 -2px 0 0 var(--accent)}
+.rsum-seg-t{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-micro);
+  letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-semi);color:var(--mut)}
+.rsum-seg-t svg{color:var(--faint)}
+.rsum-seg button[data-on="true"] .rsum-seg-t,
+.rsum-seg button[data-on="true"] .rsum-seg-t svg{color:var(--accent-a)}
+.rsum-seg-v{font-size:var(--t-h1);line-height:1.15;font-weight:var(--w-bold);color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.rsum-seg-s{font-size:var(--t-xs);color:var(--mut)}
+
+@media(max-width:900px){
+  .rsum-anchor,.rsum-facts{flex:1 1 100%}
+  .rsum-seg{flex:1 1 100%}
+  .rsum-seg-s{display:none}
+}
+@media(max-width:560px){
+  .rsum-seg{flex-direction:column}
+  .rsum-seg button{border-left:0;border-top:1px solid var(--hair);flex-direction:row;
+    align-items:baseline;justify-content:space-between}
+  .rsum-seg button:first-child{border-top:0}
+  .rsum-seg button[data-on="true"]{box-shadow:inset 2px 0 0 0 var(--accent)}
+}
+
+/* Compact tightens the summary the same way it tightens a register row. */
+:root[data-density="compact"] .rsum{gap:var(--sp-2);margin-bottom:var(--sp-3)}
+:root[data-density="compact"] .rsum-anchor,
+:root[data-density="compact"] .rsum-facts,
+:root[data-density="compact"] .rsum-seg button{padding:8px 13px}
+:root[data-density="compact"] .rsum-v{font-size:var(--t-h1)}
+:root[data-density="compact"] .rsum-seg-v{font-size:var(--t-h2)}
+:root[data-density="compact"] .rsum-c,
+:root[data-density="compact"] .rsum-seg-s{display:none}

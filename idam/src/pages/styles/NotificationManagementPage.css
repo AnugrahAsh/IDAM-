@@ -1,0 +1,36 @@
+/* Page-owned styles for NotificationManagementPage. Shared primitives remain in src/styles. */
+
+/* Pop-up preview — a scaled-down rendering of the modal an identity is shown at
+   sign-in, so the wording can be judged against the frame it appears in. */
+.popup-preview {
+  display: flex;
+  justify-content: center;
+  padding: 18px 12px;
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.popup-card {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .14);
+}
+.popup-preview[data-size="Compact"] .popup-card { max-width: 268px; }
+.popup-preview[data-size="Full"] .popup-card { max-width: 100%; }
+.popup-h { display: flex; align-items: center; gap: 9px; }
+.popup-b { color: var(--mut); line-height: 1.55; }
+.popup-f { display: flex; align-items: center; gap: 10px; padding-top: 4px; border-top: 1px solid var(--hair); }
+.popup-btn {
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--t-xs);
+  font-weight: var(--w-semi);
+}

@@ -64,7 +64,7 @@ function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
   const cards = [
     { id: 'all', icon: 'building', label: 'Organizations', value: stats.total, chip: `${num(stats.identities)} identities`, sub: 'in the structure', hint: 'Every organization the platform governs' },
     { id: 'root', icon: 'hierarchy', label: 'Root', value: stats.root, chip: 'top of the tree', sub: 'no parent above them', hint: 'Organizations with no parent' },
-    { id: 'inherited', icon: 'link', label: 'Inherit policy', value: stats.inherited, chip: `${stats.total - stats.inherited} own policy`, sub: 'password rules from the parent', hint: 'Organizations inheriting their password policy' },
+    { id: 'inherited', icon: 'link', label: 'Inherit policy', value: stats.inherited, chip: `${stats.total - stats.inherited} own policy`, sub: 'from the parent', hint: 'Organizations inheriting their password policy' },
     { id: 'own', icon: 'lock', label: 'Own policy', value: stats.total - stats.inherited, chip: 'overridden', sub: 'set at this level', hint: 'Organizations that set their own password policy' },
     { id: 'disabled', icon: 'ban', label: 'Disabled', value: stats.disabled, chip: stats.disabled ? 'sign-in blocked' : 'none', chipTone: stats.disabled ? 'warn' : undefined, sub: 'retained in the tree', hint: 'Organizations switched off' },
   ]
@@ -97,7 +97,7 @@ function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
   const { navigate, toast, confirm } = useApp()
 
   const columns = [
-    serialColumn('Serial No'),
+    serialColumn('S.No'),
     {
       key: 'name', label: 'Organization', locked: true, cls: 'td-main',
       value: (r) => `${r.name} ${r.parent || ''} ${profileFor(r).code}`,

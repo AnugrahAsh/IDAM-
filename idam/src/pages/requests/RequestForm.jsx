@@ -417,7 +417,7 @@ export default function RequestForm({ type, onSubmit }) {
               <div className="chain">
                 {chain.slice(0, routedLevels).map((step, i) => (
                   <div className="chain-step" key={step.title} data-state={i === 0 ? 'current' : 'future'}>
-                    <span className="cs-n" style={{ background: i === 0 ? 'var(--warn-core)' : 'var(--mut)' }}>{i + 1}</span>
+                    <span className="cs-n" style={{ background: i === 0 ? 'var(--warn-core)' : 'var(--mut-solid)' }}>{i + 1}</span>
                     <div className="cs-m">
                       <div className="cs-t">Level {i + 1} · {step.title}</div>
                       <div className="cs-s">{step.detail}. Target {step.sla}h.</div>

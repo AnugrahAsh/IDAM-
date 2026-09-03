@@ -1,4 +1,5 @@
 import { approvalLevels, useApprovalLevels } from '../settings/settingsStore'
+import { NOW_MS, stampText } from '../../lib/clock'
 import {
   APPLICATIONS, ATTRS, DEPARTMENTS, GROUPS, LOOKUPS, MFA_METHODS, ME, ORGS, USERS,
 } from '../../data/seed'
@@ -11,11 +12,14 @@ export const DURATIONS = ['30 days', '60 days', '90 days', 'Until project close'
 const STAMP_RE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{1,2})/
 export const hashOf = (v) => [...String(v)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 100003, 7)
 
+/* A decision is stamped some hours after the request was raised, but it cannot
+   be stamped after the platform clock: a request raised at the current instant
+   was otherwise showing approvals committed hours into the future. */
 export const shiftStamp = (raised, hours) => {
   const m = STAMP_RE.exec(String(raised || ''))
   if (!m) return ''
   const base = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]) % 24, Number(m[5]) % 60)
-  return new Date(base + hours * 3600000).toISOString().slice(0, 16).replace('T', ' ')
+  return stampText(new Date(Math.min(base + hours * 3600000, NOW_MS)))
 }
 
 export const nameOf = (username) => {
@@ -69,13 +73,17 @@ export const levelFields = (i) => (i === 0
   ? { on: 'approvedOn', by: 'approvedBy', comment: 'comment' }
   : { on: `approvedOnL${i}`, by: `approvedByL${i}`, comment: `commentL${i}` })
 
-/** The `APPROVED ON (<level>)` / `APPROVED BY (<level>)` column pairs, named
- *  from the configured levels so renaming a level renames the column. */
+/** The `DECIDED ON (<level>)` / `DECIDED BY (<level>)` column pairs, named from
+ *  the configured levels so renaming a level renames the column.
+ *
+ *  A level records whoever closed it either way, so a rejected request has a
+ *  name and a timestamp in these cells. Heading them "Approved" said the
+ *  opposite of what the row shows. */
 export const levelColumnDefs = (levels) => levels.flatMap((l, i) => {
   const f = levelFields(i)
   return [
-    { key: f.on, label: `Approved on (${l.name})`, kind: 'date' },
-    { key: f.by, label: `Approved by (${l.name})`, kind: 'who' },
+    { key: f.on, label: `Decided on (${l.name})`, kind: 'date' },
+    { key: f.by, label: `Decided by (${l.name})`, kind: 'who' },
   ]
 })
 export const STEP_FILL = { done: 'var(--ok)', current: 'var(--warn-core)', rejected: 'var(--bad)', future: 'var(--mut)' }

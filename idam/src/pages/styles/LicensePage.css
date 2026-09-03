@@ -1,0 +1,59 @@
+/* Page-owned styles for LicensePage. Shared primitives remain in src/styles. */
+
+.licmatrix-bundles{flex-wrap:wrap;gap:6px;padding:12px 16px;border-bottom:1px solid var(--hair)}
+.licmatrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:1px;
+  background:var(--hair);border-bottom:1px solid var(--hair)}
+.licmatrix-cell{background:var(--surface);padding:11px 13px;display:flex;flex-direction:column;
+  gap:6px;min-width:0;transition:background var(--dur-1) var(--ease)}
+.licmatrix-cell[data-nav]{cursor:pointer}
+.licmatrix-cell[data-nav]:hover{background:var(--surface-2)}
+.licmatrix-cell[data-off]{background:var(--surface-2)}
+.licmatrix-cell[data-off] .licmatrix-name{color:var(--mut)}
+.licmatrix-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.licmatrix-name{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);line-height:1.35}
+.licmatrix-sub{font-size:var(--t-xs);color:var(--faint)}
+.licmatrix-note{padding:12px 16px}
+@media(max-width:640px){.licmatrix{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* --- License record card ------------------------------------------------- */
+.lic-chip{
+  display:inline-flex;align-items:center;height:30px;padding:0 10px;
+  border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);
+  font-size:var(--t-sm);color:var(--ink-2);white-space:nowrap;
+}
+.lic-id{display:flex;flex-direction:column;align-items:center;text-align:center;padding-bottom:4px}
+.lic-ring{margin:16px 0 12px}
+.lic-key{font-size:var(--t-body);font-weight:var(--w-semi);color:var(--ink);word-break:break-all}
+.lic-sec{
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--mut);
+  margin:var(--sp-4) 0 6px;padding-top:var(--sp-3);border-top:1px solid var(--hair);
+}
+
+/* --- Entitlement consumption rows ---------------------------------------- */
+.lic-cons{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) 120px;
+  gap:var(--sp-4);align-items:center;
+  padding:13px 0;border-bottom:1px solid var(--hair);
+}
+.lic-cons:last-child{border-bottom:none}
+.lic-cons-k{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.lic-cons-val{text-align:right}
+.lic-cons-val b{font-size:var(--t-h1);font-weight:var(--w-bold);letter-spacing:-.015em;color:var(--ink)}
+@media(max-width:1100px){
+  .lic-cons{grid-template-columns:minmax(0,1fr) 110px;row-gap:8px}
+  .lic-cons-bar{grid-column:1 / -1;order:3}
+}
+
+/* --- License two-column body --------------------------------------------
+   The shared `grid-32` sizes its tracks with a bare `1fr`, whose automatic
+   minimum is the content's min-content — the module tables held the right-hand
+   track open and pushed this card 29px past the canvas edge at 1280. Same
+   proportions, tracks that can actually shrink. */
+.lic-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.9fr);
+  gap:var(--sp-3);align-items:start}
+@media(max-width:1240px){.lic-cols{grid-template-columns:minmax(0,1fr)}}
+
+/* Referenced by both module tables but never defined, so a table wider than
+   its column simply overflowed the card. It scrolls in its own box instead. */
+.tbl-wrap{max-width:100%;overflow-x:auto}

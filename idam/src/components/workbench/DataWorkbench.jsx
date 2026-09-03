@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import Icon from '../primitives/Icon'
 import IconButton from '../primitives/IconButton'
+import Button from '../primitives/Button'
 import Check from '../primitives/Check'
 import Menu from '../primitives/Menu'
 import EmptyState from '../primitives/EmptyState'
@@ -32,6 +33,9 @@ export default function DataWorkbench({
   filters,
   // A second row under the toolbar — saved views, scope banners, and the like.
   subBar,
+  // Registers that name the column read better than a blank header, and a
+  // real header is what a screen reader announces.
+  actionsLabel,
   // Rendered inside the panel above the toolbar: a register header owns the
   // counts and the filter for the rows below it.
   header,
@@ -236,20 +240,29 @@ export default function DataWorkbench({
     <div className="wb">
       {header}
       <div className="wb-bar">
+        {/* Three groups, not two. Search and the facet chips used to travel
+            together, so when the bar ran out of width the chips wrapped inside
+            that group while the right-hand controls stayed put — a ragged
+            second line starting under the middle of the bar. Kept apart, the
+            chips can drop to a full row of their own beneath a complete first
+            row, which is the only arrangement that stays aligned at every
+            width. */}
         {search && (
-          <div className="wb-search">
-            <Icon name="search" size={14} />
-            <input
-              ref={searchRef}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={searchPlaceholder}
-              aria-label={searchPlaceholder}
-            />
-            {q && <IconButton icon="x" size="sm" label="Clear search" onClick={() => setQ('')} />}
+          <div className="wb-bar-search">
+            <div className="wb-search">
+              <Icon name="search" size={14} />
+              <input
+                ref={searchRef}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+              />
+              {q && <IconButton icon="x" size="sm" label="Clear search" onClick={() => setQ('')} />}
+            </div>
           </div>
         )}
-        {filters}
+        {filters && <div className="wb-bar-filters">{filters}</div>}
 
         <div className="wb-bar-r">
           {toolbar}
@@ -318,7 +331,17 @@ export default function DataWorkbench({
         {loading ? (
           <SkeletonTable rows={8} cols={Math.min(6, visibleColumns.length || 5)} />
         ) : pageRows.length === 0 ? (
-          <EmptyState icon={emptyIcon} title={emptyTitle} body={emptyBody} />
+          // "Nothing has been published yet" is the wrong thing to say to
+          // someone who has simply mistyped a search. The query is internal
+          // state, so only this component can tell the two apart.
+          q.trim() && rows.length > 0 ? (
+            <EmptyState
+              icon="search"
+              title={`No match for “${q.trim()}”`}
+              body="Nothing in this register matches that search. Clear it to see everything again."
+              actions={<Button icon="x" onClick={() => setQ('')}>Clear search</Button>}
+            />
+          ) : <EmptyState icon={emptyIcon} title={emptyTitle} body={emptyBody} />
         ) : asCards ? (
           <div className="wb-cards">
             {pageRows.map((r) => {
@@ -365,7 +388,7 @@ export default function DataWorkbench({
                     </span>
                   </th>
                 ))}
-                {rowActions && <th className="td-act" />}
+                {rowActions && <th className="td-act">{actionsLabel}</th>}
               </tr>
             </thead>
             <tbody>{tableBody}</tbody>
@@ -381,22 +404,22 @@ export default function DataWorkbench({
         </span>
         {footNote && <span className="t-faint">{footNote}</span>}
         <div className="spacer" />
-        {!asCards && (
-          <div className="density" role="group" aria-label="Table density">
-            {DENSITIES.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                data-on={density === d.id || undefined}
-                aria-pressed={density === d.id}
-                onClick={() => setDensity(d.id)}
-              >
-                <Icon name={d.icon} size={12} />
-                {d.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Density now changes the card view as much as the table — comfortable
+            is a card, compact is a list — so the switch belongs in both. */}
+        <div className="density" role="group" aria-label="Density">
+          {DENSITIES.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              data-on={density === d.id || undefined}
+              aria-pressed={density === d.id}
+              onClick={() => setDensity(d.id)}
+            >
+              <Icon name={d.icon} size={12} />
+              {d.label}
+            </button>
+          ))}
+        </div>
         <select className="sel" style={{ width: 96, height: 25 }} value={per} onChange={(e) => setPer(Number(e.target.value))} aria-label="Rows per page">
           {[10, 25, 50, 100, 250].map((n) => <option key={n} value={n}>{n} rows</option>)}
         </select>

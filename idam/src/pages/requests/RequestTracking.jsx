@@ -18,8 +18,9 @@ import Menu from '../../components/primitives/Menu'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
 import {
-  useChain, OPEN, grantsFor, nameOf, requesterProfile, shiftStamp, statusTone, userOf,
+  useChain, OPEN, grantsFor, levelColumnDefs, nameOf, requesterProfile, shiftStamp, statusTone, userOf,
 } from './data'
+import { useApprovalLevels } from '../settings/settingsStore'
 import { ApprovalChain, EntitlementCard, RiskPanel, auditCell } from './RequestRail'
 import { DiffList } from './FormControls'
 
@@ -106,6 +107,8 @@ export default function RequestTracking({ id, rows, onCancel, onDuplicate }) {
   const [menu, setMenu] = useState(null)
   const row = rows.find((r) => String(r.id) === String(id))
   const trail = useMemo(() => (row ? trailFor(row) : []), [row])
+  const levels = useApprovalLevels()
+  const evidenceRows = useMemo(() => levelColumnDefs(levels), [levels])
 
   if (!row) {
     return (
@@ -262,13 +265,13 @@ export default function RequestTracking({ id, rows, onCancel, onDuplicate }) {
               title="Approval evidence"
               sub="Exported with the request for audit sampling"
             >
+              {/* Built from the configured levels, like the register columns.
+                  Hand-written rows started at the second level and headed the
+                  last pair with the raw storage key. */}
               <KeyValue
-                rows={[
-                  { k: 'Approved on (approver)', node: auditCell(row.approvedOnL1), icon: 'history' },
-                  { k: 'Approved by (approver)', v: row.approvedByL1 || '', icon: 'user' },
-                  { k: 'Approved on (approver_level_2)', node: auditCell(row.approvedOnL2), icon: 'history' },
-                  { k: 'Approved by (approver_level_2)', v: row.approvedByL2 || '', icon: 'user' },
-                ]}
+                rows={evidenceRows.map((c) => (c.kind === 'date'
+                  ? { k: c.label, node: auditCell(row[c.key]), icon: 'history' }
+                  : { k: c.label, v: row[c.key] || '', icon: 'user' }))}
               />
               <div style={{ marginTop: 14 }}>
                 <div className="row-between" style={{ marginBottom: 6 }}>
@@ -323,7 +326,7 @@ export default function RequestTracking({ id, rows, onCancel, onDuplicate }) {
               <div className="chain">
                 {chain.slice(0, row.levels).map((step, i) => (
                   <div className="chain-step" key={step.title} data-state={i + 1 < row.level ? 'done' : i + 1 === row.level ? 'current' : 'future'}>
-                    <span className="cs-n" style={{ background: i + 1 < row.level ? 'var(--ok)' : i + 1 === row.level ? 'var(--warn-core)' : 'var(--mut)' }}>{i + 1}</span>
+                    <span className="cs-n" style={{ background: i + 1 < row.level ? 'var(--ok-solid)' : i + 1 === row.level ? 'var(--warn-core)' : 'var(--mut-solid)' }}>{i + 1}</span>
                     <div className="cs-m">
                       <div className="cs-t">{step.title}</div>
                       <div className="cs-s">{step.detail}. Target {step.sla}h.</div>

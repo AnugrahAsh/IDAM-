@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { stampText } from '../../lib/clock'
 
 /**
  * Tenant settings.
@@ -47,10 +48,62 @@ export const MAX_COMBINED_FLOWS = 2
 export const DEFAULT_SETTINGS = {
   general: {
     orgName: 'Tanflow Corp',
-    locale: 'en-GB',
-    timezone: 'Asia/Kolkata',
-    dateFormat: 'DD MMM YYYY',
     usernameUppercase: false,
+  },
+  /**
+   * How the platform renders time.
+   *
+   * Everything is stored in UTC; these settings decide what an operator reads
+   * and what an export contains. They used to be three loose selects inside
+   * General, which put "what timezone are these timestamps in" — the question
+   * every report and every job record is read through — behind a section about
+   * the tenant's name.
+   */
+  datetime: {
+    timezone: 'Asia/Calcutta',
+    dateFormat: 'dd-MM-yyyy',
+    timeFormat: '12h',
+    locale: 'en-IN',
+    weekStartsOn: 'Sunday',
+    displaySeconds: true,
+  },
+  /**
+   * Direct SIEM delivery.
+   *
+   * The local file and the Splunk forwarder are always on; this adds a second,
+   * direct path to a collector over TLS. The passphrase is deliberately absent
+   * — it is read from the server environment, and a form that accepts one
+   * invites it into a config export.
+   *
+   * Edited from Security Events rather than from this page: the transport is
+   * where security events go, so it sits with the register that decides which
+   * events exist. The value stays here because it is tenant configuration and
+   * has to survive a reload and appear in a configuration export.
+   */
+  siem: {
+    enabled: false,
+    host: '',
+    port: 6514,
+    framing: 'Octet counting (RFC 5425)',
+    /* Carried over from the Syslog config screen the transport replaced.
+       Nothing else on the platform sets the severity floor, the RFC 5424
+       facility, or whether secrets are redacted before dispatch. */
+    minSeverity: 'INFO',
+    facility: 'LOCAL3',
+    maskSensitive: true,
+    failover: '',
+    deadLetterPath: '',
+    caBundlePath: '',
+    sni: '',
+    clientCertPath: '',
+    clientKeyPath: '',
+    minTlsVersion: 'TLS 1.2',
+    verifyServerCert: true,
+    retryAttempts: 5,
+    baseBackoffMs: 200,
+    maxBackoffMs: 5000,
+    breakerThreshold: 5,
+    breakerCooldownMs: 30000,
   },
   branding: {
     logoName: 'tanflow-wordmark.png',
@@ -133,6 +186,8 @@ export const DEFAULT_SETTINGS = {
    */
   meta: {
     general: { by: 'SHUBHAM_JAIN', at: '2026-08-01 09:12', ticket: 'CHG-4471' },
+    datetime: { by: 'SHUBHAM_JAIN', at: '2026-08-01 09:12', ticket: 'CHG-4471' },
+    siem: { by: 'vansh.makhija', at: '2026-07-29 11:47', ticket: 'CHG-4460' },
     branding: { by: 'priya.nair', at: '2026-06-18 14:02', ticket: 'CHG-4102' },
     security: { by: 'vansh.makhija', at: '2026-07-29 11:47', ticket: 'CHG-4460' },
     lifetimes: { by: 'vansh.makhija', at: '2026-07-29 11:51', ticket: 'CHG-4460' },
@@ -195,7 +250,7 @@ export const writeSection = (key, value) => writeSettings((s) => ({
 export const resetSettings = () => writeSettings(clone(DEFAULT_SETTINGS))
 
 /** Stamp a section as changed by the signed-in operator, here and now. */
-export const recordChange = (section, by = 'SHUBHAM_JAIN', at = '2026-08-05 09:00') => writeSettings((s) => ({
+export const recordChange = (section, by = 'SHUBHAM_JAIN', at = stampText()) => writeSettings((s) => ({
   ...s,
   meta: { ...s.meta, [section]: { by, at, ticket: 'CHG-4482' } },
 }))

@@ -1,0 +1,218 @@
+.ldap-dashboard .tile-v .tile-unit{margin-left:2px}
+
+.ldap-dir-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:var(--sp-3)}
+.ldap-dir-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-lg);min-width:0}
+.ldap-dir-card:hover{border-color:var(--accent-line);box-shadow:var(--sh-md)}
+.ldap-dir-meta{display:flex;align-items:center;gap:12px;font-size:var(--t-xs);color:var(--mut);flex-wrap:wrap}
+.ldap-dir-meta b{color:var(--ink)}
+
+.ldap-inline-act{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:-4px;flex-wrap:wrap}
+
+/* --- Register: transport marker, slow binds, card view ---------------------- */
+/* The transport is the first thing to read on a directory row: an unencrypted
+   bind is a finding, not a preference. */
+.ldap-ic{flex:none;color:var(--accent)}
+.ldap-ic[data-plain]{color:var(--warn-core)}
+.ldap-card-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:30px;height:30px;border-radius:var(--r);background:var(--warn-bg);color:var(--warn)}
+.ldap-card-ic[data-tls]{background:var(--accent-bg);color:var(--accent)}
+/* A bind over the 150 ms estate threshold. */
+.ldap-slow{color:var(--bad);font-weight:var(--w-semi)}
+
+/* --- Directory tree: one level per expansion -------------------------------- */
+.dt-card .card-h-sub .mono{color:var(--ink-2)}
+.dt-actions{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;justify-content:flex-end}
+
+/* Summary cards double as the type filter: the count you read is the filter you apply. */
+.dt-summary{padding:var(--sp-3) var(--sp-4) 0}
+.dt-summary .scards{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+
+.dt-bar{border-bottom:1px solid var(--hair)}
+.dt-bar .wb-search{flex:0 1 380px}
+.dt-bar-r{display:flex;align-items:center;gap:6px;margin-left:auto}
+
+.dt-empty{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-8) var(--sp-6);
+  background:
+    radial-gradient(circle at 12% 40%,var(--accent-bg) 0,transparent 42%),
+    radial-gradient(circle at 88% 70%,var(--surface-2) 0,transparent 40%)}
+.dt-empty-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;
+  border-radius:var(--r-lg);background:var(--accent-bg);color:var(--accent-a);border:1px solid var(--accent-line)}
+.dt-empty-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.dt-empty-m b{font-size:var(--t-h2);color:var(--ink);letter-spacing:var(--t-h2-ls)}
+.dt-empty-m span{font-size:var(--t-sm);color:var(--mut);max-width:62ch}
+.dt-empty-dn{margin-top:4px;font-size:var(--t-xs);color:var(--ink-2)}
+
+.dt-tbl td{white-space:nowrap}
+.dt-tbl thead th{white-space:nowrap}
+.dt-tbl .dt-th-act{width:150px;text-align:right}
+.dt-tbl .td-sel{width:38px}
+.dt-tbl .td-sel .check{vertical-align:middle}
+/* Rows are keyboard-focusable: the focused row is the cursor of the tree. */
+.dt-tbl tbody tr{outline:none;cursor:default}
+.dt-tbl tbody tr[data-focus]{background:var(--surface-2);box-shadow:inset 2px 0 0 var(--accent)}
+.dt-tbl tbody tr:focus-visible{background:var(--accent-bg);box-shadow:inset 2px 0 0 var(--accent)}
+.dt-tbl tbody tr[data-type="root"] td{background:var(--surface-2);border-bottom-color:var(--line)}
+.dt-tbl tbody tr[data-type="root"]:hover td{background:var(--surface-3)}
+.dt-tbl tbody tr[data-type="root"] .dt-label{color:var(--ink);font-size:var(--t-xs)}
+.dt-tbl tbody tr[data-type="container"] .dt-label{color:var(--ink-2)}
+.dt-tbl tbody tr[data-type="container"] .dt-label:hover{color:var(--accent-a)}
+.dt-td-name{min-width:280px}
+
+/* The name column carries the hierarchy: guide lines, disclosure, icon, then the entry. */
+.dt-name{display:flex;align-items:center;gap:7px;min-width:0}
+.dt-guide{flex:none;width:18px;align-self:stretch;margin:calc(var(--td-py) * -1) 0;
+  background:linear-gradient(var(--line),var(--line)) 9px 0/1px 100% no-repeat}
+.dt-guide:last-of-type{
+  background:
+    linear-gradient(var(--line),var(--line)) 9px 0/1px 100% no-repeat,
+    linear-gradient(var(--line),var(--line)) 9px 50%/9px 1px no-repeat}
+.dt-chev{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:18px;height:18px;border:none;background:none;cursor:pointer;color:var(--faint);
+  border-radius:var(--r-xs);transition:transform var(--dur-2) var(--ease),color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.dt-chev:hover{color:var(--ink);background:var(--surface-3)}
+.dt-chev[data-open]{transform:rotate(90deg);color:var(--accent)}
+.dt-chev-sp{width:18px;flex:none}
+.dt-ico{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;
+  border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface-3);color:var(--mut)}
+.dt-ico[data-type="ou"]{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.dt-ico[data-type="root"]{background:var(--info-bg);border-color:var(--info-line);color:var(--info)}
+.dt-label{border:none;background:none;padding:0;font:inherit;cursor:pointer;text-align:left;
+  font-weight:var(--w-semi);color:var(--accent-a);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dt-label:hover{text-decoration:underline;text-underline-offset:2px}
+.dt-hl{background:var(--warn-bg);color:inherit;border-radius:2px;box-shadow:0 0 0 1px var(--warn-line)}
+
+/* The RDN is what identifies a row; the rest of the DN is context and reads quieter. */
+.dt-dn{color:var(--mut);min-width:220px}
+.dt-dn-in{display:flex;align-items:center;gap:4px;min-width:0}
+.dt-dn-in .trunc{flex:1}
+.dt-dn-rdn{color:var(--ink-2)}
+.dt-dn-rest{color:var(--faint)}
+.dt-detail{color:var(--mut);min-width:180px}
+.dt-count{display:inline-flex;flex-direction:column;line-height:1.25}
+.dt-count b{color:var(--ink);font-size:var(--t-sm)}
+.dt-read{font-size:var(--t-xs)}
+.dt-mod{color:var(--mut)}
+.dt-acts{display:inline-flex;align-items:center;gap:2px;justify-content:flex-end}
+.dt-del{color:var(--bad)}
+.dt-del:hover{background:var(--bad-bg)}
+.dt-busy td{color:var(--mut);font-size:var(--t-xs);background:var(--surface-2)}
+.dt-busy span{display:inline-flex;align-items:center;gap:10px}
+.dt-busy svg{color:var(--accent);animation:dt-spin 900ms linear infinite}
+.dt-busy .skel{display:inline-block;height:8px}
+@keyframes dt-spin{to{transform:rotate(360deg)}}
+.dt-more td{background:var(--surface-2);border-bottom:1px solid var(--hair)}
+.dt-more span{display:inline-flex;align-items:center;gap:10px}
+.dt-none{padding:var(--sp-6) var(--sp-4) !important;text-align:center;white-space:normal !important}
+.dt-none svg{color:var(--faint);display:block;margin:0 auto 6px}
+.dt-none b{display:block;color:var(--ink);font-size:var(--t-sm)}
+.dt-none span{display:block;color:var(--mut);font-size:var(--t-sm);margin-top:2px}
+.dt-keys{display:inline-flex;align-items:center;gap:5px;color:var(--faint)}
+.dt-keys kbd{margin-right:1px}
+
+@media (max-width:900px){
+  .dt-bar-r{margin-left:0;width:100%}
+  .dt-empty{flex-direction:column;align-items:flex-start}
+}
+
+/* --- Provisioning rules, scoped to one directory ---------------------------- */
+/* The organizational unit is offered from this directory's tree, so the field
+   carries its own scope note and its own fault line rather than failing later
+   at provisioning time. */
+.lp-ou-foot{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.lp-ou-foot .link{font-size:var(--t-xs)}
+.lp-ou-foot .mono{color:var(--ink-2)}
+/* The RDN identifies the container; the rest of the DN is the tree it sits in. */
+.lp-ou-rdn{color:var(--ink-2)}
+.lp-ou-rest{color:var(--faint)}
+
+/* --- Entry details: attributes as the directory holds them ------------------ */
+.ldap-entry-id{display:flex;align-items:center;gap:10px;min-width:0;
+  padding:11px 13px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r)}
+.ldap-entry-id-m{display:flex;flex-direction:column;min-width:0;flex:1;gap:1px}
+.ldap-entry-id-m b{font-size:var(--t-h3);color:var(--ink)}
+.ldap-entry-id-m span{font-size:var(--t-xs);color:var(--mut)}
+.ldap-entry-bar{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--t-sm);color:var(--mut)}
+.ldap-entry-bar b{color:var(--ink)}
+
+.ldap-attrs{display:flex;flex-direction:column;gap:var(--sp-3)}
+.ldap-attr{display:flex;flex-direction:column;gap:5px;padding-bottom:var(--sp-3);
+  border-bottom:1px solid var(--hair)}
+.ldap-attr:last-child{border-bottom:none}
+.ldap-attr-k{display:flex;align-items:center;gap:7px;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+/* Server-owned values are shown, never edited. */
+.ldap-attr[data-op] .ldap-attr-k{color:var(--mut);font-weight:var(--w-med)}
+.ldap-attr-v{display:flex;flex-direction:column;gap:5px}
+.ldap-attr-row{display:flex;align-items:center;gap:6px}
+.ldap-attr-row .inp{flex:1;min-width:0}
+.ldap-attr-del{color:var(--bad)}
+.ldap-attr-del:hover{background:var(--bad-bg)}
+.ldap-attr-add{align-self:flex-start;font-size:var(--t-xs)}
+
+/* --- Schema browser --------------------------------------------------------- */
+.schema-bar{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.schema-bar .seg button b{margin-left:5px;font-variant-numeric:tabular-nums;color:inherit;opacity:.7}
+.schema-only{display:inline-flex;align-items:center;gap:7px;font-size:var(--t-sm);color:var(--ink-2)}
+.schema-list{display:flex;flex-direction:column;gap:6px}
+.schema-row{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.schema-row[data-open]{border-color:var(--accent-line)}
+.schema-head{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;
+  background:none;border:none;font:inherit;text-align:left;cursor:pointer}
+.schema-head:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent-line)}
+.schema-head:hover{background:var(--surface-2)}
+.schema-head b{font-size:var(--t-sm);color:var(--ink)}
+.schema-chev{color:var(--faint);transition:transform var(--dur-2) var(--ease)}
+.schema-chev[data-open]{transform:rotate(90deg);color:var(--accent)}
+.schema-ic{color:var(--accent)}
+.schema-body{padding:0 12px 12px 34px;display:flex;flex-direction:column;gap:9px;
+  border-top:1px solid var(--hair)}
+.schema-body p{margin:9px 0 0;font-size:var(--t-sm);color:var(--mut)}
+.schema-kv{display:flex;align-items:flex-start;gap:10px;font-size:var(--t-sm)}
+.schema-kv > span:first-child{flex:none;width:190px;color:var(--mut);font-size:var(--t-xs)}
+.schema-chips{display:flex;flex-wrap:wrap;gap:5px}
+.schema-foot{display:flex;align-items:center;gap:var(--sp-3);padding-top:var(--sp-2);
+  border-top:1px solid var(--hair);font-size:var(--t-xs);color:var(--mut)}
+
+/* --- Provisioning rules: clause builder ------------------------------------- */
+.rule-cond{border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);
+  padding:var(--sp-3);display:flex;flex-direction:column;gap:9px}
+.rule-cond-h{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--t-sm)}
+.rule-clause{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr) 28px;
+  gap:7px;align-items:center}
+.rule-join{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);font-weight:var(--w-bold);
+  color:var(--mut);text-transform:uppercase}
+.rule-cond-f{display:flex;align-items:center;gap:var(--sp-2)}
+.rule-count{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--mut)}
+.rule-count b{color:var(--ink)}
+.rule-count svg{color:var(--faint)}
+/* The expression is shown as it is built, so the builder and the raw
+   condition can never drift apart. */
+.rule-expr{display:flex;flex-direction:column;gap:3px;padding:9px 10px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+.rule-expr code{font-size:var(--t-xs);color:var(--accent-a);overflow-wrap:anywhere}
+.rule-code{font-size:var(--t-xs);color:var(--ink-2)}
+
+/* A probe verdict outlives the toast that announced it. */
+.ldap-probe{
+  display:flex;align-items:flex-start;gap:6px;width:100%;
+  padding:7px 9px;border-radius:var(--r-sm);border:1px solid var(--hair);
+  background:var(--surface-3);color:var(--ink-2);
+}
+.ldap-probe svg{flex:none;margin-top:1px}
+.ldap-probe[data-tone="ok"]{border-color:var(--ok-line,var(--hair));background:var(--ok-bg,var(--surface-3));color:var(--ok,var(--ink-2))}
+.ldap-probe[data-tone="bad"]{border-color:var(--bad-line);background:var(--bad-bg);color:var(--bad)}
+
+/* --- Module options -------------------------------------------------------- */
+/* What this module can do, stated on arrival. Each option is a full row rather
+   than a bare button so it carries its own one-line description: "Configure"
+   alone does not say that the password policy mapping lives behind it. */
+.ldap-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--sp-2);
+  margin-bottom:var(--sp-3)}
+.ldap-opts button{display:flex;align-items:center;gap:10px;min-width:0;text-align:left;
+  padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+  font:inherit;cursor:pointer;transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.ldap-opts button:hover,.ldap-opts button:focus-visible{border-color:var(--accent-line);background:var(--accent-bg)}
+.ldap-opt-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ldap-opt-m b{display:flex;align-items:center;gap:6px;font-size:var(--t-sm);color:var(--ink)}
+.ldap-opt-m > span{font-size:var(--t-xs);color:var(--mut)}
+.ldap-opts > button > svg:last-child{flex:none;color:var(--faint)}

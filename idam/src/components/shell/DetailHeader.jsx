@@ -42,12 +42,15 @@ export default function DetailHeader({
   )
 }
 
-export function Fact({ label, value, icon }) {
+export function Fact({ label, value, icon, title }) {
+  // The value ellipses when the header is tight, so a long one was
+  // unrecoverable without a way to read it back.
+  const hint = title || (typeof value === 'string' || typeof value === 'number' ? String(value) : undefined)
   return (
     <span className="detail-fact">
       {icon && <Icon name={icon} size={12} />}
       <span className="detail-fact-k">{label}</span>
-      <span className="detail-fact-v">{value}</span>
+      <span className="detail-fact-v" title={hint}>{value}</span>
     </span>
   )
 }
