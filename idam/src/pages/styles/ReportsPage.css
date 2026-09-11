@@ -1,0 +1,194 @@
+/* Page-owned styles for ReportsPage. Shared primitives remain in src/styles. */
+
+.rep-grid{align-items:stretch}
+
+.rep-tile{display:flex;flex-direction:column;gap:8px;min-height:132px;padding:13px 14px 12px}
+
+.rep-tile-top{display:flex;align-items:center;gap:9px}
+.rep-tile-name{font-size:var(--t-sm);font-weight:var(--w-semi);letter-spacing:-.012em;color:var(--ink);line-height:1.25}
+
+/* `viol` has a pill variant but no feed-ic variant in the shared sheet. */
+.rep-tile .feed-ic[data-tone="viol"]{background:var(--viol-bg);color:var(--viol);border-color:var(--viol-line)}
+
+.rep-tile-desc{flex:1;font-size:var(--t-xs);line-height:1.5;color:var(--mut)}
+
+.rep-tile-foot{display:flex;align-items:center;gap:8px;padding-top:9px;border-top:1px solid var(--hair)}
+.rep-tile-go{display:inline-flex;color:var(--faint);transition:transform var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.rep-tile:hover .rep-tile-go{color:var(--accent);transform:translateX(2px)}
+
+.rep-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.rep-presets .chip{cursor:pointer}
+
+/* --- Report catalog: pinned shelf, card grid and a dense list --------------- */
+.rep-catalog .wb-bar{align-items:center}
+.rep-body{padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-5)}
+.rep-sect{display:flex;flex-direction:column;gap:var(--sp-3)}
+.rep-sect-k{display:flex;align-items:center;gap:6px;margin:0;
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--faint)}
+.rep-sect-k svg{color:var(--faint)}
+
+.rep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:var(--sp-3)}
+.rep-card{display:flex;flex-direction:column;gap:9px;min-width:0;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 14px;
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.rep-card:hover{border-color:var(--accent-line);box-shadow:var(--sh-md)}
+.rep-card:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
+.rep-card-top{display:flex;align-items:center;gap:9px;min-width:0}
+.rep-card-id{display:flex;flex-direction:column;min-width:0;flex:1}
+.rep-card-name{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.rep-card-cat{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut)}
+.rep-card-desc{margin:0;font-size:var(--t-sm);line-height:1.5;color:var(--mut);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rep-card-facts{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;
+  font-size:var(--t-xs);color:var(--mut)}
+.rep-card-facts span{display:inline-flex;align-items:center;gap:5px}
+.rep-card-facts svg{color:var(--faint)}
+.rep-card-facts b{color:var(--ink);font-weight:var(--w-semi)}
+.rep-card-foot{border-top:1px solid var(--hair);padding-top:9px;margin-top:auto}
+.rep-card-foot .link{font-size:var(--t-sm)}
+
+/* The star is the only control on the card that is not "open the report". */
+.rep-pin{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:26px;height:26px;border-radius:var(--r-sm);background:none;border:none;cursor:pointer;
+  color:var(--faint);transition:color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.rep-pin:hover{background:var(--surface-3);color:var(--warn-core)}
+.rep-pin[data-on]{color:var(--warn-core)}
+.rep-pin[data-on] svg{fill:currentColor}
+
+.rep-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.rep-row{display:flex;align-items:center;gap:var(--sp-3);width:100%;padding:9px var(--sp-3);
+  background:var(--surface);border:none;border-bottom:1px solid var(--hair);cursor:pointer;text-align:left;
+  font:inherit;transition:background var(--dur-1) var(--ease)}
+.rep-row:last-child{border-bottom:none}
+.rep-row:hover{background:var(--row-hover)}
+.rep-row-m{display:flex;flex-direction:column;min-width:0;flex:1;gap:1px}
+.rep-row-name{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.rep-row-desc{font-size:var(--t-xs);color:var(--mut)}
+.rep-row-cat{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;flex:none;width:160px}
+.rep-row-n{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);
+  font-variant-numeric:tabular-nums;text-align:right;flex:none;width:64px}
+.rep-row-when{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;flex:none;width:82px}
+.rep-row-go{color:var(--faint);flex:none}
+
+@media(max-width:900px){
+  .rep-row-cat,.rep-row-when{display:none}
+}
+
+/* Attribute-level diff on an audit event: the value that was replaced, and the
+   value that replaced it, told apart by more than position. */
+.diff-old{
+  display:inline-block;padding:1px 6px;border-radius:var(--r-sm);
+  background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad-line);
+  text-decoration:line-through;text-decoration-thickness:1px;
+}
+.diff-new{
+  display:inline-block;padding:1px 6px;border-radius:var(--r-sm);
+  background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line);
+  font-weight:var(--w-semi);
+}
+
+/* --- Filters and download ---------------------------------------------------
+   Download and Filters live in the page header on every report, and the active
+   filter row sits between the header and the data. The row renders even when
+   nothing is set, so the table always starts at the same place and "what am I
+   looking at" is answered in one spot on every report page. */
+
+.rep-fbadge{display:inline-flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;padding:0 4px;margin-left:1px;border-radius:var(--r-pill);
+  background:var(--surface);color:var(--accent-a);
+  font-size:var(--t-micro);font-weight:var(--w-bold);line-height:1}
+
+.rep-active{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;
+  padding:9px var(--sp-3) 9px var(--sp-4);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.rep-active-k{display:inline-flex;align-items:center;gap:6px;flex:none;
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--mut)}
+.rep-active-k svg{color:var(--faint)}
+.rep-active-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.rep-active .spacer{flex:1 1 auto}
+.rep-active-n{white-space:nowrap;flex:none}
+.rep-active-n b{color:var(--ink)}
+/* The field name, so a chip reading "Failed" says which column it came from. */
+.rep-chip-k{color:var(--mut);font-weight:var(--w-med)}
+.rep-chip-k::after{content:':';margin-right:3px}
+
+@media(max-width:900px){
+  .rep-active .spacer{display:none}
+  .rep-active-chips{flex:1 1 100%}
+}
+
+/* --- Filter drawer --------------------------------------------------------- */
+
+.rep-fp-grid{align-items:start}
+/* The window spans the drawer: its presets and its two dates are one control. */
+.rep-fp-date{grid-column:span 2;display:flex;flex-direction:column;gap:4px}
+.rep-fp-date .rep-presets{margin-bottom:2px}
+.rep-fp-opts{display:flex;flex-wrap:wrap;gap:6px}
+.rep-fp-opts .chip{cursor:pointer}
+
+/* Apply and Reset stay reachable however long the report's field set is. */
+.rep-fp-act{position:sticky;bottom:0;z-index:1;
+  display:flex;align-items:center;gap:var(--sp-2);
+  margin:var(--sp-2) calc(var(--sp-4) * -1) calc(var(--sp-4) * -1);
+  padding:11px var(--sp-4);
+  background:var(--surface);border-top:1px solid var(--line)}
+.rep-fp-act .spacer{flex:1 1 auto}
+
+/* --- Timestamp clock ------------------------------------------------------- */
+
+.rep-zone{display:inline-flex;align-items:center;gap:6px}
+.rep-zone-k{font-size:var(--t-xs);color:var(--mut);white-space:nowrap}
+.rep-zone .sel{height:26px;font-size:var(--t-xs);min-width:150px}
+
+@media(max-width:720px){
+  .rep-zone-k{display:none}
+}
+
+/* --- Row detail panel ------------------------------------------------------ */
+
+/* Flush cards inside the drawer need their own gutter back for prose content. */
+.rep-detail-pad{padding:var(--sp-3) var(--sp-4)}
+
+.rep-diff-wrap{overflow-x:auto}
+.rep-diff{width:100%}
+.rep-diff th{white-space:nowrap}
+.rep-diff td{vertical-align:top}
+/* An unset attribute reads as the literal the record holds, not as an em dash —
+   "null before, 1075 after" is the sentence the auditor needs. */
+.rep-diff .diff-old,.rep-diff .diff-new{white-space:normal;overflow-wrap:anywhere}
+
+/* A value that is a document is printed as one. The pill treatment above is
+   for a scalar: strike-through over a nested object says nothing, and the
+   whole point of keeping the shape is that the reader can see which key moved.
+   Tinted by side so a document and a scalar still read as one column. */
+.rep-json{
+  margin:0;padding:7px 9px;max-height:230px;overflow:auto;
+  font-family:var(--mono);font-size:var(--t-xs);line-height:1.55;
+  /* pre-wrap, not pre: a bind DN is longer than the panel, and a scrollbar
+     inside a cell inside a scrolling drawer is three nested scrollers to read
+     one value. Indentation is preserved either way. */
+  white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
+}
+.rep-json[data-side="old"]{color:var(--bad);border-color:var(--bad-line);background:var(--bad-bg)}
+.rep-json[data-side="new"]{color:var(--ok);border-color:var(--ok-line);background:var(--ok-bg)}
+/* A document's longest line is wider than the panel, and an auto-laid-out
+   table sizes itself to it — which pushed the new value off the right edge of
+   the drawer. Fixed layout once a document is in play: the attribute name gets
+   a readable fixed column and the two payloads split the rest evenly. */
+.rep-diff:has(.rep-json){table-layout:fixed}
+.rep-diff:has(.rep-json) th:first-child,
+.rep-diff:has(.rep-json) td:first-child{width:168px;overflow-wrap:anywhere}
+
+/* A set the table had to flatten into a cell, shown back as a set. */
+.rep-list-set{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.rep-list-set li{display:flex;align-items:center;gap:10px;padding:8px var(--sp-4);
+  border-bottom:1px solid var(--hair)}
+.rep-list-set li:last-child{border-bottom:0}
+.rep-list-set li > svg{flex:none;color:var(--faint)}
+.rep-list-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rep-list-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);overflow-wrap:anywhere}
+.rep-list-s{font-size:var(--t-xs);color:var(--mut)}

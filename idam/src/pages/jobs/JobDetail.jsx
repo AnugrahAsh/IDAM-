@@ -269,8 +269,7 @@ export default function JobDetail({ job, onCancel, onRemove, onDownload, navigat
             pageSize={10}
             searchPlaceholder="Search by username, entity, operation, message or error…"
             onRowClick={openRecord}
-            toolbar={<Button size="sm" variant="pri" icon="download" onClick={onDownload}>Download Report</Button>}
-            rowActions={(r) => [
+rowActions={(r) => [
               { id: 'view', label: 'View Details', icon: 'eye', onSelect: () => openRecord(r) },
               { divider: true },
               { id: 'identity', label: 'Open identity', icon: 'external', onSelect: () => navigate('/iam/users') },

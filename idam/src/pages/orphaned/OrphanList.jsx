@@ -10,13 +10,20 @@ import { useState } from 'react'
 import { RULES_BASE, allRules, countRules, modelText, ruleText } from './orphanedData'
 import AccountsTable from './AccountsTable'
 import StatCards from '../../components/workbench/StatCards'
-import RecordCard, { CardIcon } from '../../components/workbench/RecordCard'
 import { useLocalState } from '../../lib/useLocalState'
 
+/* Table and Grouped, on both tabs. Cards are gone — an orphan rule and an
+   orphaned account are each a row of short fields, and a tile per row turned a
+   register you scan into three screens you scroll. */
+const VIEWS = [
+  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense register with sortable columns' },
+  { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Split into sections' },
+]
+
 export default function OrphanList({ rows, rules, stats, ruleRows, actions }) {
-  const [view, setView] = useLocalState('tf-idam-orphan-view', 'table')
   const { toast, navigate } = useApp()
   const [tab, setTab] = useState('rules')
+  const [ruleView, setRuleView] = useLocalState('tf-idam-orphan-rules-view', 'table')
 
   const ruleColumns = [
     serialColumn('S.No'),
@@ -97,38 +104,23 @@ export default function OrphanList({ rows, rules, stats, ruleRows, actions }) {
           ]}
         />
 
-        {/* modelText reads a rule model, not a table row. Passing the row left
-            r.groups undefined and threw inside both the Cards and the Grouped
-            renderer, which is why only Table ever worked here. */}
         {tab === 'rules' ? (
           <DataWorkbench
             id="orphan-rules"
             rows={ruleRows}
-            views={[
-              { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense register with sortable columns' },
-              { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per rule' },
-              { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Split by model' },
-            ]}
-            view={view}
-            onViewChange={setView}
-            groupOf={(r) => modelText(r.model)}
-            renderCard={(r, ctx) => (
-              <RecordCard
-                ctx={ctx}
-                label={r.name}
-                media={<CardIcon name="policy" tone={r.active ? 'acc' : 'warn'} />}
-                title={r.name}
-                sub={modelText(r.model)}
-                tags={<><Pill tone={r.active ? 'ok' : 'mut'} dot>{r.active ? 'Active' : 'Inactive'}</Pill></>}
-                line={<span className="trunc">{r.description}</span>}
-                meta={[
-                  { k: 'Scope', v: r.scope },
-                  { k: 'Matches', v: num(r.matched ?? 0) },
-                ]}
-              />
-            )}
             columns={ruleColumns}
             selectable
+            views={VIEWS}
+            view={ruleView}
+            onViewChange={setRuleView}
+            /* Grouped splits on whether the rule is live. The previous grouping
+               ran a rule row through modelText, which reads a rule model rather
+               than a row, so it threw and only Table ever rendered. */
+            groupOf={(r) => (r.active ? 'Enabled' : 'Disabled')}
+            groupSummary={(section) => {
+              const matched = section.reduce((n, r) => n + (r.matched || 0), 0)
+              return `${num(matched)} ${matched === 1 ? 'account' : 'accounts'} matched`
+            }}
             searchPlaceholder="Search rules by name, description or condition…"
             onRowClick={(r) => navigate(`${RULES_BASE}/${r.id}`)}
             bulkActions={(ids, clear) => {
@@ -142,8 +134,7 @@ export default function OrphanList({ rows, rules, stats, ruleRows, actions }) {
               { divider: true },
               { id: 'del', label: 'Delete', icon: 'trash', danger: true, onSelect: () => actions.deleteRules([r]) },
             ]}
-            toolbar={<Button size="sm" icon="plus" onClick={() => navigate(`${RULES_BASE}/add`)}>Add Rule</Button>}
-            emptyTitle="No detection rules"
+emptyTitle="No detection rules"
             emptyBody="Without a rule nothing is ever flagged as orphaned. Add a rule to describe the accounts reconciliation should surface."
             emptyIcon="policy"
             footNote="Rules are evaluated by the nightly orphan detection sweep"

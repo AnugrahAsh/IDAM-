@@ -2,10 +2,7 @@ import { useMemo, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import Icon from '../../components/primitives/Icon'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
-import SeverityBadge from '../../components/primitives/SeverityBadge'
-import Tag from '../../components/primitives/Tag'
 import StatCards from '../../components/workbench/StatCards'
-import RecordCard, { CardIcon } from '../../components/workbench/RecordCard'
 import { useLocalState } from '../../lib/useLocalState'
 import { serialColumn } from '../../lib/format'
 import Button from '../../components/primitives/Button'
@@ -14,6 +11,7 @@ import { useApp } from '../../store/AppContext'
 import { markRead, markUnread, useRead } from './readStore'
 import { inboxRows } from './inboxModel'
 import { usePublishedAnnouncements } from './announcementStore'
+import { useNotificationTaxonomy } from '../settings/settingsStore'
 import { MANAGE_PATH, NOTIFICATION_MODULE, WRITE_ANNOUNCEMENT } from './notificationAccess'
 
 const SEVERITY = {
@@ -22,17 +20,15 @@ const SEVERITY = {
   info: { tone: 'acc', label: 'Info' },
 }
 
-const CATEGORY = {
-  Governance: 'certify',
-  Operations: 'provision',
-  Compliance: 'sod',
-  Security: 'shield',
-  Platform: 'server',
-  Announcements: 'bell',
-}
+/* The mark beside a notification is the one its category carries in Settings →
+   Notification Management Setup. A row filed under a category that has since
+   been deleted still renders — it falls back to the bell rather than nothing. */
+const markFor = (taxonomy, category) =>
+  taxonomy.categories.find((c) => c.label === category)?.icon || 'bell'
 
 export default function NotificationInbox() {
   const { toast, setDrawer, navigate, can } = useApp()
+  const taxonomy = useNotificationTaxonomy()
   const [sev, setSev] = useState('all')
   const [view, setView] = useLocalState('tf-idam-notif-view', 'table')
   const read = useRead()
@@ -69,7 +65,7 @@ export default function NotificationInbox() {
       children: (
         <div className="stack">
           <div className="banner" data-tone={SEVERITY[row.severity].tone === 'bad' ? 'bad' : SEVERITY[row.severity].tone === 'warn' ? 'warn' : 'info'}>
-            <Icon name={CATEGORY[row.category] || 'bell'} size={15} />
+            <Icon name={markFor(taxonomy, row.category)} size={15} />
             <div>{row.description}</div>
           </div>
           <KeyValue
@@ -116,7 +112,7 @@ export default function NotificationInbox() {
       render: (r) => (
         <span className="ntf">
           <span className="feed-ic" data-tone={SEVERITY[r.severity].tone}>
-            <Icon name={CATEGORY[r.category] || 'bell'} size={13} />
+            <Icon name={markFor(taxonomy, r.category)} size={13} />
           </span>
           <span className="cell-stack">
             <span className="ntf-t" data-unread={r.unread || undefined}>
@@ -174,37 +170,17 @@ export default function NotificationInbox() {
         id="notifications"
         rows={rows}
         columns={columns}
+        /* Table and Grouped only. A notification is a title, a severity and a
+           line of body text — a card gave that a whole tile and turned a
+           thirteen-row inbox into three screens of scrolling. */
         views={[
           { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense list with sortable columns' },
-          { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per notification' },
           { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Split by category' },
         ]}
         view={view}
         onViewChange={setView}
         groupOf={(r) => r.category}
         groupSummary={(section) => `${section.filter((r) => r.unread).length} unread`}
-        renderCard={(r, ctx) => (
-          <RecordCard
-            ctx={ctx}
-            label={r.title}
-            media={<CardIcon name={CATEGORY[r.category] || 'bell'} tone={r.severity === 'critical' ? 'bad' : r.severity === 'high' ? 'warn' : 'acc'} />}
-            title={r.title}
-            sub={r.category}
-            tags={(
-              <>
-                <SeverityBadge level={r.severity} />
-                {r.unread && <Tag tone="acc">Unread</Tag>}
-              </>
-            )}
-            line={<span className="trunc">{r.description}</span>}
-            meta={[
-              { k: 'Severity', v: SEVERITY[r.severity].label },
-              { k: 'Category', v: r.category },
-              { k: 'State', v: r.unread ? 'Unread' : 'Read' },
-            ]}
-            footR={r.scheduleOn}
-          />
-        )}
         searchPlaceholder="Search notifications by title, description or category…"
         onRowClick={open}
         rowActions={(r) => [

@@ -1,0 +1,77 @@
+/* Page-owned styles for ReconciliationPage. Shared primitives remain in src/styles. */
+
+/* ---- Add Application wizard: horizontal step bar ---- */
+.rec-steps{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.rec-step{flex:1 1 220px;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;
+  padding:11px 13px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s,box-shadow .12s}
+.rec-step:hover:not([disabled]){background:var(--surface-2);border-color:var(--line-2)}
+.rec-step[disabled]{cursor:default;opacity:.55}
+.rec-step[data-on]{border-color:var(--accent-line);background:var(--accent-bg);
+  box-shadow:inset 0 0 0 1px var(--accent-line)}
+
+.rec-step-n{width:24px;height:24px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--mut);
+  background:var(--surface-3);border:1px solid var(--line)}
+.rec-step-n svg{width:11px;height:11px}
+.rec-step[data-done] .rec-step-n{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.rec-step[data-on] .rec-step-n{background:var(--accent-solid);border-color:var(--accent-solid);color:#fff}
+
+.rec-step-m{min-width:0;display:flex;flex-direction:column;gap:1px}
+.rec-step-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-step[data-on] .rec-step-t{color:var(--accent-a)}
+.rec-step-s{font-size:var(--t-xs);color:var(--mut);line-height:1.4;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---- Application picker (step 1) ---- */
+.app-pick{display:flex;flex-direction:column;gap:7px}
+.app-pick-it{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s}
+.app-pick-it:hover{background:var(--surface-2);border-color:var(--line-2)}
+.app-pick-it[data-on]{border-color:var(--accent-line);background:var(--accent-bg)}
+.app-pick-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.app-pick-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.app-pick-s{font-size:var(--t-xs);color:var(--mut)}
+.app-pick-r{flex:none;display:flex;align-items:center;gap:9px}
+
+.rec-radio{width:17px;height:17px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  border:1.5px solid var(--line-2);color:#fff;background:var(--surface)}
+.rec-radio[data-on]{background:var(--accent);border-color:var(--accent)}
+
+@media(max-width:820px){
+  .rec-step{flex:1 1 100%}
+  .app-pick-r{display:none}
+}
+
+/* ---- Categorised synced data (Total / mismatch username / mismatch data) ----
+   The three counts sit inside the register panel and act as its filter, so they
+   need the panel's own gutter rather than the page gutter. */
+.sync-head{display:flex;flex-direction:column;gap:var(--sp-3);
+  padding:var(--sp-4) var(--sp-4) 0}
+.sync-head .scards{margin:0}
+.sync-head .section-head{gap:var(--sp-2)}
+
+/* A difference cell carries one line per attribute, so it opts out of the
+   single-line rule the rest of the table runs under. */
+.tbl td .diff-list{display:flex;flex-direction:column;gap:2px;white-space:normal;min-width:0}
+.diff-it{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:var(--t-xs);line-height:1.5}
+.diff-it svg{color:var(--faint);flex:none}
+.diff-k{color:var(--mut)}
+.diff-v{color:var(--ink-2);overflow-wrap:anywhere}
+/* The target value is the one that disagrees with the store, so it is the one
+   that carries the colour. */
+.diff-v[data-drift]{color:var(--warn);font-weight:var(--w-semi)}
+
+/* ---- Trust source attribute configuration ----
+   The provisioning mapping table carries seven columns and reserves 900px for
+   them. Reconciliation reads inward and needs five, so it declares its own
+   floor rather than inheriting a horizontal scrollbar it has no columns to
+   justify. */
+.map-tbl.trust-map{min-width:810px}
+
+/* A manual row puts an input in the main column, which otherwise renders a
+   two-line identifier cell — so that cell drops the vertical padding it uses
+   for the label-and-sub pair and centres the control instead. */
+.map-tbl.trust-map td.td-main{vertical-align:middle}

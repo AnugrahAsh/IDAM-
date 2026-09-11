@@ -17,25 +17,35 @@ import Select from '../../components/primitives/Select'
 import EmptyState from '../../components/primitives/EmptyState'
 import FileDrop from '../../components/primitives/FileDrop'
 import IconButton from '../../components/primitives/IconButton'
+import Check from '../../components/primitives/Check'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
-import { ME } from '../../data/seed'
+import { LOOKUPS, ME } from '../../data/seed'
 import {
   useChain, TYPE_ORDER, TYPE_SPECS,
   birthrightFor, defaultsFor, factorsFor, fieldsOf, grantsFor, groupOf, policyChecks, sensitivityOf, slug, userOf,
 } from './data'
 import {
-  AttributeChangeEditor, DiffList, GroupDualPicker, GroupMultiSelect,
+  AttributeChangeEditor, DiffList, FactorMultiSelect, GroupDualPicker, GroupMultiSelect,
 } from './FormControls'
 
 const CHECK_ICON = { ok: 'checkC', warn: 'warn', bad: 'warn' }
-const CUSTOM_KINDS = new Set(['groupmulti', 'groupdual', 'attrmulti', 'file'])
+const CUSTOM_KINDS = new Set(['groupmulti', 'groupdual', 'attrmulti', 'file', 'checkbox', 'factors'])
 
 function FieldControl({ f, value, v, onChange }) {
   const id = `req-${f.id}`
-  if (f.kind === 'groupmulti') {
+  if (f.kind === 'checkbox') {
     return (
-      <GroupMultiSelect
+      <label className="req-check">
+        <Check checked={!!value} label={f.checkboxLabel || f.label} onChange={() => onChange(f.id, value ? '' : 'yes')} />
+        <span>{f.checkboxLabel || f.label}</span>
+      </label>
+    )
+  }
+  if (f.kind === 'factors') {
+    return (
+      <FactorMultiSelect
+        user={v.userId ? userOf(v.userId) : null}
         value={Array.isArray(value) ? value : []}
         onChange={(list) => onChange(f.id, list)}
       />
@@ -44,8 +54,17 @@ function FieldControl({ f, value, v, onChange }) {
   if (f.kind === 'groupdual') {
     return (
       <GroupDualPicker
+        user={v.userId ? userOf(v.userId) : null}
         value={value && typeof value === 'object' ? value : { add: [], remove: [] }}
         onChange={(gc) => onChange(f.id, gc)}
+      />
+    )
+  }
+  if (f.kind === 'groupmulti') {
+    return (
+      <GroupMultiSelect
+        value={Array.isArray(value) ? value : []}
+        onChange={(list) => onChange(f.id, list)}
       />
     )
   }
@@ -273,6 +292,20 @@ function ContextRail({ spec, v, built }) {
   return null
 }
 
+/* A joiner's employee type decides the policy, the birthright bundle and which
+   attributes are even asked for, so the Add User screen asks it before anything
+   else. A request for the same joiner asked it as the fifth field of the first
+   card, which let an operator fill a form and then change the thing that
+   governs it. Same gate, same order. */
+const TYPE_ICON = { Internal: 'user', External: 'globe', Contractor: 'clock', 'Service Account': 'server' }
+
+const TYPE_NOTE = {
+  Internal: 'Permanent employee. Full attribute set, organization baseline entitlements and the standard password policy.',
+  External: 'Partner or vendor identity. Sponsor and contract end date are required before the chain clears.',
+  Contractor: 'Fixed-term worker. Entitlements expire 90 days after the start date unless a renewal is approved.',
+  'Service Account': 'Non-human identity. Requires a named owner and is excluded from interactive sign-in.',
+}
+
 export default function RequestForm({ type, onSubmit }) {
   const chain = useChain()
   const { toast, navigate } = useApp()
@@ -352,10 +385,52 @@ export default function RequestForm({ type, onSubmit }) {
       <div className="detail-body">
         <div className="detail-cols">
           <div className="stack">
-            {spec.sections.map((section) => (
+            {spec.key === 'adduser' && (
+              <Card
+                title="Employee type"
+                sub="Asked first — it decides the policy, the birthright bundle and which attributes the rest of this form requires."
+                actions={v.employeeType ? <Tag tone="acc">{v.employeeType}</Tag> : <Tag>Not chosen</Tag>}
+              >
+                <div className="grid grid-4">
+                  {LOOKUPS.employee_type.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className="tile"
+                      data-tone={v.employeeType === t ? 'ok' : undefined}
+                      style={{ textAlign: 'left', borderColor: v.employeeType === t ? 'var(--accent)' : undefined }}
+                      onClick={() => set('employeeType', t)}
+                    >
+                      <span className="tile-k"><Icon name={TYPE_ICON[t] || 'tag'} size={12} />{t}</span>
+                      <span className="t-xs t-mut" style={{ marginTop: 4, lineHeight: 1.45 }}>{TYPE_NOTE[t]}</span>
+                    </button>
+                  ))}
+                </div>
+                {touched && !v.employeeType && (
+                  <div className="t-xs" style={{ color: 'var(--bad)', marginTop: 10 }}>
+                    Choose an employee type before submitting.
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* The rest of the form stays closed until the type is chosen, so
+                nothing is filled in against a policy that is about to change. */}
+            {spec.key === 'adduser' && !v.employeeType ? (
+              <Card title="Details" sub="Available once an employee type is chosen">
+                <EmptyState
+                  size="sm"
+                  icon="user"
+                  title="Choose an employee type"
+                  body="The attributes, documents and approval chain below are decided by it."
+                />
+              </Card>
+            ) : spec.sections.map((section) => (
               <Card key={section.id} title={section.title} sub={section.sub}>
                 <div className="grid grid-2">
-                  {section.fields.map((f) => (
+                  {/* A field may depend on another's value — the date window on
+                      a group grant disappears when the grant is permanent. */}
+                  {section.fields.filter((f) => !f.showIf || f.showIf(v)).map((f) => (
                     <Field
                       key={f.id}
                       label={f.label}
@@ -388,28 +463,6 @@ export default function RequestForm({ type, onSubmit }) {
                 />
               </Card>
             )}
-
-            <Card title="What happens on approval" sub="The provisioning plan the platform executes once the chain clears">
-              <div className="feed">
-                {grantsFor(built.target).map((x, i) => (
-                  <div className="feed-it" key={x.capability}>
-                    <span className="feed-ic" data-tone="mut"><Icon name="provision" size={13} /></span>
-                    <div className="feed-m">
-                      <div className="feed-t">Step {i + 1} · {x.capability}</div>
-                      <div className="feed-s">
-                        <span>{x.target}</span>
-                        <SeverityBadge level={x.sensitivity}>{x.sensitivity}</SeverityBadge>
-                      </div>
-                    </div>
-                    <span className="feed-time">queued</span>
-                  </div>
-                ))}
-              </div>
-              <div className="t-xs t-faint" style={{ marginTop: 10 }}>
-                Nothing in this plan runs until the final approver commits. Every step is written to the job log with
-                its target, result and duration.
-              </div>
-            </Card>
           </div>
 
           <div className="stack">
@@ -463,19 +516,6 @@ export default function RequestForm({ type, onSubmit }) {
             </Card>
 
             <ContextRail spec={spec} v={v} built={built} />
-
-            <Card title="After submission" sub="What the requester and the identity see">
-              <KeyValue
-                cols={1}
-                rows={[
-                  { k: 'Request id', v: 'Assigned on submit', icon: 'request' },
-                  { k: 'First approver notified', v: 'Immediately, by mail and in-console', icon: 'mail' },
-                  { k: 'Reminder', v: 'Every 12 hours until decided', icon: 'bell' },
-                  { k: 'Escalation', v: 'Line manager at 48 hours', icon: 'trendUp' },
-                  { k: 'Withdrawal', v: 'Possible at any point before the final decision', icon: 'ban' },
-                ]}
-              />
-            </Card>
           </div>
         </div>
       </div>

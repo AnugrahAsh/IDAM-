@@ -8,6 +8,7 @@ import Icon from '../components/primitives/Icon'
 import Pill from '../components/primitives/Pill'
 import Tag from '../components/primitives/Tag'
 import Tabs from '../components/primitives/Tabs'
+import Menu from '../components/primitives/Menu'
 import Meter from '../components/primitives/Meter'
 import Banner from '../components/primitives/Banner'
 import KeyValue from '../components/primitives/KeyValue'
@@ -15,7 +16,7 @@ import Field from '../components/primitives/Field'
 import TextInput from '../components/primitives/TextInput'
 import { useApp } from '../store/AppContext'
 import { num } from '../lib/format'
-import { APPLICATIONS, LICENSE, ORGANIZATIONS, USERS } from '../data/seed'
+import { APPLICATIONS, LICENCES, LICENSE, ORGANIZATIONS, USERS } from '../data/seed'
 import { RingGauge } from '../components/viz/Charts'
 
 const MONTHS = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
@@ -42,7 +43,11 @@ const MODULE_MATRIX = [
   { area: 'Privileged Session Recording', icon: 'eye', bundle: 'Privileged Session Recording' },
   { area: 'Identity Analytics Pro', icon: 'trendUp', bundle: 'Identity Analytics Pro' },
   { area: 'Customer Identity', icon: 'users', bundle: 'Customer Identity' },
-].map((m) => ({ ...m, licensed: LICENSE.modules.includes(m.bundle) }))
+]
+
+/* Entitlement is a property of the licence being read, not of the product, so
+   an older licence lights up the modules it actually carried. */
+const modulesFor = (lic) => MODULE_MATRIX.map((m) => ({ ...m, licensed: lic.modules.includes(m.bundle) }))
 
 function LicenseUpload({ onSubmit, onCancel }) {
   const [file, setFile] = useState('')
@@ -104,34 +109,42 @@ function LicenseUpload({ onSubmit, onCancel }) {
 }
 
 export default function LicensePage() {
+  /* Which licence the page is being read as of. A renewal replaces a licence
+     rather than editing it, so the superseded ones are still answerable
+     questions — what were we entitled to, and for how many seats. */
+  const [licKey, setLicKey] = useState(LICENCES[0].key)
+  const [licMenu, setLicMenu] = useState(null)
+  const lic = LICENCES.find((l) => l.key === licKey) || LICENSE
+  const current = lic.key === LICENCES[0].key
+  const modules = useMemo(() => modulesFor(lic), [lic])
   const { toast, setDrawer, navigate } = useApp()
 
-  const available = LICENSE.seats - LICENSE.seatsUsed
-  const utilization = Math.round((LICENSE.seatsUsed / LICENSE.seats) * 100)
-  const expiring = LICENSE.daysRemaining < 60
+  const available = lic.seats - lic.seatsUsed
+  const utilization = Math.round((lic.seatsUsed / lic.seats) * 100)
+  const expiring = lic.daysRemaining < 60
 
   const totalDays = Math.round(
-    (Date.parse(LICENSE.expires) - Date.parse(LICENSE.issued)) / 86400000,
+    (Date.parse(lic.expires) - Date.parse(lic.issued)) / 86400000,
   )
-  const elapsed = totalDays - LICENSE.daysRemaining
+  const elapsed = totalDays - lic.daysRemaining
 
-  const modulesLicensed = MODULE_MATRIX.filter((m) => m.licensed)
-  const modulesUnlicensed = MODULE_MATRIX.filter((m) => !m.licensed)
+  const modulesLicensed = modules.filter((m) => m.licensed)
+  const modulesUnlicensed = modules.filter((m) => !m.licensed)
 
   // Entitlement lines, each measured against what the licence actually permits.
   const consumption = [
     {
       k: 'Identity seats',
       sub: 'Named identities that may authenticate',
-      used: LICENSE.seatsUsed,
-      cap: LICENSE.seats,
+      used: lic.seatsUsed,
+      cap: lic.seats,
       unit: 'seats',
     },
     {
       k: 'Licensed modules',
       sub: 'Feature areas enabled by this edition',
       used: modulesLicensed.length,
-      cap: MODULE_MATRIX.length,
+      cap: modules.length,
       unit: 'modules',
     },
     {
@@ -169,17 +182,17 @@ export default function LicensePage() {
 
   const timeline = [
     { k: 'Order created', d: '2025-12-04', s: 'Licence order raised with Tanflow', tone: 'ok', icon: 'check' },
-    { k: 'Issued & activated', d: LICENSE.issued, s: `${LICENSE.edition} entitlements applied`, tone: 'ok', icon: 'check' },
+    { k: 'Issued & activated', d: lic.issued, s: `${lic.edition} entitlements applied`, tone: 'ok', icon: 'check' },
     // Read from the same clock as daysRemaining — the two used to be computed
     // from different dates and disagreed by a fortnight on the same screen.
-    { k: 'Today', d: LICENSE.today, s: `${num(LICENSE.daysRemaining)} days of validity remaining`, tone: 'acc', icon: 'clock' },
-    { k: 'Validity ends', d: LICENSE.expires, s: 'Renew or install a refreshed licence file', tone: 'warn', icon: 'warn' },
+    { k: 'Today', d: lic.today, s: `${num(lic.daysRemaining)} days of validity remaining`, tone: 'acc', icon: 'clock' },
+    { k: 'Validity ends', d: lic.expires, s: 'Renew or install a refreshed licence file', tone: 'warn', icon: 'warn' },
   ]
 
   const openUpload = () => {
     setDrawer({
       title: 'Upload license',
-      sub: `Replacing ${LICENSE.key}`,
+      sub: `Replacing ${lic.key}`,
       children: (
         <LicenseUpload
           onCancel={() => setDrawer(null)}
@@ -200,7 +213,40 @@ export default function LicensePage() {
         sub="Subscription health, entitlement consumption, feature entitlements and registered machines for this installation."
         actions={
           <>
-            <span className="lic-chip mono">{LICENSE.key} ({expiring ? 'Expiring' : 'Active'})</span>
+            {/* Every licence this installation has held, current first. It was
+                a static chip naming the one in force, which is the only one
+                that never needs looking up — the superseded ones are what an
+                audit question is actually about. */}
+            <button
+              type="button"
+              className="lic-pick"
+              aria-haspopup="menu"
+              aria-expanded={!!licMenu}
+              onClick={(e) => setLicMenu({
+                anchor: e.currentTarget,
+                items: LICENCES.map((l) => ({
+                  id: l.key,
+                  label: (
+                    <span className="lic-opt" data-on={l.key === licKey || undefined}>
+                      <span className="lic-dot" data-state={l.status.toLowerCase()} />
+                      <span className="lic-opt-m">
+                        <span className="lic-opt-k mono">{l.key}</span>
+                        <span className="lic-opt-s">
+                          {l.edition} · {l.issued} to {l.expires}
+                        </span>
+                      </span>
+                      <span className="lic-opt-st" data-state={l.status.toLowerCase()}>{l.status}</span>
+                    </span>
+                  ),
+                  onSelect: () => setLicKey(l.key),
+                })),
+              })}
+            >
+              <span className="lic-dot" data-state={lic.status.toLowerCase()} />
+              <span className="mono">{lic.key}</span>
+              <span className="lic-pick-st">({lic.status})</span>
+              <Icon name="chevD" size={12} />
+            </button>
             <Button icon="download" onClick={() => toast('ok', 'Export queued', 'The licence report is being prepared as a signed PDF.')}>
               Export report
             </Button>
@@ -212,31 +258,42 @@ export default function LicensePage() {
         }
       />
 
-      {expiring && (
+      {!current && (
+        <Banner tone="info">
+          You are reading <b className="mono">{lic.key}</b>, a superseded licence. Its entitlements and seat count
+          are shown as they stood; nothing on this page can be changed while a past licence is selected.
+          {' '}
+          <button type="button" className="link" onClick={() => setLicKey(LICENCES[0].key)}>
+            Back to the licence in force<Icon name="chevR" size={10} />
+          </button>
+        </Banner>
+      )}
+
+      {current && expiring && (
         <Banner tone="warn" style={{ marginBottom: 10 }}>
-          This licence expires in {LICENSE.daysRemaining} days. Install a refreshed licence file before {LICENSE.expires} to avoid sign-in disruption.
+          This licence expires in {lic.daysRemaining} days. Install a refreshed licence file before {lic.expires} to avoid sign-in disruption.
         </Banner>
       )}
 
       <div className="kpi-row cols-5">
         <div className="kpi">
           <span className="k-label"><Icon name="shield" size={12} />License status</span>
-          <span className="k-val">{expiring ? 'Expiring' : 'Active'}</span>
-          <span className="k-foot mono">{LICENSE.key}</span>
+          <span className="k-val">{lic.status}</span>
+          <span className="k-foot mono">{lic.key}</span>
         </div>
         <div className="kpi">
           <span className="k-label"><Icon name="clock" size={12} />Validity remaining</span>
-          <span className="k-val num">{num(LICENSE.daysRemaining)}<span className="k-unit">of {num(totalDays)} days</span></span>
-          <span className="k-foot">Ends {LICENSE.expires}</span>
+          <span className="k-val num">{num(lic.daysRemaining)}<span className="k-unit">of {num(totalDays)} days</span></span>
+          <span className="k-foot">Ends {lic.expires}</span>
         </div>
         <div className="kpi">
           <span className="k-label"><Icon name="users" size={12} />Identity seats</span>
-          <span className="k-val num">{num(LICENSE.seatsUsed)}<span className="k-unit">/ {num(LICENSE.seats)}</span></span>
+          <span className="k-val num">{num(lic.seatsUsed)}<span className="k-unit">/ {num(lic.seats)}</span></span>
           <span className="k-foot">{utilization}% of entitlement</span>
         </div>
         <div className="kpi">
           <span className="k-label"><Icon name="layers" size={12} />Licensed modules</span>
-          <span className="k-val num">{modulesLicensed.length}<span className="k-unit">/ {MODULE_MATRIX.length}</span></span>
+          <span className="k-val num">{modulesLicensed.length}<span className="k-unit">/ {modules.length}</span></span>
           <span className="k-foot">{modulesUnlicensed.length} available as add-ons</span>
         </div>
         <div className="kpi">
@@ -252,26 +309,26 @@ export default function LicensePage() {
           <Card>
             <div className="lic-id">
               <div className="row" style={{ gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <Pill tone={expiring ? 'warn' : 'ok'} dot>{expiring ? 'Expiring' : 'Active'}</Pill>
-                <Tag tone="acc">{LICENSE.edition}</Tag>
+                <Pill tone={expiring ? 'warn' : 'ok'} dot>{lic.status}</Pill>
+                <Tag tone="acc">{lic.edition}</Tag>
                 <Tag>Subscription</Tag>
               </div>
 
               <div className="lic-ring">
                 <RingGauge
-                  pct={(LICENSE.daysRemaining / totalDays) * 100}
+                  pct={(lic.daysRemaining / totalDays) * 100}
                   size={148}
                   color={expiring ? 'var(--warn-core)' : 'var(--ok)'}
                   track={expiring ? 'var(--warn-bg)' : 'var(--ok-bg)'}
-                  label={num(LICENSE.daysRemaining)}
+                  label={num(lic.daysRemaining)}
                   cap={`of ${num(totalDays)} days left`}
                 />
               </div>
 
-              <div className="lic-key mono">{LICENSE.key}</div>
+              <div className="lic-key mono">{lic.key}</div>
 
               <div className="row" style={{ gap: 7, justifyContent: 'center', marginTop: 12 }}>
-                <Button icon="shield" onClick={() => toast('ok', 'License valid', `Signature verified. ${num(LICENSE.daysRemaining)} days remaining.`)}>
+                <Button icon="shield" onClick={() => toast('ok', 'License valid', `Signature verified. ${num(lic.daysRemaining)} days remaining.`)}>
                   Validate now
                 </Button>
                 <Button icon="report" onClick={() => toast('info', 'Usage matrix', 'Per-module consumption is being compiled.')}>
@@ -284,9 +341,9 @@ export default function LicensePage() {
             <KeyValue
               cols={1}
               rows={[
-                { k: 'License ID', v: LICENSE.key },
-                { k: 'Product', v: LICENSE.product },
-                { k: 'Plan', v: LICENSE.edition },
+                { k: 'License ID', v: lic.key },
+                { k: 'Product', v: lic.product },
+                { k: 'Plan', v: lic.edition },
                 { k: 'Type', v: 'Subscription' },
               ]}
             />
@@ -295,7 +352,7 @@ export default function LicensePage() {
             <KeyValue
               cols={1}
               rows={[
-                { k: 'Organization', v: LICENSE.licensedTo },
+                { k: 'Organization', v: lic.licensedTo },
                 { k: 'Tenant', v: 'tanflow-prod' },
                 { k: 'Identities on record', v: `${num(USERS.length)} directory identities` },
               ]}
@@ -307,12 +364,12 @@ export default function LicensePage() {
             <KeyValue
               cols={1}
               rows={[
-                { k: 'Client name', v: LICENSE.contact.clientName },
-                { k: 'Designation', v: LICENSE.contact.designation },
-                { k: 'Phone number', v: <span className="mono">{LICENSE.contact.phone}</span> },
-                { k: 'Email address', v: <span className="mono">{LICENSE.contact.email}</span> },
-                { k: 'Organization address', v: LICENSE.contact.address },
-                { k: 'Organization GSTIN', v: <span className="mono">{LICENSE.contact.gstin}</span> },
+                { k: 'Client name', v: lic.contact.clientName },
+                { k: 'Designation', v: lic.contact.designation },
+                { k: 'Phone number', v: <span className="mono">{lic.contact.phone}</span> },
+                { k: 'Email address', v: <span className="mono">{lic.contact.email}</span> },
+                { k: 'Organization address', v: lic.contact.address },
+                { k: 'Organization GSTIN', v: <span className="mono">{lic.contact.gstin}</span> },
               ]}
             />
 
@@ -320,8 +377,8 @@ export default function LicensePage() {
             <KeyValue
               cols={1}
               rows={[
-                { k: 'Issued & activated', v: LICENSE.issued },
-                { k: 'Validity ends', v: `${LICENSE.expires} · ${num(LICENSE.daysRemaining)} days` },
+                { k: 'Issued & activated', v: lic.issued },
+                { k: 'Validity ends', v: `${lic.expires} · ${num(lic.daysRemaining)} days` },
                 { k: 'Term length', v: `${num(totalDays)} days` },
                 { k: 'Elapsed', v: `${num(elapsed)} days` },
               ]}
@@ -372,7 +429,7 @@ export default function LicensePage() {
           <Card
             title="Feature entitlements"
             sub="Capabilities enforced at runtime for this licence"
-            actions={<Tag tone="acc">Current: {LICENSE.edition}</Tag>}
+            actions={<Tag tone="acc">Current: {lic.edition}</Tag>}
             flush
           >
             <div className="tbl-wrap">
@@ -381,11 +438,11 @@ export default function LicensePage() {
                   <tr>
                     <th>Capability</th>
                     <th>Bundle</th>
-                    <th style={{ width: 130, textAlign: 'right' }}>{LICENSE.edition}</th>
+                    <th style={{ width: 130, textAlign: 'right' }}>{lic.edition}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {MODULE_MATRIX.map((m) => (
+                  {modules.map((m) => (
                     <tr
                       key={m.area}
                       onClick={() => m.licensed && m.route && navigate(m.route)}
@@ -438,6 +495,8 @@ export default function LicensePage() {
           </Card>
         </div>
       </div>
+
+      {licMenu && <Menu {...licMenu} onClose={() => setLicMenu(null)} />}
     </>
   )
 }

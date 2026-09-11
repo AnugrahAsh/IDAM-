@@ -43,6 +43,9 @@ export default function Menu({ anchor, items, onClose }) {
             className="menu-it"
             data-danger={!!it.danger}
             disabled={it.disabled}
+            /* Why an item is disabled belongs on the item, not in a note beside
+               the table: "Run now" greyed out with no reason reads as a fault. */
+            title={it.title}
             onClick={() => {
               onClose()
               it.onSelect && it.onSelect()

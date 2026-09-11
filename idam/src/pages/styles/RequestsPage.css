@@ -77,3 +77,122 @@
   padding:6px 9px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:var(--surface-2);gap:10px;
 }
+
+/* Entitlements picker — applications, expanded to their groups.
+
+   The joiner request used a flat list of every group in the estate. It now uses
+   the Add User page's layout, so the two screens that ask "which groups?" ask
+   it the same way. These rules mirror the ones in DirectoryPage.css; they are
+   restated rather than shared because each page ships its own stylesheet. */
+.gp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.gp-bar .gp-search{flex:1 1 260px;min-width:0}
+.gp-mini{display:inline-flex;align-items:center;gap:5px;height:27px;padding:0 9px;flex:none;
+  font-size:var(--t-xs);font-weight:var(--w-med);color:var(--mut);cursor:pointer;white-space:nowrap;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-sm);
+  transition:border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.gp-mini:hover{border-color:#AEB6C6;color:var(--ink)}
+.gp-mini svg{color:var(--faint)}
+
+.gp-panel{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);
+  max-height:min(56vh,520px);overflow-y:auto}
+.gp-app + .gp-app{border-top:1px solid var(--line)}
+/* The application header reads as the parent of its groups: heavier weight, its
+   own band, and the groups indented beneath it against a rule. */
+.gp-app-h{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;
+  padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.gp-app-btn{display:flex;align-items:center;gap:6px;flex:1;min-width:0;padding:0;border:none;
+  background:transparent;cursor:pointer;font:inherit;text-align:left;color:var(--ink)}
+.gp-app-btn svg{color:var(--mut);flex:none}
+.gp-app-btn:hover .gp-app-name{color:var(--accent-a)}
+.gp-app-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
+.gp-app-name{font-size:var(--t-sm);font-weight:var(--w-bold);color:var(--ink);flex:1;min-width:0;
+  letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Groups sit in columns under their application, so a target carrying a couple
+   of hundred subgroups stays scannable. */
+.gp-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));
+  gap:2px 10px;padding:7px 12px 9px 26px;position:relative}
+.gp-groups::before{content:"";position:absolute;left:14px;top:6px;bottom:8px;width:1px;
+  background:var(--line)}
+.gp-groups .gp-row{display:flex;align-items:center;gap:8px;padding:4px 7px;cursor:pointer;
+  min-width:0;border-radius:var(--r-sm);transition:background var(--dur-1) var(--ease)}
+.gp-groups .gp-row:hover{background:var(--surface-2)}
+.gp-groups .gp-row[data-on="true"]{background:var(--accent-bg)}
+.gp-row-name{flex:1;min-width:0;font-size:var(--t-sm);color:var(--ink);font-family:var(--mono);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gp-row-meta{display:inline-flex;align-items:center;gap:5px;flex:none}
+
+/* A boolean that reads as a sentence rather than a labelled field. */
+.req-check{display:flex;align-items:center;gap:9px;min-height:31px;cursor:pointer;
+  font-size:var(--t-sm);color:var(--ink-2)}
+
+/* Which of an identity's enrolled factors a reset clears. */
+.fx{display:flex;flex-direction:column;gap:8px}
+.fx-bar{display:flex;align-items:center;gap:10px}
+.fx-empty{padding:12px 13px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r);line-height:1.5}
+.fx-list{display:flex;flex-direction:column;border:1px solid var(--line);
+  border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.fx-row{display:flex;align-items:center;gap:10px;padding:9px 11px;cursor:pointer;
+  border-bottom:1px solid var(--hair);transition:background var(--dur-1) var(--ease)}
+.fx-row:last-child{border-bottom:none}
+.fx-row:hover{background:var(--row-hover)}
+.fx-row[data-on="true"]{background:var(--accent-bg)}
+.fx-row > svg{color:var(--mut);flex:none}
+.fx-m{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
+.fx-t{font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink)}
+.fx-s{line-height:1.4}
+
+/* "Held" / "Not held" on the membership picker, and the actions that follow
+   from it: adding a group already held, or removing one never held, are both
+   no-ops and are disabled rather than silently accepted. */
+.gp-row[data-held] .gp-t{color:var(--ink)}
+.gp-act[disabled]{opacity:.38;cursor:not-allowed;pointer-events:none}
+
+/* --- Membership picker, rebuilt -------------------------------------------
+   Every row carried a Held tag, a disabled Add, an active Remove, a severity
+   badge, a conflict mark and a wrapped description — six things stating what
+   amounts to two: what the group is, and whether the identity is in it. The
+   row states the group and offers the one action that applies to it. */
+
+.gp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.gp-bar .gp-search{flex:1 1 260px;min-width:0}
+/* The counted labels ran off the right edge of the panel; the strip is allowed
+   to take a row of its own rather than being clipped. */
+.gp-scope{flex:0 0 auto;max-width:100%}
+.gp-scope button{gap:6px}
+.gp-n{font-size:9.5px;font-weight:var(--w-bold);line-height:1;padding:2px 5px;border-radius:var(--r-xs);
+  background:var(--surface-3);color:var(--mut)}
+.gp-scope button[data-on="true"] .gp-n{background:var(--accent-bg-2);color:var(--accent-a)}
+
+.gp-list{max-height:320px}
+/* Roomier rows: the name and its context get two clean lines instead of one
+   crowded one, and the action sits at a fixed right edge across every row. */
+.gp-list > .gp-row{display:flex;align-items:center;gap:10px;padding:9px 11px;cursor:default}
+.gp-list > .gp-row:hover{background:var(--row-hover)}
+.gp-list > .gp-row[data-state="held"]{background:var(--surface-2)}
+.gp-list > .gp-row[data-state="adding"]{background:var(--ok-bg)}
+.gp-list > .gp-row[data-state="removing"]{background:var(--bad-bg)}
+/* A staged row is marked on its edge, so the list reads at a glance without a
+   badge on every line. */
+.gp-list > .gp-row[data-state="adding"]{box-shadow:inset 3px 0 0 var(--ok)}
+.gp-list > .gp-row[data-state="removing"]{box-shadow:inset 3px 0 0 var(--bad)}
+
+.gp-list > .gp-row .gp-m{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.gp-list > .gp-row .gp-t{display:flex;align-items:center;gap:6px;font-size:var(--t-sm);
+  font-weight:var(--w-med);color:var(--ink);min-width:0}
+.gp-list > .gp-row .gp-t .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gp-list > .gp-row .gp-t svg{color:var(--viol);flex:none}
+.gp-list > .gp-row .gp-s{margin:0;line-height:1.4}
+
+.gp-list > .gp-row .gp-act{height:26px;padding:0 10px;flex:none;min-width:84px;justify-content:center;
+  font-weight:var(--w-med)}
+.gp-list > .gp-row .gp-act[data-kind="add"]{color:var(--accent-a);border-color:var(--accent-line)}
+.gp-list > .gp-row .gp-act[data-kind="add"]:hover{background:var(--accent-bg)}
+.gp-list > .gp-row .gp-act[data-kind="remove"]{color:var(--bad);border-color:var(--bad-line)}
+.gp-list > .gp-row .gp-act[data-kind="remove"]:hover{background:var(--bad-bg)}
+
+/* What is staged, once, at the foot — replacing the two half-empty "To add" /
+   "To remove" columns that were shown whether anything was staged or not. */
+.gp-staged{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px;
+  padding:9px 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r)}

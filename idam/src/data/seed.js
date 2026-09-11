@@ -308,10 +308,10 @@ export const GROUPS = GROUP_CATALOG.map(([name, description], i) => ({
 }))
 
 export const POLICIES = [
-  { id: 1, name: 'Contractor 90-day expiry', description: 'Revokes contractor entitlements 90 days after start unless renewed.', condition: "employeeType = 'Contractor' AND days_since(startDate) > 90", groupType: 'Access', group: 'SUP_TIER2', active: true, matched: 38, lastRun: stamp(0, 3) },
-  { id: 2, name: 'Finance read baseline', description: 'Every Finance identity receives ledger read access.', condition: "department = 'Finance'", groupType: 'Application', group: 'FIN_GL_POST', active: true, matched: 58, lastRun: stamp(0, 3) },
-  { id: 3, name: 'Engineering repository access', description: 'Engineering staff receive repository access on join.', condition: "department = 'Engineering' AND status = 'Active'", groupType: 'Application', group: 'ENG_REPO_ADMIN', active: true, matched: 132, lastRun: stamp(0, 3) },
-  { id: 4, name: 'Field staff onboarding', description: 'Field-level identities receive the field bundle.', condition: "officeLevel = 'Field' AND status = 'Active'", groupType: 'SSO', group: 'SUP_TIER2', active: false, matched: 76, lastRun: stamp(6, 3) },
+  { id: 1, name: 'Contractor 90-day expiry', description: 'Revokes contractor entitlements 90 days after start unless renewed.', condition: "employeeType = 'Contractor' AND days_since(startDate) > 90", groupType: 'Access', group: ['SUP_TIER2'], active: true, matched: 38, lastRun: stamp(0, 3) },
+  { id: 2, name: 'Finance read baseline', description: 'Every Finance identity receives ledger read access.', condition: "department = 'Finance'", groupType: 'Access', group: ['FIN_GL_POST'], active: true, matched: 58, lastRun: stamp(0, 3) },
+  { id: 3, name: 'Engineering repository access', description: 'Engineering staff receive repository access on join.', condition: "department = 'Engineering' AND status = 'Active'", groupType: 'SSO', group: ['ENG_REPO_ADMIN'], active: true, matched: 132, lastRun: stamp(0, 3) },
+  { id: 4, name: 'Field staff onboarding', description: 'Field-level identities receive the field bundle.', condition: "officeLevel = 'Field' AND status = 'Active'", groupType: 'Access', group: ['SUP_TIER2', 'IT_BACKUP_OPERATOR', 'FIN_VENDOR_MASTER'], active: false, matched: 76, lastRun: stamp(6, 3) },
 ]
 
 /**
@@ -323,11 +323,11 @@ export const POLICIES = [
  * leading entitlement of each side so every existing consumer keeps working.
  */
 export const SOD_RULES = [
-  { id: 1, name: 'Create and approve payment', description: 'A single identity must not both raise and approve a payment batch.', type: 'Anti-affinity', sides: [['FIN_GL_POST'], ['FIN_AP_APPROVE', 'FIN_PAYMENT_RELEASE']], groups: ['FIN_GL_POST', 'FIN_AP_APPROVE'], violations: 7, severity: 'critical', framework: 'SOX 404', owner: 'Finance' },
-  { id: 2, name: 'Vendor master and payment', description: 'Vendor master maintenance conflicts with payment execution.', type: 'Anti-affinity', sides: [['FIN_VENDOR_MASTER'], ['FIN_AP_APPROVE']], groups: ['FIN_VENDOR_MASTER', 'FIN_AP_APPROVE'], violations: 3, severity: 'critical', framework: 'SOX 404', owner: 'Finance' },
-  { id: 3, name: 'Develop and deploy to production', description: 'Repository administration conflicts with production deployment.', type: 'Anti-affinity', sides: [['ENG_REPO_ADMIN'], ['ENG_PROD_DEPLOY']], groups: ['ENG_REPO_ADMIN', 'ENG_PROD_DEPLOY'], violations: 4, severity: 'high', framework: 'ITGC', owner: 'Engineering' },
-  { id: 4, name: 'Administer and audit', description: 'Domain administration conflicts with security audit review.', type: 'Anti-affinity', sides: [['IT_DOMAIN_ADMIN'], ['SEC_SIEM_ANALYST']], groups: ['IT_DOMAIN_ADMIN', 'SEC_SIEM_ANALYST'], violations: 1, severity: 'high', framework: 'ISO 27001', owner: 'Security' },
-  { id: 5, name: 'Payroll requires HR data', description: 'Payroll execution requires HR data access to function.', type: 'Affinity', sides: [['HR_PAYROLL_RUN'], ['HR_PII_READ']], groups: ['HR_PAYROLL_RUN', 'HR_PII_READ'], violations: 0, severity: 'low', framework: 'Operational', owner: 'Human Resources' },
+  { id: 1, name: 'Create and approve payment', description: 'A single identity must not both raise and approve a payment batch.', type: 'Anti-affinity', groups: ['FIN_GL_POST', 'FIN_AP_APPROVE', 'FIN_PAYMENT_RELEASE'], violations: 7, severity: 'critical', framework: 'SOX 404', owner: 'Finance' },
+  { id: 2, name: 'Vendor master and payment', description: 'Vendor master maintenance conflicts with payment execution.', type: 'Anti-affinity', groups: ['FIN_VENDOR_MASTER', 'FIN_AP_APPROVE'], violations: 3, severity: 'critical', framework: 'SOX 404', owner: 'Finance' },
+  { id: 3, name: 'Develop and deploy to production', description: 'Repository administration conflicts with production deployment.', type: 'Anti-affinity', groups: ['ENG_REPO_ADMIN', 'ENG_PROD_DEPLOY'], violations: 4, severity: 'high', framework: 'ITGC', owner: 'Engineering' },
+  { id: 4, name: 'Administer and audit', description: 'Domain administration conflicts with security audit review.', type: 'Anti-affinity', groups: ['IT_DOMAIN_ADMIN', 'SEC_SIEM_ANALYST'], violations: 1, severity: 'high', framework: 'ISO 27001', owner: 'Security' },
+  { id: 5, name: 'Payroll requires HR data', description: 'Payroll execution requires HR data access to function.', type: 'Affinity', groups: ['HR_PAYROLL_RUN', 'HR_PII_READ'], violations: 0, severity: 'low', framework: 'Operational', owner: 'Human Resources' },
 ]
 
 export const SOD_VIOLATIONS = Array.from({ length: 15 }, (_, i) => {
@@ -432,66 +432,24 @@ export const USEFUL_LINKS = [
   { id: 4, url: 'https://kb.tanflow.com/idam', label: 'Knowledge base', description: 'How-to articles and runbooks.', order: 4 },
 ]
 
-export const MY_APPS = [
-  { id: 1,  brand: 'gmail',       name: 'Google Workspace',   type: 'SAML',  category: 'Productivity', owner: 'IT Operations',     lastUsed: '2 hours ago',  favorite: true },
-  { id: 2,  brand: 'slack',       name: 'Slack',              type: 'OIDC',  category: 'Collaboration',owner: 'IT Operations',     lastUsed: '12 minutes ago', favorite: true },
-  { id: 3,  brand: 'salesforce',  name: 'Salesforce',         type: 'SAML',  category: 'Sales',        owner: 'Sales',             lastUsed: 'yesterday',    favorite: true },
-  { id: 4,  brand: 'atlassian',   name: 'Atlassian Cloud',    type: 'OIDC',  category: 'Engineering',  owner: 'Engineering',       lastUsed: '3 days ago' },
-  { id: 5,  brand: 'jira',        name: 'Jira Service Desk',  type: 'OIDC',  category: 'Engineering',  owner: 'Engineering',       lastUsed: 'today',        favorite: true },
-  { id: 6,  brand: 'confluence',  name: 'Confluence',         type: 'OIDC',  category: 'Collaboration',owner: 'Engineering',       lastUsed: '4 hours ago' },
-  { id: 7,  brand: 'workday',     name: 'Workday',            type: 'SAML',  category: 'HR',           owner: 'Human Resources',   lastUsed: 'last week' },
-  { id: 8,  brand: 'servicenow',  name: 'ServiceNow',         type: 'SAML',  category: 'IT Service',   owner: 'IT Operations',     lastUsed: 'today' },
-  { id: 9,  brand: 'sap',         name: 'SAP S/4HANA',        type: 'SAML',  category: 'Finance',      owner: 'Finance',           lastUsed: '2 days ago' },
-  { id: 10, brand: 'oracle',      name: 'Oracle ERP',         type: 'SAML',  category: 'Finance',      owner: 'Finance',           lastUsed: '5 days ago' },
-  { id: 11, brand: 'netsuite',    name: 'NetSuite',           type: 'SAML',  category: 'Finance',      owner: 'Finance',           lastUsed: '3 weeks ago' },
-  { id: 12, brand: 'concur',      name: 'SAP Concur',         type: 'SAML',  category: 'Finance',      owner: 'Finance',           lastUsed: 'last month' },
-  { id: 13, brand: 'microsoft',   name: 'Microsoft 365',      type: 'OIDC',  category: 'Productivity', owner: 'IT Operations',     lastUsed: '1 hour ago',   favorite: true },
-  { id: 14, brand: 'azure',       name: 'Microsoft Azure',    type: 'OIDC',  category: 'Cloud',        owner: 'IT Operations',     lastUsed: 'today' },
-  { id: 15, brand: 'aws',         name: 'Amazon Web Services',type: 'SAML',  category: 'Cloud',        owner: 'Engineering',       lastUsed: 'today',        favorite: true },
-  { id: 16, brand: 'gcp',         name: 'Google Cloud',       type: 'SAML',  category: 'Cloud',        owner: 'Engineering',       lastUsed: '6 days ago' },
-  { id: 17, brand: 'github',      name: 'GitHub Enterprise',  type: 'SAML',  category: 'Engineering',  owner: 'Engineering',       lastUsed: '30 minutes ago', favorite: true },
-  { id: 18, brand: 'gitlab',      name: 'GitLab',             type: 'OIDC',  category: 'Engineering',  owner: 'Engineering',       lastUsed: '2 days ago' },
-  { id: 19, brand: 'docker',      name: 'Docker Hub',         type: 'OAuth', category: 'Engineering',  owner: 'Engineering',       lastUsed: 'last week' },
-  { id: 20, brand: 'jenkins',     name: 'Jenkins',            type: 'SAML',  category: 'Engineering',  owner: 'Engineering',       lastUsed: 'yesterday' },
-  { id: 21, brand: 'kubernetes',  name: 'Kubernetes Console', type: 'OIDC',  category: 'Cloud',        owner: 'Engineering',       lastUsed: 'today' },
-  { id: 22, brand: 'datadog',     name: 'Datadog',            type: 'SAML',  category: 'Observability',owner: 'Engineering',       lastUsed: '3 hours ago' },
-  { id: 23, brand: 'grafana',     name: 'Grafana',            type: 'OIDC',  category: 'Observability',owner: 'Engineering',       lastUsed: 'yesterday' },
-  { id: 24, brand: 'splunk',      name: 'Splunk',             type: 'SAML',  category: 'Security',     owner: 'Security',          lastUsed: 'today' },
-  { id: 25, brand: 'pagerduty',   name: 'PagerDuty',          type: 'SAML',  category: 'Observability',owner: 'Engineering',       lastUsed: '8 hours ago' },
-  { id: 26, brand: 'snowflake',   name: 'Snowflake',          type: 'SAML',  category: 'Data',         owner: 'Engineering',       lastUsed: '2 days ago' },
-  { id: 27, brand: 'tableau',     name: 'Tableau',            type: 'SAML',  category: 'Data',         owner: 'Finance',           lastUsed: 'last week' },
-  { id: 28, brand: 'looker',      name: 'Looker',             type: 'SAML',  category: 'Data',         owner: 'Engineering',       lastUsed: '4 days ago' },
-  { id: 29, brand: 'mongodb',     name: 'MongoDB Atlas',      type: 'SAML',  category: 'Data',         owner: 'Engineering',       lastUsed: '5 days ago' },
-  { id: 30, brand: 'mssql',       name: 'SQL Server Reporting',type:'Link',  category: 'Data',         owner: 'IT Operations',     lastUsed: '2 weeks ago' },
-  { id: 31, brand: 'zoom',        name: 'Zoom',               type: 'SAML',  category: 'Collaboration',owner: 'IT Operations',     lastUsed: '3 hours ago' },
-  { id: 32, brand: 'box',         name: 'Box',                type: 'SAML',  category: 'Storage',      owner: 'IT Operations',     lastUsed: 'last week' },
-  { id: 33, brand: 'dropbox',     name: 'Dropbox Business',   type: 'SAML',  category: 'Storage',      owner: 'IT Operations',     lastUsed: '3 weeks ago' },
-  { id: 34, brand: 'notion',      name: 'Notion',             type: 'SAML',  category: 'Collaboration',owner: 'Engineering',       lastUsed: 'yesterday' },
-  { id: 35, brand: 'figma',       name: 'Figma',              type: 'SAML',  category: 'Design',       owner: 'Engineering',       lastUsed: '2 days ago' },
-  { id: 36, brand: 'miro',        name: 'Miro',               type: 'SAML',  category: 'Design',       owner: 'Engineering',       lastUsed: 'last week' },
-  { id: 37, brand: 'asana',       name: 'Asana',              type: 'SAML',  category: 'Collaboration',owner: 'Sales',             lastUsed: '6 days ago' },
-  { id: 38, brand: 'trello',      name: 'Trello',             type: 'OAuth', category: 'Collaboration',owner: 'Sales',             lastUsed: 'last month' },
-  { id: 39, brand: 'smartsheet',  name: 'Smartsheet',         type: 'SAML',  category: 'Collaboration',owner: 'Finance',           lastUsed: '2 weeks ago' },
-  { id: 40, brand: 'airtable',    name: 'Airtable',           type: 'OAuth', category: 'Collaboration',owner: 'Sales',             lastUsed: '9 days ago' },
-  { id: 41, brand: 'linear',      name: 'Linear',             type: 'OIDC',  category: 'Engineering',  owner: 'Engineering',       lastUsed: 'today' },
-  { id: 42, brand: 'zendesk',     name: 'Zendesk',            type: 'SAML',  category: 'Support',      owner: 'Support',           lastUsed: 'today' },
-  { id: 43, brand: 'freshworks',  name: 'Freshservice',       type: 'SAML',  category: 'Support',      owner: 'Support',           lastUsed: '4 hours ago' },
-  { id: 44, brand: 'intercom',    name: 'Intercom',           type: 'OAuth', category: 'Support',      owner: 'Support',           lastUsed: '2 days ago' },
-  { id: 45, brand: 'hubspot',     name: 'HubSpot',            type: 'SAML',  category: 'Sales',        owner: 'Sales',             lastUsed: 'yesterday' },
-  { id: 46, brand: 'docusign',    name: 'DocuSign',           type: 'SAML',  category: 'Legal',        owner: 'Compliance',        lastUsed: 'last week' },
-  { id: 47, brand: 'adobe',       name: 'Adobe Creative Cloud',type:'SAML',  category: 'Design',       owner: 'Engineering',       lastUsed: '3 weeks ago' },
-  { id: 48, brand: 'qualtrics',   name: 'Qualtrics',          type: 'SAML',  category: 'HR',           owner: 'Human Resources',   lastUsed: 'last month' },
-  { id: 49, brand: 'okta',        name: 'Okta Verify',        type: 'OIDC',  category: 'Security',     owner: 'Security',          lastUsed: 'today' },
-  { id: 50, brand: 'crowdstrike', name: 'CrowdStrike Falcon', type: 'SAML',  category: 'Security',     owner: 'Security',          lastUsed: 'today' },
-  { id: 51, brand: 'zscaler',     name: 'Zscaler',            type: 'SAML',  category: 'Security',     owner: 'Security',          lastUsed: '5 hours ago' },
-  { id: 52, brand: 'proofpoint',  name: 'Proofpoint',         type: 'SAML',  category: 'Security',     owner: 'Security',          lastUsed: 'yesterday' },
-  { id: 53, brand: 'jamf',        name: 'Jamf Pro',           type: 'SAML',  category: 'Security',     owner: 'IT Operations',     lastUsed: '2 days ago' },
-  { id: 54, brand: 'cloudflare',  name: 'Cloudflare',         type: 'SAML',  category: 'Cloud',        owner: 'Engineering',       lastUsed: 'last week' },
-  { id: 55, brand: 'stripe',      name: 'Stripe',             type: 'OAuth', category: 'Finance',      owner: 'Finance',           lastUsed: '3 days ago' },
-  { id: 56, brand: 'twilio',      name: 'Twilio',             type: 'OAuth', category: 'Platform',     owner: 'Engineering',       lastUsed: 'last week' },
-]
+/* The applications an identity can reach from My Apps.
 
-export const APP_CATEGORIES = [...new Set(MY_APPS.map((a) => a.category))].sort()
+   A short estate on purpose: this is what one identity is entitled to, not the
+   tenant's application catalogue, and six is what a real assignment set looks
+   like. `url` is the launch target — My Apps is a showcase, so a tile hands the
+   browser straight to the service rather than explaining how the hand-off is
+   authenticated. `type` and `category` are kept because the administrative
+   surfaces still file an assignment by protocol, and the launcher's search
+   still matches on the category even though it never shows one; neither is
+   rendered on a tile. */
+export const MY_APPS = [
+  { id: 1, brand: 'slack',      name: 'Slack',            type: 'OIDC', category: 'Collaboration', owner: 'IT Operations',   lastUsed: '12 minutes ago', url: 'https://app.slack.com',        desc: 'Team messaging, channels and huddles across every department.' },
+  { id: 2, brand: 'github',     name: 'GitHub Enterprise',type: 'SAML', category: 'Engineering',   owner: 'Engineering',     lastUsed: '30 minutes ago', url: 'https://github.com',           desc: 'Source control, pull requests and continuous integration.' },
+  { id: 3, brand: 'gmail',      name: 'Google Workspace', type: 'SAML', category: 'Productivity',  owner: 'IT Operations',   lastUsed: '2 hours ago',    url: 'https://workspace.google.com', desc: 'Mail, calendar, drive and shared documents.' },
+  { id: 4, brand: 'servicenow', name: 'ServiceNow',       type: 'SAML', category: 'IT Service',    owner: 'IT Operations',   lastUsed: 'today',          url: 'https://www.servicenow.com',   desc: 'Incidents, service requests and change records.' },
+  { id: 5, brand: 'salesforce', name: 'Salesforce',       type: 'SAML', category: 'Sales',         owner: 'Sales',           lastUsed: 'yesterday',      url: 'https://login.salesforce.com', desc: 'Accounts, opportunities and pipeline reporting.' },
+  { id: 6, brand: 'workday',    name: 'Workday',          type: 'SAML', category: 'HR',            owner: 'Human Resources', lastUsed: 'last week',      url: 'https://www.workday.com',      desc: 'Payslips, leave, performance reviews and personal records.' },
+]
 
 /* The console runs on one clock. `daysRemaining` and the "today" marker on the
    contract timeline are both derived from it, so they cannot disagree — they
@@ -529,6 +487,49 @@ export const LICENSE = {
     gstin: '06AABCT1332L1ZT',
   },
 }
+
+/**
+ * Every licence this installation has held, newest first.
+ *
+ * A licence is replaced, not edited: a renewal installs a new file and the one
+ * it supersedes stays on the record. An auditor asking "what were we entitled
+ * to in March" is asking about a licence that is no longer in force, so the
+ * expired ones are kept and are selectable — the console can be read as of any
+ * of them.
+ */
+const priorLicence = (key, edition, issued, expires, seats, modules) => ({
+  ...LICENSE,
+  key,
+  edition,
+  issued,
+  expires,
+  seats,
+  modules,
+  status: 'Expired',
+  daysRemaining: 0,
+  termDays: daysBetween(issued, expires),
+  daysElapsed: daysBetween(issued, expires),
+  /* Consumption is against that licence's own cap, not today's estate. A past
+     licence showing 112% consumed was reading the current identity count
+     against a smaller entitlement it never had to carry. */
+  seatsUsed: Math.round(seats * 0.78),
+})
+
+export const LICENCES = [
+  { ...LICENSE, status: daysBetween(TODAY, LICENSE_EXPIRES) < 60 ? 'Expiring' : 'Active' },
+  priorLicence(
+    'TFLW-IDAM-ENT-7310-QA47-9F2B', 'Enterprise', '2025-01-01', '2025-12-31', 4000,
+    ['Lifecycle', 'RBAC', 'Provisioning', 'Single Sign-On', 'Governance', 'MFA', 'Reporting'],
+  ),
+  priorLicence(
+    'TFLW-IDAM-PRO-5521-KD08-3M1X', 'Professional', '2024-02-15', '2024-12-31', 2500,
+    ['Lifecycle', 'RBAC', 'Provisioning', 'Single Sign-On', 'MFA'],
+  ),
+  priorLicence(
+    'TFLW-IDAM-TRL-1004-BB93-7Z5Q', 'Trial', '2023-11-01', '2024-02-14', 250,
+    ['Lifecycle', 'RBAC'],
+  ),
+]
 
 export const SIGNIN_SERIES = Array.from({ length: 24 }, (_, i) => ({
   t: `${String(i).padStart(2, '0')}:00`,

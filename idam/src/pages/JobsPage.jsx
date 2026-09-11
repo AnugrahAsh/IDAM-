@@ -47,25 +47,9 @@ const groupSummary = (section) => {
     .join(' · ')
 }
 
-const VIEWS = [
-  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense run history with sortable columns' },
-  { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per run' },
-  { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'History split into sections' },
-]
-
-const GROUPINGS = [
-  { id: 'module', label: 'Module', of: (j) => j.module },
-  { id: 'status', label: 'Outcome', of: (j) => j.status },
-  { id: 'target', label: 'Target', of: (j) => j.target },
-  { id: 'triggeredBy', label: 'Triggered by', of: (j) => j.triggeredBy },
-  { id: 'day', label: 'Day', of: (j) => String(j.started).slice(0, 10) },
-]
-
 export default function JobsPage({ segments = [] }) {
   const { toast, confirm, navigate, setModal, setDrawer } = useApp()
   const [tab, setTab] = useState('all')
-  const [view, setView] = useLocalState('tf-idam-jobs-view', 'table')
-  const [groupBy, setGroupBy] = useLocalState('tf-idam-jobs-groupby', 'module')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [rows, setRows] = useState(() => JOBS.map(withDerivedCounts))
@@ -327,35 +311,6 @@ export default function JobsPage({ segments = [] }) {
             rows={dated}
             columns={columns}
             selectable
-            views={VIEWS}
-            view={view}
-            onViewChange={setView}
-            groupOf={(GROUPINGS.find((g) => g.id === groupBy) || GROUPINGS[0]).of}
-            groupSummary={groupSummary}
-            renderCard={(j, ctx) => (
-              <RecordCard
-                ctx={ctx}
-                label={j.jobId}
-                media={<CardIcon name="jobs" tone={j.status === 'Failed' ? 'bad' : j.status === 'Running' ? 'warn' : 'ok'} />}
-                title={j.jobId}
-                sub={`${j.module} · ${j.operation}`}
-                tags={(
-                  <>
-                    <Pill tone={statusTone(j.status)} dot>{j.status}</Pill>
-                    <span className="spacer" />
-                    <span className="rcard-stat"><b className="num">{num(j.total)}</b> records</span>
-                  </>
-                )}
-                line={<span className="trunc">{j.target}</span>}
-                meta={[
-                  { k: 'Succeeded', v: num(j.succeeded) },
-                  { k: 'Failed', v: j.failed ? num(j.failed) : '0' },
-                  { k: 'Duration', v: duration(j.durationMs) },
-                  { k: 'Triggered by', v: j.triggeredBy },
-                ]}
-                footR={`Started ${j.started}`}
-              />
-            )}
             searchPlaceholder="Search"
             bulkActions={bulkActions}
             rowActions={rowActions}

@@ -227,6 +227,7 @@ export default function MfaEnforcement({ methods }) {
       </div>
 
       <StickyActions
+        flow
         dirty={dirty}
         message={(
           <span className="mfa-save">

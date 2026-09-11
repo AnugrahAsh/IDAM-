@@ -1,4 +1,5 @@
 import './styles/ApprovalsPage.css'
+import './styles/ApprovalWorkflow.css'
 import { useMemo, useState } from 'react'
 import PageBar from '../components/shell/PageBar'
 import DataWorkbench from '../components/workbench/DataWorkbench'
@@ -8,11 +9,14 @@ import Pill from '../components/primitives/Pill'
 import Avatar from '../components/primitives/Avatar'
 import { useApp } from '../store/AppContext'
 import { num, serialColumn } from '../lib/format'
-import { ME, REQUESTS } from '../data/seed'
-import { OPEN, TODAY_DATE, levelColumnDefs, levelFields, nameOf, statusTone, withAudit } from './requests/data'
+import { ME } from '../data/seed'
+import { OPEN, TODAY_DATE, levelColumnDefs, levelFields, nameOf, statusTone } from './requests/data'
 import { useApprovalLevels } from './settings/settingsStore'
 import { auditCell } from './requests/RequestRail'
 import RequestRecord from './approvals/RequestRecord'
+import WorkflowRecord from './approvals/WorkflowRecord'
+import { draftCounts, revisionsOf } from './approvals/data'
+import { useApprovalRows, writeApprovalRows } from './approvals/approvalStore'
 import StatCards from '../components/workbench/StatCards'
 import RecordCard, { CardIcon } from '../components/workbench/RecordCard'
 import SeverityBadge from '../components/primitives/SeverityBadge'
@@ -29,29 +33,13 @@ const FACETS = {
   decided: (r) => !OPEN.has(r.status),
 }
 
-const VIEWS = [
-  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense queue with sortable columns' },
-  { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per request' },
-  { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Queue split into sections' },
-]
-
-const GROUPINGS = [
-  { id: 'status', label: 'Status', of: (r) => r.status },
-  { id: 'type', label: 'Request type', of: (r) => r.type },
-  { id: 'risk', label: 'Risk', of: (r) => r.risk },
-  { id: 'requester', label: 'Raised by', of: (r) => r.requester },
-]
-
 const SLA_LABEL = { breached: 'SLA breached', 'at-risk': 'SLA at risk', ok: 'Within SLA' }
 
 function ApprovalQueue({ rows, stats, onApprove, onReject, onReassign, onExport }) {
   const { navigate, toast } = useApp()
   const levels = useApprovalLevels()
   const [facet, setFacet] = useState('all')
-  const [view, setView] = useLocalState('tf-idam-approvals-view', 'table')
-  const [groupBy, setGroupBy] = useLocalState('tf-idam-approvals-groupby', 'status')
 
-  const grouping = GROUPINGS.find((g) => g.id === groupBy) || GROUPINGS[0]
   const visible = useMemo(() => rows.filter(FACETS[facet] || FACETS.all), [rows, facet])
 
   const cards = [
@@ -197,21 +185,6 @@ function ApprovalQueue({ rows, stats, onApprove, onReject, onReassign, onExport 
         rows={visible}
         columns={columns}
         selectable
-        views={VIEWS}
-        view={view}
-        onViewChange={setView}
-        renderCard={renderCard}
-        groupOf={grouping.of}
-        groupSummary={groupSummary}
-        toolbar={view === 'groups' ? (
-          <span className="wb-groupby">
-            <span>Group by</span>
-            <select className="sel" value={groupBy} onChange={(e) => setGroupBy(e.target.value)} aria-label="Group requests by">
-              {GROUPINGS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-            </select>
-          </span>
-        ) : null}
-        footNote={view === 'groups' ? `Sectioned by ${grouping.label.toLowerCase()}` : undefined}
         searchPlaceholder="Search by request id, requester, identity, entitlement or approver…"
         bulkActions={bulkActions}
         rowActions={rowActions}
@@ -228,7 +201,9 @@ function ApprovalQueue({ rows, stats, onApprove, onReject, onReassign, onExport 
 export default function ApprovalsPage({ segments = [] }) {
   const { toast, confirm, navigate } = useApp()
   const levels = useApprovalLevels()
-  const [rows, setRows] = useState(() => REQUESTS.map(withAudit))
+  // Session state, not page state: see approvalStore.js for why.
+  const rows = useApprovalRows()
+  const setRows = writeApprovalRows
 
   const stats = useMemo(() => {
     const awaiting = rows.filter((r) => OPEN.has(r.status))
@@ -258,9 +233,10 @@ export default function ApprovalsPage({ segments = [] }) {
    * level has signed. The row is not deleted — the queue has to be able to show
    * what was decided, and the audit columns have to have something to hold.
    */
-  const decide = (ids, decision, note, remarks) => {
+  const decide = (ids, decision, note, remarks, draft) => {
     const set = new Set(ids.map(String))
     const stampNow = `${TODAY_DATE} ${new Date().toISOString().slice(11, 16)}`
+    const me = ME.firstName ? `${ME.firstName} ${ME.lastName}` : ME.username
     let advanced = 0
     let completed = 0
 
@@ -268,11 +244,22 @@ export default function ApprovalsPage({ segments = [] }) {
       if (!set.has(String(r.id)) || !OPEN.has(r.status)) return r
       const at = Math.max(0, (r.level || 1) - 1)
       const f = levelFields(at)
+      /* The revision this level made is committed with the decision — and only
+         with an approval. A rejected request carries no revision because
+         nothing from it will ever be provisioned. The revisions already on the
+         row are materialised here too, so a seeded history and a live one are
+         the same data from this point on. */
+      const committed = revisionsOf(r)
+      const ops = decision === 'Approved' && draft ? draft.ops : []
+      const revisions = ops.length
+        ? [...committed, { level: r.level || 1, approver: me, role: (levels[at] || {}).name || '', when: stampNow, ops }]
+        : committed
       const stamped = {
         ...r,
         [f.on]: stampNow,
-        [f.by]: ME.firstName ? `${ME.firstName} ${ME.lastName}` : ME.username,
+        [f.by]: me,
         [f.comment]: (remarks || '').trim(),
+        revisions,
       }
       if (decision === 'Rejected') return { ...stamped, status: 'Rejected', pendingWith: '' }
       const last = (r.level || 1) >= (r.levels || 1)
@@ -300,8 +287,8 @@ export default function ApprovalsPage({ segments = [] }) {
     )
   }
 
-  const approve = (ids, note, remarks) => {
-    decide(ids, 'Approved', note, remarks)
+  const approve = (ids, note, remarks, draft) => {
+    decide(ids, 'Approved', note, remarks, draft)
     if (segments[0]) navigate('/iam/approvals')
   }
 
@@ -321,17 +308,32 @@ export default function ApprovalsPage({ segments = [] }) {
     if (done) done()
   }
 
+  /* /iam/approvals/<id>/workflow — the chain in depth, on a page of its own so
+     it can be linked to directly. Kept a segment under the record rather than a
+     route of its own: it is a reading of one request, and an id that no longer
+     resolves should land on the record's own "not found", not on a bare page. */
+  if (segments[0] && segments[1] === 'workflow') {
+    return <WorkflowRecord key={segments[0]} id={segments[0]} rows={rows} />
+  }
+
   if (segments[0]) {
     return (
       <RequestRecord
         key={segments[0]}
         id={segments[0]}
         rows={rows}
-        onApprove={(row, basis, comment, editCount = 0) => approve(
-          [row.id],
-          `${row.id} approved · ${basis}${editCount > 0 ? ` · ${editCount} requested ${editCount === 1 ? 'change' : 'changes'} edited at level ${row.level}` : ''}${comment.trim() ? ` · "${comment.trim().slice(0, 90)}"` : ''}.`,
-          comment,
-        )}
+        onApprove={(row, basis, comment, draft) => {
+          const c = draftCounts(draft)
+          const rev = c.total > 0
+            ? ` · level ${row.level} revision committed (${c.added} added, ${c.removed} removed, ${c.changed} changed)`
+            : ''
+          approve(
+            [row.id],
+            `${row.id} approved · ${basis}${rev}${comment.trim() ? ` · "${comment.trim().slice(0, 90)}"` : ''}.`,
+            comment,
+            draft,
+          )
+        }}
         onReject={(row, basis, comment) => {
           if (!comment.trim()) {
             toast('warn', 'Comment required', 'A rejection must carry a comment. The requester sees it verbatim.')

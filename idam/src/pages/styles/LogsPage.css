@@ -1,0 +1,87 @@
+/* Page-owned styles for LogsPage. Shared primitives remain in src/styles. */
+
+/* Audit log configuration — sections an operator recognises, each holding the
+   modules inside it and one switch per operation. The flat list is well over a
+   hundred rows and nobody reviews it end to end, so the sections collapse and
+   every switch carries the sentence that says what it records. */
+.audit-sec { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
+.audit-sec-h { padding: var(--sp-3); background: var(--surface-2); border-bottom: 1px solid var(--hair); }
+.audit-sec-top { display: flex; align-items: center; gap: var(--sp-2); }
+.audit-sec-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.audit-sec-btn svg { color: var(--mut); flex: none; }
+.audit-sec-btn .audit-sec-i { color: var(--accent); }
+.audit-sec-t { font-size: var(--t-h3); line-height: var(--t-h3-lh); letter-spacing: var(--t-h3-ls); font-weight: var(--w-semi); }
+.audit-sec-btn:hover .audit-sec-t { color: var(--accent-a); }
+.audit-sec-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm); }
+.audit-sec-s {
+  margin: var(--sp-1) 0 0 30px;
+  max-width: 96ch;
+  color: var(--mut);
+  font-size: var(--t-sm);
+  line-height: var(--t-sm-lh);
+}
+
+/* One block per module: what it keeps records about, how much of it is
+   recorded, and a tri-state box that sets every operation in one move. */
+.audit-mod { padding: var(--sp-3) var(--sp-4); }
+.audit-mod + .audit-mod { border-top: 1px solid var(--hair); }
+.audit-mod-h { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.audit-mod-h .check { margin-top: 2px; flex: none; }
+.audit-mod-meta { flex: 1; min-width: 0; }
+.audit-mod-t { margin: 0; font-size: var(--t-body); line-height: var(--t-body-lh); font-weight: var(--w-semi); color: var(--ink); }
+.audit-mod-s { margin: 0; color: var(--mut); font-size: var(--t-xs); line-height: var(--t-xs-lh); }
+
+.audit-evts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.audit-evt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-2);
+  border-radius: var(--r);
+  /* The fill stays the same either way: surface-2 sits one step off the card
+     body in both themes, while the raised surfaces invert between them. State
+     is carried by the edge, the status word and the text weight instead. */
+  background: var(--surface-2);
+  transition: border-color var(--dur-1) var(--ease);
+}
+.audit-evt[data-on="true"] { border-left-color: var(--ok); }
+.audit-evt .switch { margin-top: 1px; flex: none; }
+.audit-evt-meta { flex: 1; min-width: 0; }
+.audit-evt-top { display: flex; align-items: center; gap: var(--sp-1); }
+.audit-evt-ico { color: var(--mut); flex: none; }
+.audit-evt-t { font-size: var(--t-sm); line-height: var(--t-sm-lh); font-weight: var(--w-semi); color: var(--ink); }
+.audit-evt-st {
+  margin-left: auto;
+  font-size: var(--t-micro);
+  letter-spacing: var(--t-micro-ls);
+  text-transform: uppercase;
+  font-weight: var(--w-bold);
+  color: var(--faint);
+  white-space: nowrap;
+}
+.audit-evt[data-on="true"] .audit-evt-st { color: var(--ok); }
+.audit-evt[data-on="false"] .audit-evt-t { color: var(--ink-2); }
+.audit-evt-i { display: inline-flex; color: var(--faint); cursor: help; flex: none; }
+.audit-evt-i:hover { color: var(--accent-a); }
+.audit-evt-d { margin: 2px 0 0; color: var(--mut); font-size: var(--t-xs); line-height: var(--t-xs-lh); }
+.audit-evt[data-on="false"] .audit-evt-d { color: var(--faint); }

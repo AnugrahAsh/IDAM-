@@ -1,4 +1,6 @@
+import '../styles/RolesPage.css'
 import { useMemo, useState } from 'react'
+import AppPicker from './AppPicker'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
 import Card from '../../components/primitives/Card'
 import Button from '../../components/primitives/Button'
@@ -109,6 +111,10 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
   const [addedGrants, setAddedGrants] = useState([])
   const [addedAccounts, setAddedAccounts] = useState([])
   const [addedSso, setAddedSso] = useState([])
+  /* Reachability that has been taken away in this session. A directly assigned
+     application is removed outright; one reached through a group is not
+     removable here at all, because the grant is what confers it. */
+  const [removedApps, setRemovedApps] = useState(() => new Set())
   // Revoking one grant at a time does not survive contact with a leaver, so the
   // two access tables carry a selection and a bulk revoke.
   const [entSel, setEntSel] = useState(() => new Set())
@@ -122,7 +128,10 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
     () => [...provisionedFor(user), ...addedAccounts].filter((p) => !revoked.has(p.id)),
     [user, addedAccounts, revoked],
   )
-  const reachable = useMemo(() => [...reachableAppsFor(user), ...addedSso], [user, addedSso])
+  const reachable = useMemo(
+    () => [...reachableAppsFor(user), ...addedSso].filter((a) => !removedApps.has(a.id)),
+    [user, addedSso, removedApps],
+  )
   const events = useMemo(() => eventsFor(user), [user])
   const factors = useMemo(() => factorsFor(user), [user])
   const devices = useMemo(() => devicesFor(user), [user])
@@ -275,51 +284,68 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
     const held = new Set(reachable.map((a) => a.name))
     const choices = SSO_APPS
       .filter((a) => a.enabled && !held.has(a.displayName))
-      .map((a) => ({ value: a.displayName, label: `${a.displayName} · ${a.protocol}` }))
-    let picked = []
+      .map((a) => ({
+        id: String(a.id),
+        name: a.displayName,
+        brand: a.name,
+        type: a.protocol,
+        category: 'Single sign-on',
+        owner: a.owner,
+      }))
     setDrawer({
-      title: 'Assign SSO application',
+      size: 'xl',
+      title: 'Assign application access',
       sub: `Give ${user.username} single sign-on access.`,
       children: (
-        <AssignPicker
-          options={choices}
-          placeholder="Select applications…"
-          emptyNote="This identity can already reach every SSO application."
-          onChange={(v) => { picked = v }}
+        <AppPicker
+          source={choices}
+          subject={user.username}
+          commitLabel="Assign"
+          commitIcon="sso"
+          emptyBody="This identity can already reach every enabled SSO application."
+          onCommit={(ids) => {
+            const set = new Set(ids)
+            // Rows have to match the shape reachableAppsFor returns, since the
+            // tiles below render both from the same list.
+            const rows = choices.filter((a) => set.has(a.id)).map((a) => ({
+              id: `newsso-${user.id}-${a.name}`,
+              name: a.name,
+              brand: a.brand,
+              type: a.type,
+              category: a.category,
+              owner: a.owner,
+              via: 'Direct assignment',
+              lastUsed: 'Never',
+              signIns30d: 0,
+            }))
+            setAddedSso((x) => [...x, ...rows])
+            setDrawer(null)
+            toast('ok', 'Applications assigned', `${rows.length} ${rows.length === 1 ? 'application' : 'applications'} assigned to ${user.username}.`)
+          }}
         />
       ),
-      footer: (
-        <>
-          <Button onClick={() => setDrawer(null)}>Cancel</Button>
-          <Button
-            variant="pri"
-            icon="sso"
-            onClick={() => {
-              if (!picked.length) { toast('warn', 'Nothing selected', 'Choose at least one application.'); return }
-              // Rows have to match the shape reachableAppsFor returns, since the
-              // table below renders both from the same list.
-              const rows = picked.map((name) => {
-                const a = SSO_APPS.find((x) => x.displayName === name)
-                return {
-                  id: `newsso-${user.id}-${name}`,
-                  name,
-                  type: a ? a.protocol : 'SAML',
-                  category: 'Single sign-on',
-                  owner: a ? a.owner : 'IT Operations',
-                  via: 'Direct assignment',
-                  lastUsed: 'Never',
-                  signIns30d: 0,
-                }
-              })
-              setAddedSso((x) => [...x, ...rows])
-              setDrawer(null)
-              toast('ok', 'Applications assigned', `${rows.length} SSO ${rows.length === 1 ? 'application' : 'applications'} assigned to ${user.username}.`)
-            }}
-          >
-            Assign
-          </Button>
-        </>
-      ),
+      footer: <Button onClick={() => setDrawer(null)}>Close</Button>,
+    })
+  }
+
+  /* Taking an application away. Only a direct assignment can be removed from
+     here — an application reached through a group is conferred by the grant,
+     and quietly dropping it from this tile would leave the grant intact and
+     the tile lying about it. */
+  const removeApp = (a) => {
+    if (a.via !== 'Direct assignment') {
+      toast('warn', 'Not a direct assignment', `${a.name} is reached through ${a.via}. Revoke that grant on the Access tab to take it away.`)
+      return
+    }
+    confirm({
+      title: `Remove ${a.name}?`,
+      body: `${user.username} loses single sign-on access to ${a.name} on the next provisioning run. Any target account they hold on it is left in place.`,
+      confirmLabel: 'Remove access',
+      onConfirm: () => {
+        setRemovedApps((prev) => new Set(prev).add(a.id))
+        setAddedSso((x) => x.filter((r) => r.id !== a.id))
+        toast('ok', 'Access removed', `${a.name} removed from ${user.username}.`)
+      },
     })
   }
 
@@ -842,6 +868,20 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
                       <div className="apptile-name">{a.name}</div>
                       <div className="apptile-sub trunc">{a.via}</div>
                     </div>
+                    {/* Removing access was only possible by revoking the grant
+                        behind it, which is the wrong door for an application
+                        assigned directly — and no door at all if you did not
+                        already know the grant existed. */}
+                    <IconButton
+                      icon="trash"
+                      size="sm"
+                      className="apptile-del"
+                      label={`Remove ${a.name}`}
+                      title={a.via === 'Direct assignment'
+                        ? `Remove ${a.name}`
+                        : `Reached through ${a.via} — revoke that grant to remove it`}
+                      onClick={() => removeApp(a)}
+                    />
                   </div>
                   <div className="apptile-foot">
                     <span className="tag">{a.type}</span>

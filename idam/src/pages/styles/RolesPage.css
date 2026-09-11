@@ -94,3 +94,59 @@
 .pp-review-perms{display:flex;flex-wrap:wrap;gap:4px}
 .pp-review-perms .tag[data-tone="warn"]{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
 @media (max-width:640px){.pp-review-row{grid-template-columns:1fr}}
+
+/* Role catalog: shared portal palette, typography, and controls. */
+.rl-workspace{max-width:1440px;margin:0 auto;padding-bottom:24px}
+.rl-workspace .pagebar{margin-bottom:22px}
+.rl-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);margin-bottom:30px;overflow:hidden}
+.rl-metric{padding:20px 22px;display:flex;flex-direction:column;gap:11px;min-width:0}
+.rl-metric+.rl-metric{border-left:1px solid var(--line)}
+.rl-metric-label{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--mut);font-size:11px;font-weight:500}
+.rl-metric-label svg{color:var(--accent-a)}
+.rl-metric>strong{font-size:28px;letter-spacing:-.8px;line-height:1.1;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.rl-metric-detail{font-size:10px;color:var(--mut);line-height:1.5}
+.rl-section-head{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}
+.rl-section-head h2{display:flex;gap:9px;align-items:center;margin:0;color:var(--ink);font-size:17px;letter-spacing:-.3px;font-weight:600}
+.rl-section-head h2>span{font-size:10px;font-weight:500;border:1px solid var(--line);border-radius:var(--r);padding:3px 6px;color:var(--mut);background:var(--surface)}
+.rl-section-head p{font-size:12px;color:var(--mut);margin:6px 0 0;line-height:1.5}
+.rl-governance{display:flex;gap:7px;align-items:center;font-size:10px;color:var(--mut);white-space:nowrap}
+.rl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.rl-card{display:flex;flex-direction:column;min-width:0;padding:22px 22px 0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);transition:border-color .15s,box-shadow .15s}
+.rl-card:hover,.rl-card:focus-within{border-color:var(--accent-line);box-shadow:0 3px 12px color-mix(in srgb,var(--ink) 5%,transparent)}
+.rl-card-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:19px}
+.rl-role-icon{display:grid;place-items:center;width:40px;height:40px;background:var(--accent-bg);color:var(--accent-a);border:1px solid var(--accent-line);border-radius:var(--r-lg)}
+.rl-type{display:flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r);padding:4px 7px;font-size:9px;color:var(--mut)}
+.rl-type[data-system]{border-color:var(--accent-line);color:var(--accent-a);background:var(--accent-bg)}
+.rl-card h3{font-size:16px;letter-spacing:-.25px;font-weight:600;line-height:1.4;margin:0;color:var(--ink)}
+.rl-card h3 button{text-align:left;color:inherit;font:inherit;overflow-wrap:anywhere}.rl-card h3 button:hover{color:var(--accent-a)}
+.rl-description{font-size:12px;line-height:1.65;color:var(--mut);margin:8px 0 24px;flex:1;overflow-wrap:anywhere}
+.rl-facts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:0 0 20px}.rl-facts>div+div{border-left:1px solid var(--hair);padding-left:18px}
+.rl-facts dt{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--mut);margin-bottom:8px}.rl-facts dd{font-size:21px;letter-spacing:-.5px;font-weight:600;color:var(--ink);margin:0;font-variant-numeric:tabular-nums}
+.rl-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 0;border-top:1px solid var(--hair)}
+.rl-card-footer>.btn:first-child{color:var(--accent-a)}
+.rl-card-footer>.btn-danger{background:transparent;border-color:transparent}
+.rl-card-footer>.btn-danger:disabled{color:var(--faint);opacity:.5}
+.rl-note{display:flex;align-items:center;gap:7px;margin:18px 0 0;font-size:10px;color:var(--mut)}
+.rl-workspace button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:1150px){.rl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rl-metric{padding:17px}.rl-metric-label{align-items:flex-start}}
+@media(max-width:760px){.rl-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.rl-metric:nth-child(3){border-left:0}.rl-metric:nth-child(n+3){border-top:1px solid var(--line)}.rl-section-head{align-items:flex-start}.rl-governance{display:none}.rl-card{padding:18px 18px 0}.rl-grid{gap:12px}}
+@media(max-width:520px){.rl-grid{grid-template-columns:1fr}.rl-metric{padding:16px}.rl-metric>strong{font-size:25px}.rl-metric-label{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.rl-card{transition:none}}
+
+/* Member picker — the filter row.
+
+   Four bare selects, sized to their content and set at the register's own
+   control height. They carried uppercase labels above them, which doubled the
+   width of a row whose every control already says what it filters. */
+.mp-filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.mp-filters .sel{height:29px;width:auto;min-width:0;max-width:190px;
+  font-size:var(--t-sm);color:var(--ink-2);
+  border-color:var(--line);background:var(--surface)}
+.mp-filters .sel:hover{border-color:var(--line-2)}
+
+.mp-clear{display:inline-flex;align-items:center;gap:5px;height:29px;padding:0 10px;
+  font-size:var(--t-xs);font-weight:var(--w-med);color:var(--mut);cursor:pointer;
+  background:none;border:1px solid transparent;border-radius:var(--r-sm);
+  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.mp-clear:hover{background:var(--surface-2);color:var(--ink)}
+.mp-clear svg{color:var(--faint)}

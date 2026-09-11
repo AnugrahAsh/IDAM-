@@ -34,15 +34,9 @@ const HINTS = {
   slow: `Last bind slower than the ${SLOW_BIND_MS} ms estate threshold`,
 }
 
-const VIEWS = [
-  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense register with sortable columns' },
-  { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per directory' },
-]
-
 export default function LdapList({ apps, setApps, maps, stats, rules = [] }) {
   const { toast, confirm, navigate } = useApp()
   const [facet, setFacet] = useState('all')
-  const [view, setView] = useLocalState('tf-idam-ldap-view', 'table')
   const [mutedAlert, setMutedAlert] = useState(null)
 
   const rows = useMemo(
@@ -254,10 +248,6 @@ export default function LdapList({ apps, setApps, maps, stats, rules = [] }) {
         rows={rows}
         columns={columns}
         selectable
-        views={VIEWS}
-        view={view}
-        onViewChange={setView}
-        renderCard={(r, ctx) => <LdapCard app={r} ctx={ctx} />}
         header={(
           <RegisterHeader
             items={headerItems}

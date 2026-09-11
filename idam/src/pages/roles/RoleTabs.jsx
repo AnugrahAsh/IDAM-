@@ -3,10 +3,8 @@ import DataWorkbench from '../../components/workbench/DataWorkbench'
 import Card from '../../components/primitives/Card'
 import Button from '../../components/primitives/Button'
 import Icon from '../../components/primitives/Icon'
-import IconButton from '../../components/primitives/IconButton'
 import Pill from '../../components/primitives/Pill'
 import KeyValue from '../../components/primitives/KeyValue'
-import Check from '../../components/primitives/Check'
 import Avatar from '../../components/primitives/Avatar'
 import FileDrop, { formatSize } from '../../components/primitives/FileDrop'
 import EmptyState from '../../components/primitives/EmptyState'
@@ -14,98 +12,41 @@ import { useApp } from '../../store/AppContext'
 import { num, statusTone } from '../../lib/format'
 import { USERS } from '../../data/seed'
 import { CHAIN, SOURCE_ICON, eventsFor } from './roleModel'
-
-export function AddMembers({ current, onAdd, onClose }) {
-  const [q, setQ] = useState('')
-  const [pick, setPick] = useState(() => new Set())
-  const held = new Set(current)
-  const needle = q.trim().toLowerCase()
-
-  const candidates = USERS
-    .filter((u) => !held.has(u.id))
-    .filter((u) => !needle
-      || u.username.toLowerCase().includes(needle)
-      || u.email.toLowerCase().includes(needle)
-      || u.department.toLowerCase().includes(needle))
-    .slice(0, 60)
-
-  const toggle = (id) => setPick((s) => {
-    const next = new Set(s)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    return next
-  })
-
-  return (
-    <Card
-      title="Add identities to this role"
-      sub="Direct assignment is recorded against you in the role's activity log."
-      actions={<IconButton icon="x" label="Close" onClick={onClose} />}
-      footer={(
-        <>
-          <span><b className="num">{pick.size}</b> selected</span>
-          <span className="spacer" />
-          <Button size="sm" onClick={onClose}>Cancel</Button>
-          <Button
-            size="sm"
-            variant="pri"
-            icon="plus"
-            disabled={pick.size === 0}
-            onClick={() => { onAdd([...pick]); setPick(new Set()) }}
-          >
-            Add {pick.size || ''} to role
-          </Button>
-        </>
-      )}
-    >
-      <div className="stack">
-        <div className="wb-search" style={{ flex: 'none', maxWidth: 360 }}>
-          <Icon name="search" size={14} />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by username, email or department…" aria-label="Search identities" />
-          {q && <IconButton icon="x" size="sm" label="Clear search" onClick={() => setQ('')} />}
-        </div>
-        <div style={{ maxHeight: 300, overflowY: 'auto', margin: '0 -4px' }}>
-          {candidates.length === 0 && <div className="t-sm t-mut" style={{ padding: '10px 4px' }}>Every matching identity already holds this role.</div>}
-          {candidates.map((u) => (
-            <div
-              key={u.id}
-              className="feed-it"
-              role="button"
-              tabIndex={0}
-              style={{ cursor: 'pointer', padding: '7px 4px' }}
-              onClick={() => toggle(u.id)}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggle(u.id)}
-            >
-              <Check checked={pick.has(u.id)} onChange={() => toggle(u.id)} label={`Select ${u.username}`} />
-              <Avatar first={u.firstName} last={u.lastName} size="sm" />
-              <div className="feed-m">
-                <div className="feed-t">{u.username}</div>
-                <div className="feed-s"><span>{u.department}</span><span>{u.employeeType}</span><span>{u.organization}</span></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </Card>
-  )
-}
+import MemberPicker from './MemberPicker'
 
 // Drop zone plus the same preparation guidance the directory import uses.
-function MemberImport({ onFile }) {
+/* Drop zone plus the same preparation guidance the directory import uses.
+   Both directions take the same file — one username per row — so the only thing
+   that changes between adding and removing in bulk is what the platform does
+   with the names it matches. */
+function MemberCsv({ mode, role, count, onFile }) {
   const [file, setFile] = useState(null)
+  const removing = mode === 'remove'
   return (
     <div className="stack">
-      <div className="banner" data-tone="info">
+      <div className="banner" data-tone={removing ? 'warn' : 'info'}>
         <Icon name="file" size={15} />
         <div>
           One username per row under a <span className="mono">username</span> header. Rows that do not match a directory
-          identity are returned as a downloadable error file and the rest of the load continues.
+          identity are returned as a downloadable error file and the rest of the {removing ? 'removal' : 'load'} continues.
         </div>
       </div>
+      {removing && (
+        <div className="banner" data-tone="bad">
+          <Icon name="warn" size={15} />
+          <div>
+            Every username matched in the file loses <b>{role.name}</b>. Each permission the role grants is withdrawn at
+            the next provisioning run; access held through another role or request is unaffected. {count} {count === 1 ? 'identity holds' : 'identities hold'} the
+            role today.
+          </div>
+        </div>
+      )}
       <FileDrop
         accept=".csv"
         label={file ? file.name : 'Drag the CSV here, or browse'}
-        hint={file ? `${formatSize(file.size)} · ready to import` : 'UTF-8, comma separated, first row must be the header'}
+        hint={file
+          ? `${formatSize(file.size)} · ready to ${removing ? 'process' : 'import'}`
+          : 'UTF-8, comma separated, first row must be the header'}
         onFiles={(files) => { setFile(files[0]); onFile(files[0]) }}
       />
     </div>
@@ -114,11 +55,15 @@ function MemberImport({ onFile }) {
 
 export function MembersTab({ role, memberIds, onAdd, onRemove }) {
   const { navigate, toast, confirm, setDrawer } = useApp()
-  const [adding, setAdding] = useState(false)
 
   const rows = useMemo(() => {
     const set = new Set(memberIds)
     return USERS.filter((u) => set.has(u.id))
+  }, [memberIds])
+
+  const available = useMemo(() => {
+    const set = new Set(memberIds)
+    return USERS.filter((u) => !set.has(u.id))
   }, [memberIds])
 
   const columns = [
@@ -144,53 +89,92 @@ export function MembersTab({ role, memberIds, onAdd, onRemove }) {
 
   // Members arrive as an HR extract far more often than they leave as one, so
   // the toolbar carries an import. The per-selection export is left in place.
-  const openImport = () => {
+  /* Members arrive as an HR extract, and they leave as one too — a joiners file
+     and a leavers file are the same shape. Both directions take a CSV here; the
+     register's own bulk bar covers taking out a handful by hand. */
+  const openCsv = (mode) => {
+    const removing = mode === 'remove'
     let chosen = null
     setDrawer({
-      title: 'Import members',
-      sub: `Add identities to ${role.name} in bulk from a CSV.`,
-      children: <MemberImport onFile={(f) => { chosen = f }} />,
+      title: removing ? 'Bulk remove members' : 'Import members',
+      sub: removing
+        ? `Take identities out of ${role.name} in bulk from a CSV.`
+        : `Add identities to ${role.name} in bulk from a CSV.`,
+      children: <MemberCsv mode={mode} role={role} count={rows.length} onFile={(f) => { chosen = f }} />,
       footer: (
         <>
           <Button onClick={() => setDrawer(null)}>Cancel</Button>
           <Button
-            variant="pri"
+            variant={removing ? 'danger' : 'pri'}
             icon="upload"
             onClick={() => {
-              if (!chosen) { toast('warn', 'No file selected', 'Choose a CSV that lists one username per row.'); return }
+              if (!chosen) {
+                toast('warn', 'No file selected', 'Choose a CSV that lists one username per row.')
+                return
+              }
               // Nothing is parsed in the demo build: the file stands in for the
-              // upload, and the identities not already in the role are added.
+              // upload, and the platform acts on the identities it would match.
               const held = new Set(memberIds)
-              const candidates = USERS.filter((u) => !held.has(u.id)).slice(0, 8).map((u) => u.id)
-              onAdd(candidates)
+              const matched = removing
+                ? USERS.filter((u) => held.has(u.id)).slice(0, 8).map((u) => u.id)
+                : USERS.filter((u) => !held.has(u.id)).slice(0, 8).map((u) => u.id)
+              if (matched.length === 0) {
+                toast('warn', 'Nothing to do', removing
+                  ? 'No username in the file matches an identity holding this role.'
+                  : 'Every username in the file already holds this role.')
+                return
+              }
               setDrawer(null)
-              toast('ok', 'Members imported', `${candidates.length} identities added to ${role.name} from ${chosen.name}.`)
+              if (removing) {
+                confirmRemove(matched, null, chosen.name)
+                return
+              }
+              onAdd(matched)
+              toast('ok', 'Members imported', `${matched.length} identities added to ${role.name} from ${chosen.name}.`)
             }}
           >
-            Import
+            {removing ? 'Remove members' : 'Import'}
           </Button>
         </>
       ),
     })
   }
 
-  const confirmRemove = (ids, clear) => confirm({
+  const confirmRemove = (ids, clear, fromFile) => confirm({
     title: ids.length === 1 ? 'Remove this identity from the role?' : `Remove ${ids.length} identities from the role?`,
-    body: `Every permission granted by ${role.name} is withdrawn at the next provisioning run. Access granted by another role or request is unaffected.`,
+    body: `${fromFile ? `${ids.length} usernames in ${fromFile} matched an identity holding this role. ` : ''}Every permission granted by ${role.name} is withdrawn at the next provisioning run. Access granted by another role or request is unaffected.`,
     confirmLabel: `Remove ${ids.length}`,
-    onConfirm: () => { onRemove(ids); if (clear) clear() },
+    onConfirm: () => {
+      onRemove(ids)
+      if (clear) clear()
+      toast('ok', 'Members removed', `${ids.length} ${ids.length === 1 ? 'identity' : 'identities'} removed from ${role.name}.`)
+    },
+  })
+
+  /* Both directions open the same picker in a drawer, so the register behind it
+     stays where the operator left it instead of being pushed down the page by a
+     panel that grows as they search. */
+  const openPicker = () => setDrawer({
+    size: 'xl',
+    title: 'Add members',
+    sub: `Choose identities to grant ${role.name}.`,
+    children: (
+      <MemberPicker
+        role={role}
+        source={available}
+        onCancel={() => setDrawer(null)}
+        onCommit={(ids) => {
+          onAdd(ids)
+          setDrawer(null)
+          toast('ok', 'Members added', `${ids.length} ${ids.length === 1 ? 'identity' : 'identities'} added to ${role.name}.`)
+        }}
+      />
+    ),
+    footer: <Button onClick={() => setDrawer(null)}>Close</Button>,
   })
 
   return (
     <div className="stack">
-      {adding && (
-        <AddMembers
-          current={memberIds}
-          onClose={() => setAdding(false)}
-          onAdd={(ids) => { onAdd(ids); setAdding(false) }}
-        />
-      )}
-
       <DataWorkbench
         id="role-members"
         rows={rows}
@@ -212,8 +196,11 @@ export function MembersTab({ role, memberIds, onAdd, onRemove }) {
         )}
         toolbar={(
           <>
-            <Button size="sm" icon="plus" onClick={() => setAdding(true)}>Add members</Button>
-            <Button size="sm" icon="upload" onClick={openImport}>Import members</Button>
+            <Button size="sm" icon="plus" onClick={openPicker}>Add members</Button>
+            <Button size="sm" icon="upload" onClick={() => openCsv('add')}>Import members</Button>
+            {/* Members arrived as a CSV but could only leave one tick at a time.
+                A leavers file is the same shape as a joiners file. */}
+            <Button size="sm" icon="minus" disabled={rows.length === 0} onClick={() => openCsv('remove')}>Bulk remove</Button>
           </>
         )}
         emptyTitle="No identities hold this role"

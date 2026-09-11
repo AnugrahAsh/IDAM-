@@ -31,6 +31,18 @@
    and pushing the bar with margin-top:auto keeps it on the bottom edge either
    way. Scoped with :has() so only pages that actually carry a bar change. */
 .canvas-inner:has(.sticky-actions){display:flex;flex-direction:column;min-height:100%;padding-bottom:0}
+/* A page that opts out with `flow` keeps the bar in normal flow: it closes the
+   content where the content ends, rather than being pushed to the bottom edge
+   with a screen of empty canvas above it. */
+.canvas-inner:has(.sticky-actions[data-flow]){display:block;min-height:0;padding-bottom:var(--sp-8)}
+.canvas-inner:has(.sticky-actions[data-flow]) > .stack:has(.sticky-actions),
+.canvas-inner:has(.sticky-actions[data-flow]) > div:has(> .sticky-actions),
+.canvas-inner:has(.sticky-actions[data-flow]) .detail-body:has(.sticky-actions),
+.canvas-inner:has(.sticky-actions[data-flow]) .detail-body:has(.sticky-actions) > .stack{
+  flex:none;display:block;min-height:0;
+}
+.sticky-actions[data-flow]{margin-top:var(--sp-4)}
+
 /* On a narrow canvas the message and the buttons stop sharing a line. */
 @media(max-width:640px){
   .sticky-actions{flex-wrap:wrap;padding:12px 13px;margin:var(--sp-4) 0 var(--sp-5)}

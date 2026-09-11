@@ -303,6 +303,16 @@ export const PERMISSION_MODULES = [
     ],
   },
   {
+    name: 'Sign-On Policy',
+    legacy: ['Sign On Policy', 'SignOn Policy'],
+    desc: 'Ordered allow and deny rules evaluated at sign-in, and the SSO applications each policy governs.',
+    perms: [
+      ...CRUD('Sign-On Policy', 'Sign-On Policies'),
+      'Change Status', 'Add Rule', 'Modify Rule', 'Delete Rule', 'Reorder Rules',
+      'Attach Application', 'Detach Application',
+    ],
+  },
+  {
     name: 'Trust Reconciliation',
     desc: 'Matching target accounts against authoritative identity sources.',
     perms: [

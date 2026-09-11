@@ -12,18 +12,26 @@ import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
 import { stampText } from '../../lib/clock'
 import { statusTone } from '../notificationMgmt/announcementData'
-import { CATEGORY_TONE, NOTIFICATION_CATEGORIES, reachOf, readAudience } from '../comms/audienceModel'
+import { reachOf, readAudience } from '../comms/audienceModel'
+import { notificationTaxonomy, useNotificationTaxonomy } from '../settings/settingsStore'
 import AnnouncementEditor from '../notificationMgmt/AnnouncementEditor'
 import { useAnnouncements, writeAnnouncements } from './announcementStore'
 import { INBOX_PATH, MANAGE_PATH, NOTIFICATION_MODULE, WRITE_ANNOUNCEMENT } from './notificationAccess'
 
-const sevLevel = (s) => (s === 'info' ? 'low' : s === 'warn' ? 'medium' : s === 'high' ? 'high' : 'critical')
+/* SeverityBadge draws a four-step scale; the taxonomy files on three. An
+   authored severity is rendered at the step it is filed under, so a tenant that
+   renames "critical" to "P1" still gets the critical badge. */
+const BADGE_LEVEL = { info: 'low', high: 'high', critical: 'critical' }
 
-const blank = () => ({
-  id: null, title: '', description: '', audience: 'All users', channel: 'In-app',
-  category: NOTIFICATION_CATEGORIES[0],
-  severity: 'info', scheduleOn: '', status: 'Draft', reach: 0,
-})
+const blank = () => {
+  const t = notificationTaxonomy()
+  return {
+    id: null, title: '', description: '', audience: 'All users', channel: 'In-app',
+    category: t.categories[0]?.label || '',
+    severity: t.severities[0]?.label || 'info',
+    scheduleOn: '', status: 'Draft', reach: 0,
+  }
+}
 
 /**
  * The Manage view of the Notification Center: a full page of its own, reached
@@ -33,6 +41,10 @@ const blank = () => ({
 export default function AnnouncementRegister({ segments = [] }) {
   const { navigate, toast, confirm, can, role } = useApp()
   const all = useAnnouncements()
+  // Category colour and severity step both come from Settings → Notification Management Setup.
+  const taxonomy = useNotificationTaxonomy()
+  const toneOf = (label) => taxonomy.categories.find((c) => c.label === label)?.tone
+  const badgeOf = (label) => BADGE_LEVEL[taxonomy.severities.find((x) => x.label === label)?.level] || 'low'
   const [status, setStatus] = useState('All')
   const rows = useMemo(() => (status === 'All' ? all : all.filter((r) => r.status === status)), [all, status])
   const setRows = writeAnnouncements
@@ -139,10 +151,10 @@ export default function AnnouncementRegister({ segments = [] }) {
     {
       key: 'category',
       label: 'Category',
-      render: (r) => <Tag tone={CATEGORY_TONE[r.category] || undefined}>{r.category || NOTIFICATION_CATEGORIES[0]}</Tag>,
+      render: (r) => <Tag tone={toneOf(r.category)}>{r.category || taxonomy.categories[0]?.label}</Tag>,
     },
     { key: 'channel', label: 'Channel', render: (r) => <Tag>{r.channel}</Tag> },
-    { key: 'severity', label: 'Severity', render: (r) => <SeverityBadge level={sevLevel(r.severity)}>{r.severity}</SeverityBadge> },
+    { key: 'severity', label: 'Severity', render: (r) => <SeverityBadge level={badgeOf(r.severity)}>{r.severity}</SeverityBadge> },
     { key: 'scheduleOn', label: 'Schedule On', cls: 'td-mono', render: (r) => r.scheduleOn || '—' },
     { key: 'reach', label: 'Reach', align: 'right', render: (r) => (r.reach ? num(r.reach) : '—') },
     { key: 'status', label: 'Status', render: (r) => <Pill tone={statusTone[r.status]} dot>{r.status}</Pill> },

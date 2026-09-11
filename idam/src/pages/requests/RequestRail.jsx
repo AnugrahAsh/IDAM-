@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Card from '../../components/primitives/Card'
 import Icon from '../../components/primitives/Icon'
 import Pill from '../../components/primitives/Pill'
@@ -9,30 +10,27 @@ import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
 import { SOD_RULES } from '../../data/seed'
 import {
-  useChain, STEP_LABEL, STEP_TONE, grantsFor, groupOf, peersFor, sensitivityOf, shiftStamp,
-  stepState, userOf,
+  STEP_LABEL, STEP_TONE, grantsFor, groupOf, peersFor, sensitivityOf, stepState, userOf,
 } from './data'
+import { LevelExpansion, useWorkflow } from '../approvals/ApprovalWorkflow'
+import { durationText } from '../approvals/workflow'
 
 export const auditCell = (v) => (v ? <span className="mono">{v}</span> : <span className="t-faint">—</span>)
 
-const approverFor = (row, i) => {
-  if (i === 1) return row.approvedByL1
-  if (i === 2) return row.approvedByL2
-  return ''
-}
-const stampFor = (row, i) => {
-  if (i === 1) return row.approvedOnL1
-  if (i === 2) return row.approvedOnL2
-  return ''
-}
-const commentFor = (row, i) => {
-  if (i === 1) return row.commentL1
-  if (i === 2) return row.commentL2
-  return ''
-}
-
+/* Who decided at a level, when, and what they wrote — read through the shared
+   workflow model rather than through a second, hand-written key mapping. The
+   one here started at `approvedByL1` for level 1, which is level 2's field, so
+   the requester's chain named the wrong approver at every level and showed
+   level 1 as undecided after it had signed. */
 export function ApprovalChain({ row }) {
-  const chain = useChain()
+  const view = useWorkflow(row)
+  const [open, setOpen] = useState(() => new Set())
+  const toggle = (i) => setOpen((prev) => {
+    const n = new Set(prev)
+    if (n.has(i)) n.delete(i); else n.add(i)
+    return n
+  })
+
   return (
     <Card
       title="Approval chain"
@@ -40,38 +38,66 @@ export function ApprovalChain({ row }) {
       actions={<Pill tone={STEP_TONE[stepState(row, row.level)] || 'mut'} dot>{row.status}</Pill>}
     >
       <div className="tl">
-        {chain.slice(0, row.levels).map((step, ix) => {
-          const i = ix + 1
-          const state = stepState(row, i)
-          const who = approverFor(row, i)
-          const when = stampFor(row, i)
-          const note = commentFor(row, i)
-          const tone = state === 'done' ? 'ok' : state === 'rejected' ? 'bad' : state === 'current' ? 'warn' : 'mut'
+        {view.levels.map((entry) => {
+          const i = entry.level
+          const step = entry.step
+          const state = entry.state
+          const who = entry.approver
+          const when = entry.decidedAt
+          const note = entry.comment
+          const tone = STEP_TONE[state] || 'mut'
+          const isOpen = open.has(i)
           return (
-            <div className="tl-it" key={step.title} data-tone={tone}>
+            <div className="tl-it apv-lvl" key={step.id || step.title} data-tone={tone} data-open={isOpen || undefined}>
               <span className="tl-dot">
                 <Icon name={state === 'done' ? 'check' : state === 'rejected' ? 'x' : state === 'current' ? 'clock' : 'chevD'} size={8} />
               </span>
-              <div className="tl-t">
-                Level {i} · {step.title}
-                <span style={{ marginLeft: 8 }}>
-                  <Pill tone={STEP_TONE[state]} dot>{STEP_LABEL[state]}</Pill>
-                </span>
+              <div className="tl-t apv-lvl-head">
+                <span>Level {i} · {step.title}</span>
+                <Pill tone={STEP_TONE[state]} dot>{STEP_LABEL[state]}</Pill>
+                {entry.diff.total > 0 && (
+                  <Tag>{entry.diff.total} {entry.diff.total === 1 ? 'revision' : 'revisions'}</Tag>
+                )}
+                {/* The requester gets the same depth as the approver. Being on
+                    the receiving end of a decision is the case where "what did
+                    that level change, and why is it sitting there" is asked
+                    most, and it was the one view that could not answer it. */}
+                <button
+                  type="button"
+                  className="apv-lvl-more"
+                  aria-expanded={isOpen}
+                  aria-label={isOpen ? `Hide level ${i} detail` : `Show level ${i} detail`}
+                  onClick={() => toggle(i)}
+                >
+                  <span>{isOpen ? 'Less' : 'Detail'}</span>
+                  <Icon name={isOpen ? 'chevU' : 'chevD'} size={11} />
+                </button>
               </div>
-              <div className="tl-s">
-                {state === 'done' && who && <><b>{who}</b> approved. </>}
-                {state === 'rejected' && <><b>Rejected at this level.</b> </>}
-                {state === 'current' && <><b>{row.pendingWith || 'Unassigned'}</b> holds the decision. </>}
-                {state === 'future' && <>{step.detail}. </>}
-                {state !== 'future' && state !== 'current' ? '' : `Target ${step.sla}h.`}
-              </div>
-              {note && state === 'done' && (
-                <div className="tl-s" style={{ marginTop: 4, fontStyle: 'italic' }}>“{note}”</div>
+
+              {!isOpen && (
+                <>
+                  <div className="tl-s">
+                    {state === 'done' && who && <><b>{who}</b> approved. </>}
+                    {state === 'rejected' && <><b>Rejected at this level.</b> </>}
+                    {state === 'current' && <><b>{row.pendingWith || 'Unassigned'}</b> holds the decision. </>}
+                    {state === 'future' && <>{step.detail}. </>}
+                    {state !== 'future' && state !== 'current' ? '' : `Target ${step.sla}h.`}
+                  </div>
+                  {note && state === 'done' && (
+                    <div className="tl-s" style={{ marginTop: 4, fontStyle: 'italic' }}>“{note}”</div>
+                  )}
+                </>
               )}
+
+              {isOpen && <LevelExpansion row={row} level={i} />}
+
               <div className="tl-time mono">
-                {when || (state === 'current'
-                  ? `due ${shiftStamp(row.raised, step.sla)}`
+                {when || (state === 'current' && entry.dueAt
+                  ? `due ${entry.dueAt}`
                   : state === 'rejected' ? row.raised : 'not yet reached')}
+                {entry.clock.overBy != null && (
+                  <span className="apv-lvl-late"> · {durationText(entry.clock.overBy)} over target</span>
+                )}
               </div>
             </div>
           )

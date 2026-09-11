@@ -289,13 +289,13 @@ export default function AuthenticationPage({ segments = [] }) {
           <PageBar
             title="Provider not found"
             sub="No authentication provider is registered under that identifier."
-            crumbs={[{ label: 'Multi-Factor Authentication', to: BASE_PATH }, { label: 'Providers', to: `${BASE_PATH}/providers` }, { label: 'Not found' }]}
+            crumbs={[{ label: 'Multi-Factor Authentication', to: BASE_PATH }, { label: 'Factors', to: `${BASE_PATH}/factors` }, { label: 'Not found' }]}
           />
           <EmptyState
             icon="shield"
             title="Unknown provider"
             body="Registered providers are TOTP, SMS, email, passkey and push."
-            actions={<Button variant="pri" iconRight="chevR" onClick={() => navigate(`${BASE_PATH}/providers`)}>Back to providers</Button>}
+            actions={<Button variant="pri" iconRight="chevR" onClick={() => navigate(`${BASE_PATH}/factors`)}>Back to factors</Button>}
           />
         </>
       )
@@ -311,8 +311,8 @@ export default function AuthenticationPage({ segments = [] }) {
         onChange={(k, v) => setValue(provider.id, k, v)}
         onToggle={(next) => toggleProviderFactor(provider, next)}
         onTest={() => testProvider(provider)}
-        onSave={() => { saveProviders(provider); navigate(`${BASE_PATH}/providers`) }}
-        onCancel={() => { revertProviders(provider); navigate(`${BASE_PATH}/providers`) }}
+        onSave={() => { saveProviders(provider); navigate(`${BASE_PATH}/factors`) }}
+        onCancel={() => { revertProviders(provider); navigate(`${BASE_PATH}/factors`) }}
       />
     )
   }
@@ -412,21 +412,10 @@ export default function AuthenticationPage({ segments = [] }) {
         sub="Which factors identities may enrol, how each provider is configured, how long a session survives, and when the platform demands another challenge."
         crumbs={[{ label: 'Core' }, { label: 'Multi-Factor Authentication' }]}
         badge={<Pill tone={phishingPct >= 70 ? 'ok' : 'warn'} dot>{pct(phishingPct)} phishing-resistant</Pill>}
+        /* "Publish changes" published the provider and policy drafts, and both
+           are gone. Every control left on this page writes when it is used. */
         actions={
-          <>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Factor enrollment report is being generated.')}>Enrollment report</Button>
-            <Button
-              variant="pri"
-              icon="save"
-              disabled={!providersDirty && !policyDirty}
-              onClick={() => {
-                if (providersDirty) saveProviders()
-                if (policyDirty) { setPolicyDirty(false); toast('ok', 'Policy published', 'Authentication policy is live across every SSO application.') }
-              }}
-            >
-              Publish changes
-            </Button>
-          </>
+          <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Factor enrollment report is being generated.')}>Enrollment report</Button>
         }
       />
 
@@ -436,9 +425,8 @@ export default function AuthenticationPage({ segments = [] }) {
           onChange={goTab}
           tabs={[
             { id: 'factors', label: 'Factors', icon: 'shield', count: methods.length },
-            { id: 'providers', label: 'Providers', icon: 'sliders', count: PROVIDERS.length },
-            { id: 'policy', label: 'Policy', icon: 'policy' },
             { id: 'enrollment', label: 'Enrollment', icon: 'users', count: enrolStats.none },
+            { id: 'events', label: 'Recent events', icon: 'activity', count: events.length },
           ]}
         />
 
@@ -467,14 +455,15 @@ export default function AuthenticationPage({ segments = [] }) {
               </div>
             </div>
 
-            <div className="row-between" style={{ marginTop: 4 }}>
-              <div className="t-sm t-mut">
-                {enabled.length} of {methods.length} factors are offered at enrollment.
-                {primary
-                  ? <> <b>{primary.name}</b> is challenged first.</>
-                  : <> No primary factor is set — identities are challenged in list order.</>}
-              </div>
-              <Button size="sm" variant="pri" icon="plus" onClick={addMethod}>Add method</Button>
+            {/* The factor set is what the platform implements, not a list a
+                tenant extends: a method nobody has written a challenge for
+                cannot be offered at enrollment. Each one is enabled, disabled
+                and configured in place below. */}
+            <div className="t-sm t-mut" style={{ marginTop: 4 }}>
+              {enabled.length} of {methods.length} factors are offered at enrollment.
+              {primary
+                ? <> <b>{primary.name}</b> is challenged first.</>
+                : <> No primary factor is set — identities are challenged in list order.</>}
             </div>
 
             {Object.entries(methodProbe).some(([, p]) => p && !p.ok) && (
@@ -530,172 +519,51 @@ export default function AuthenticationPage({ segments = [] }) {
               })}
             </div>
 
-            <Card
-              title="Recent factor events"
-              sub="Authentication-category entries from the control-plane log"
-              actions={<Button size="sm" iconRight="chevR" onClick={() => navigate('/iam/syslogs')}>Audit log</Button>}
-              footer={
-                <>
-                  <Icon name="info" size={12} />
-                  <span>{num(gaps)} identities hold no phishing-resistant factor</span>
-                  <span className="spacer" />
-                  <button className="link" onClick={() => navigate('/iam/users')}>Review gaps<Icon name="chevR" size={10} /></button>
-                </>
-              }
-            >
-              {events.length === 0 ? (
-                <EmptyState
-                  icon="shield"
-                  title="No authentication events"
-                  body="Factor enrollments, resets and challenges will appear here as they are recorded."
-                />
-              ) : (
-                <div className="tl">
-                  {events.map((e) => (
-                    <div
-                      className="tl-it"
-                      key={e.id}
-                      data-tone={e.outcome === 'Denied' || e.level === 'ERROR' ? 'bad' : e.level === 'WARN' ? 'warn' : 'acc'}
-                    >
-                      <span className="tl-dot">
-                        <Icon name={e.outcome === 'Denied' ? 'ban' : 'check'} size={8} stroke={3} />
-                      </span>
-                      <div className="tl-t">{e.action}</div>
-                      <div className="tl-s">{e.actor} · {e.target}</div>
-                      <div className="tl-time">{e.ts} · {e.ip} · {e.outcome}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
           </>
         )}
 
-        {tab === 'providers' && (
-          <>
-            <Banner tone="info">
-              Each factor is served by a provider. Configuration is validated on save and again at every challenge, so
-              an endpoint or credential that fails here will fail for identities as well. Use <b>Test Connection</b> to
-              run the probe sequence against the values currently in the form before publishing.
-            </Banner>
-
-            {PROVIDERS.map((p) => (
-              <ProviderBlock
-                key={p.id}
-                provider={p}
-                values={config[p.id]}
-                enabled={isEnabled(p)}
-                result={results[p.id]}
-                onChange={(k, v) => setValue(p.id, k, v)}
-                onToggle={(next) => toggleProviderFactor(p, next)}
-                onTest={() => testProvider(p)}
-                onOpen={() => navigate(`${BASE_PATH}/providers/${p.id}`)}
+        {/* Recent activity was the tail of the Factors tab, which made a
+            page about eight factors run for two screens. It is its own tab
+            now, beside Factors and Enrollment. */}
+        {tab === 'events' && (
+          <Card
+            title="Recent factor events"
+            sub="Authentication-category entries from the control-plane log"
+            actions={<Button size="sm" iconRight="chevR" onClick={() => navigate('/iam/syslogs')}>Audit log</Button>}
+            footer={
+              <>
+                <Icon name="info" size={12} />
+                <span>{num(gaps)} identities hold no phishing-resistant factor</span>
+                <span className="spacer" />
+                <button className="link" onClick={() => navigate('/iam/users')}>Review gaps<Icon name="chevR" size={10} /></button>
+              </>
+            }
+          >
+            {events.length === 0 ? (
+              <EmptyState
+                icon="shield"
+                title="No authentication events"
+                body="Factor enrollments, resets and challenges will appear here as they are recorded."
               />
-            ))}
-
-            <StickyActions dirty={providersDirty} message={providersDirty ? 'Unsaved provider configuration' : 'No changes'}>
-              <Button onClick={() => revertProviders()} disabled={!providersDirty}>Cancel</Button>
-              <Button variant="pri" icon="save" disabled={!providersDirty} onClick={() => saveProviders()}>Submit</Button>
-            </StickyActions>
-          </>
-        )}
-
-        {tab === 'policy' && (
-          <>
-            <Card
-              title="Session"
-              sub="Applies to every SSO application unless an application-level override is configured"
-              actions={policyDirty ? <Pill tone="warn" dot>Unpublished changes</Pill> : <Pill tone="ok" dot>Published</Pill>}
-            >
-              <div className="grid grid-4">
-                <Field label="Session lifetime" hint="Maximum age of a session before a full sign-in is required." htmlFor="auth-session">
-                  <Select
-                    id="auth-session"
-                    options={SESSION_LIFETIMES}
-                    value={policy.sessionLifetime}
-                    onChange={(e) => setPolicyField('sessionLifetime', e.target.value)}
-                  />
-                </Field>
-                <Field label="Re-authentication interval" hint="How often a privileged operation demands a fresh factor." htmlFor="auth-reauth">
-                  <Select
-                    id="auth-reauth"
-                    options={REAUTH_INTERVALS}
-                    value={policy.reauthInterval}
-                    onChange={(e) => setPolicyField('reauthInterval', e.target.value)}
-                  />
-                </Field>
-                <Field label="Enrollment grace period" hint="How long a new identity may sign in before a factor is mandatory." htmlFor="auth-grace">
-                  <Select
-                    id="auth-grace"
-                    options={GRACE_PERIODS}
-                    value={policy.enrollmentGrace}
-                    onChange={(e) => setPolicyField('enrollmentGrace', e.target.value)}
-                  />
-                </Field>
-                <Field label="Remember this device" hint="Suppress the factor prompt for 30 days on devices that pass a posture check.">
-                  <div className="row" style={{ height: 31 }}>
-                    <Switch
-                      checked={policy.rememberDevice}
-                      onChange={(v) => setPolicyField('rememberDevice', v)}
-                      label="Remember this device"
-                    />
-                    <span className="t-sm t-mut">{policy.rememberDevice ? 'Trusted for 30 days' : 'Challenge every sign-in'}</span>
+            ) : (
+              <div className="tl">
+                {events.map((e) => (
+                  <div
+                    className="tl-it"
+                    key={e.id}
+                    data-tone={e.outcome === 'Denied' || e.level === 'ERROR' ? 'bad' : e.level === 'WARN' ? 'warn' : 'acc'}
+                  >
+                    <span className="tl-dot">
+                      <Icon name={e.outcome === 'Denied' ? 'ban' : 'check'} size={8} stroke={3} />
+                    </span>
+                    <div className="tl-t">{e.action}</div>
+                    <div className="tl-s">{e.actor} · {e.target}</div>
+                    <div className="tl-time">{e.ts} · {e.ip} · {e.outcome}</div>
                   </div>
-                </Field>
+                ))}
               </div>
-            </Card>
-
-            <Card title="Risk rules" sub="Conditions that force an additional challenge or refuse the attempt outright">
-              {RISK_RULES.map((rule) => (
-                <div className="feed-it" key={rule.id}>
-                  <span className="feed-ic" data-tone={policy[rule.id] ? 'ok' : 'mut'}>
-                    <Icon name={rule.icon} size={13} />
-                  </span>
-                  <div className="feed-m">
-                    <div className="feed-t"><b>{rule.label}</b></div>
-                    <div className="feed-s"><span>{rule.detail}</span></div>
-                  </div>
-                  <span className="t-xs t-mut" style={{ alignSelf: 'center', marginRight: 4 }}>
-                    {policy[rule.id] ? 'Enforced' : 'Off'}
-                  </span>
-                  <span style={{ alignSelf: 'center' }}>
-                    <Switch
-                      checked={policy[rule.id]}
-                      onChange={(v) => setPolicyField(rule.id, v)}
-                      label={rule.label}
-                    />
-                  </span>
-                </div>
-              ))}
-            </Card>
-
-            <Card title="Assurance" sub="What each enabled factor is permitted to satisfy">
-              <KeyValue
-                rows={[
-                  { k: 'Sign-in', v: enabled.map((m) => m.name).join(', ') || 'No factor enabled', icon: 'shield' },
-                  { k: 'Step-up for privileged operations', v: methods.filter((m) => m.enabled && (m.strength === 'strongest' || m.strength === 'strong')).map((m) => m.name).join(', ') || 'None', icon: 'key' },
-                  { k: 'Self-service credential reset', v: methods.filter((m) => m.enabled && m.strength !== 'weakest').map((m) => m.name).join(', ') || 'None', icon: 'refresh' },
-                  { k: 'Network trust', v: policy.untrustedNetwork ? 'Evaluated against the IP restriction policy' : 'Not evaluated', icon: 'noentry' },
-                ]}
-              />
-              <div className="row" style={{ marginTop: 14 }}>
-                <Button size="sm" iconRight="chevR" onClick={() => navigate('/iam/ip/restriction/policy')}>IP restriction policy</Button>
-                <Button size="sm" iconRight="chevR" onClick={() => navigate('/iam/passwordPolicy')}>Password policy</Button>
-              </div>
-            </Card>
-
-            <StickyActions dirty={policyDirty} message={policyDirty ? 'Unsaved policy changes' : 'No changes'}>
-              <Button disabled={!policyDirty} onClick={() => { setPolicyDirty(false); toast('info', 'Changes discarded', 'The published policy is unchanged.') }}>Cancel</Button>
-              <Button
-                variant="pri"
-                icon="save"
-                disabled={!policyDirty}
-                onClick={() => { setPolicyDirty(false); toast('ok', 'Policy published', 'Authentication policy is live across every SSO application.') }}
-              >
-                Save changes
-              </Button>
-            </StickyActions>
-          </>
+            )}
+          </Card>
         )}
 
         {tab === 'enrollment' && (

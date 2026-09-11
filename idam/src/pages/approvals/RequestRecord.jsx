@@ -26,7 +26,7 @@ import {
 } from '../requests/RequestRail'
 import ChangesPanel from './ChangesPanel'
 import ApproverTimeline from './ApproverTimeline'
-import { targetState } from './data'
+import { draftCounts, emptyDraft, targetState } from './data'
 
 const BASIS_APPROVE = [
   'Business need confirmed with the requester',
@@ -44,14 +44,17 @@ const BASIS_REJECT = [
 ]
 const REASSIGN_TARGETS = [...new Set([...APPROVERS_L1, ...APPROVERS_L2, ...APPROVERS_L3])]
 
-export default function RequestRecord({ id, rows, onApprove, onReject, onReassign, initialEdits = {} }) {
+export default function RequestRecord({ id, rows, onApprove, onReject, onReassign }) {
   const { toast, navigate } = useApp()
   const row = rows.find((r) => String(r.id) === String(id))
   const [comment, setComment] = useState('')
   const [basis, setBasis] = useState(BASIS_APPROVE[0])
   const [rejectBasis, setRejectBasis] = useState(BASIS_REJECT[0])
   const [assignee, setAssignee] = useState(REASSIGN_TARGETS[0])
-  const [edits, setEdits] = useState(initialEdits)
+  /* The revision this approver is building. It is a list of operations against
+     the request as it reached this level, and it stays local until Approve
+     commits it — a rejection or a reassignment carries none of it forward. */
+  const [draft, setDraft] = useState(emptyDraft)
   const levels = useApprovalLevels()
   const evidenceRows = useMemo(() => levelColumnDefs(levels), [levels])
 
@@ -75,8 +78,9 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
   }
 
   const open = OPEN.has(row.status)
-  const editCount = Object.keys(edits).length
-  const ts = targetState(row, edits)
+  const counts = draftCounts(draft)
+  const editCount = counts.total
+  const ts = targetState(row, draft)
   const target = ts.target
   const n = nameOf(row.username)
   const identity = row.userId ? userOf(row.userId) : null
@@ -143,7 +147,11 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
               sub="Everything captured when the request was raised"
               actions={<Tag>{row.type}</Tag>}
             >
+              {/* Nine short fields read at a glance before the decision — they
+                  do not need a screen of their own above the changes. */}
               <KeyValue
+                dense
+                cols={3}
                 rows={[
                   { k: 'Request id', v: row.id, icon: 'request' },
                   { k: 'Request type', v: row.type, icon: 'tag' },
@@ -160,7 +168,7 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
               />
             </Card>
 
-            <ChangesPanel row={row} edits={edits} setEdits={setEdits} />
+            <ChangesPanel row={row} draft={draft} setDraft={setDraft} />
 
             <Card title="Justification" sub="Written by the requester, unedited">
               <div className="banner" data-tone="info">
@@ -204,7 +212,12 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
               title="Approval evidence"
               sub="Timestamps are recorded in UTC when each approver committed the decision"
             >
+              {/* Same density as the summary above it — two blocks of short
+                  read-only fields on one page should not be set two different
+                  ways. */}
               <KeyValue
+                dense
+                cols={3}
                 rows={evidenceRows.map((c) => (c.kind === 'date'
                   ? { k: c.label, node: auditCell(row[c.key]), icon: 'history' }
                   : { k: c.label, v: row[c.key] || '', icon: 'user' }))}
@@ -286,7 +299,7 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
           </div>
 
           <div className="stack">
-            <ApproverTimeline row={row} />
+            <ApproverTimeline row={row} draft={draft} />
             <RiskPanel row={row} target={target} />
             <RequesterCard row={row} profile={profile} />
           </div>
@@ -297,7 +310,7 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
         dirty={comment.trim().length > 0 || editCount > 0}
         message={open
           ? editCount > 0
-            ? `${editCount} requested ${editCount === 1 ? 'change' : 'changes'} edited by you · approving commits your edited values`
+            ? `Your level ${row.level} revision · ${counts.added} added, ${counts.removed} removed, ${counts.changed} changed · approving commits it and shows it to the next level`
             : comment.trim().length > 0
               ? `Comment captured · ${num(comment.trim().length)} characters`
               : 'Add a decision comment before approving a flagged request'
@@ -305,7 +318,7 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
       >
         <Button icon="swap" disabled={!open} onClick={() => onReassign(row, assignee, comment)}>Reassign</Button>
         <Button variant="danger" icon="ban" disabled={!open} onClick={() => onReject(row, rejectBasis, comment)}>Reject</Button>
-        <Button variant="pri" icon="checkC" disabled={!open} onClick={() => onApprove(row, basis, comment, editCount)}>Approve</Button>
+        <Button variant="pri" icon="checkC" disabled={!open} onClick={() => onApprove(row, basis, comment, draft)}>Approve</Button>
       </StickyActions>
     </>
   )

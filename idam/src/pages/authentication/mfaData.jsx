@@ -1,6 +1,11 @@
 import { EMAIL_TEMPLATES, MFA_METHODS, USERS } from '../../data/seed'
 import { fieldsOf, seedOf, validateProvider } from './authData'
-export const CONSOLE_TABS = ['factors', 'providers', 'policy', 'enrollment']
+/* Providers and Policy were removed from this console: a factor's provider is
+   configured where the factor is, and session policy belongs to the tenant
+   settings rather than to a screen about factors. Recent activity earned a tab
+   of its own — it was the tail of the Factors page, which made that page twice
+   as long as the thing it was about. */
+export const CONSOLE_TABS = ['factors', 'enrollment', 'events']
 
 export const SESSION_LIFETIMES = ['1 hour', '4 hours', '8 hours', '12 hours', '24 hours', '7 days']
 

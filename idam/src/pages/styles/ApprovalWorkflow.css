@@ -1,0 +1,146 @@
+/* Approval workflow — shared by every surface that shows an approval chain:
+   the approver's record, the requester's tracking view and the workflow page.
+   Kept out of ApprovalsPage.css because the requester's rail renders the same
+   levels and would otherwise be styled by a stylesheet its page never loads. */
+
+/* --- The level as it reads collapsed --------------------------------------- */
+.apv-lvl-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.apv-lvl-role{margin-top:2px}
+.apv-lvl-note{margin-top:4px;font-style:italic}
+.apv-lvl-edits{margin-top:6px;display:flex;flex-direction:column;gap:4px;
+  padding:6px 8px;border-radius:var(--r-sm);background:var(--surface-2)}
+.apv-lvl-late{color:var(--bad)}
+
+/* One operation of a revision, tinted by kind. The current level's draft is
+   shown the same way but dashed, so it reads as pending rather than history. */
+.apv-tl-op{display:flex;align-items:flex-start;gap:6px;font-size:var(--t-xs);color:var(--ink-2);min-width:0}
+.apv-tl-op svg{flex:none;margin-top:2px}
+.apv-tl-op[data-op="add"] svg{color:var(--ok)}
+.apv-tl-op[data-op="remove"] svg{color:var(--bad)}
+.apv-tl-op[data-op="modify"] svg{color:var(--warn)}
+.apv-tl-op .mono{font-size:var(--t-xs)}
+.apv-tl-op[data-pending]{color:var(--accent-deep)}
+.apv-lvl-edits[data-pending]{border:1px dashed var(--accent-line);border-radius:var(--r-sm);
+  padding:6px 8px;background:var(--accent-bg)}
+.apv-tl-pending{display:flex;align-items:center;gap:6px;font-size:var(--t-xs);font-weight:var(--w-semi);
+  color:var(--accent-deep);margin-bottom:2px}
+.apv-tl-pending svg{color:var(--accent)}
+
+/* --- Expanding a level ----------------------------------------------------- */
+/* The control sits in the head row, pushed to the trailing edge, so a shut
+   level is the height it always was. */
+.apv-lvl-more{margin-left:auto;display:inline-flex;align-items:center;gap:3px;flex:none;
+  height:20px;padding:0 5px 0 7px;border-radius:var(--r-xs);border:1px solid transparent;
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut);background:transparent;cursor:pointer}
+.apv-lvl-more:hover{background:var(--surface-2);border-color:var(--line);color:var(--ink)}
+.apv-lvl-more:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+.apv-lvl-more svg{flex:none;transition:transform var(--dur-1) var(--ease)}
+.tl-it[data-open]{padding-bottom:20px}
+
+/* --- The depth view -------------------------------------------------------- */
+.apv-deep{display:flex;flex-direction:column;gap:14px;margin-top:10px;min-width:0}
+/* Inside a rail timeline the depth hangs off the level's own rule, so a long
+   expansion still reads as belonging to the level above it. */
+.apv-deep[data-compact]{gap:11px;margin-top:8px;padding-left:10px;
+  border-left:2px solid var(--line);}
+.apv-deep-s{display:flex;flex-direction:column;gap:6px;min-width:0}
+.apv-deep-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut)}
+.apv-deep-h svg{color:var(--faint)}
+
+/* The clock: received, decided, taken, target, verdict. Five short figures
+   that answer "was this level slow" without a chart. */
+.apv-clock{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.apv-clock-c{display:flex;flex-direction:column;justify-content:space-between;gap:3px;
+  padding:8px 10px;background:var(--surface);min-width:0}
+.apv-clock-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  color:var(--mut);white-space:nowrap}
+.apv-clock-v{font-size:var(--t-xs);color:var(--ink);font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis}
+.apv-clock-sla{background:var(--surface-2)}
+.apv-deep[data-compact] .apv-clock{grid-template-columns:repeat(2,minmax(0,1fr))}
+.apv-deep[data-compact] .apv-clock-sla{grid-column:1 / -1}
+
+/* The comment, verbatim. It is evidence, so it is set apart rather than run
+   into the paragraph above it. */
+.apv-quote{font-size:var(--t-sm);line-height:1.55;color:var(--ink-2);font-style:italic;
+  padding:9px 12px;border-left:3px solid var(--line-2);border-radius:0 var(--r-sm) var(--r-sm) 0;
+  background:var(--surface-2)}
+
+/* Received beside handed on. The single question the compact card cannot
+   answer: is this still the request that was raised. */
+.apv-ba{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start}
+.apv-ba-col{min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--surface)}
+.apv-ba-col[data-changed]{border-color:var(--warn-line);background:var(--warn-bg)}
+.apv-ba-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut);margin-bottom:6px}
+.apv-ba-arr{display:flex;align-items:center;justify-content:center;align-self:center;color:var(--faint)}
+
+.apv-set{display:flex;flex-direction:column;gap:5px;min-width:0}
+.apv-set-it{display:flex;align-items:baseline;gap:6px;font-size:var(--t-xs);color:var(--ink-2);min-width:0}
+.apv-set-it svg{flex:none;align-self:center;color:var(--mut)}
+.apv-set-it[data-kind="add"] svg{color:var(--ok)}
+.apv-set-it[data-kind="remove"] svg{color:var(--bad)}
+.apv-set-it[data-kind="modify"] svg{color:var(--warn)}
+.apv-set-f{flex:none;color:var(--mut)}
+.apv-set-v{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-xs)}
+
+/* The stored keys the decision is written to. An auditor sampling the export
+   needs the column name, not a prose description of it. */
+.apv-ev{display:flex;flex-direction:column;gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.apv-ev-r{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) minmax(0,1.2fr);
+  gap:10px;align-items:baseline;padding:7px 10px;background:var(--surface);font-size:var(--t-xs)}
+.apv-ev-k{color:var(--accent-deep);white-space:nowrap}
+.apv-ev-l{color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apv-ev-v{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* --- The workflow page ----------------------------------------------------- */
+.apv-sum{display:flex;flex-direction:column;gap:14px}
+.apv-sum-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+/* A label that wraps to two lines must not drop its figure below the figures
+   beside it — the cells share a grid row, so the values are pinned to the
+   bottom and read as one line across. */
+.apv-sum-c{display:flex;flex-direction:column;justify-content:space-between;gap:4px;
+  padding:11px 13px;background:var(--surface);min-width:0}
+.apv-sum-k{display:flex;align-items:center;gap:5px;font-size:var(--t-micro);
+  letter-spacing:var(--t-micro-ls);text-transform:uppercase;color:var(--mut)}
+.apv-sum-k svg{flex:none;color:var(--faint)}
+.apv-sum-v{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink);
+  font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.apv-sum-c[data-tone="bad"] .apv-sum-v{color:var(--bad)}
+.apv-sum-c[data-tone="bad"] .apv-sum-k svg{color:var(--bad)}
+.apv-sum-c[data-tone="warn"] .apv-sum-v{color:var(--warn)}
+.apv-sum-c[data-tone="warn"] .apv-sum-k svg{color:var(--warn)}
+
+/* Who held the level, at the top of its section. */
+.apv-who{display:flex;align-items:center;gap:10px;padding-bottom:12px;
+  border-bottom:1px solid var(--line);min-width:0}
+.apv-who-dot{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:22px;height:22px;border-radius:50%;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--mut)}
+.apv-who-dot[data-tone="ok"]{border-color:var(--ok-line);background:var(--ok-bg);color:var(--ok)}
+.apv-who-dot[data-tone="warn"]{border-color:var(--warn-line);background:var(--warn-bg);color:var(--warn)}
+.apv-who-dot[data-tone="bad"]{border-color:var(--bad-line);background:var(--bad-bg);color:var(--bad)}
+.apv-who-blank{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:32px;height:32px;border-radius:50%;border:1px dashed var(--line-2);color:var(--faint)}
+.apv-who-m{min-width:0}
+.apv-who-n{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apv-who-s{font-size:var(--t-xs);color:var(--mut);margin-top:1px}
+.apv-deep-card .apv-deep{margin-top:14px}
+.apv-legend .t-sm{line-height:1.6}
+
+/* Narrow: the before/after columns stack, and the arrow turns to point down
+   the flow rather than across a gap that no longer exists. */
+@media (max-width:900px){
+  .apv-ba{grid-template-columns:1fr;gap:8px}
+  .apv-ba-arr{transform:rotate(90deg)}
+  .apv-ev-r{grid-template-columns:1fr;gap:2px}
+  .apv-ev-l{white-space:normal}
+}

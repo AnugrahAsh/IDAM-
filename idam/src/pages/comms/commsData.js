@@ -398,10 +398,3 @@ export const EMAIL_PROVIDERS = [
 ]
 
 /* A client is the tenant whose mail a provider carries. */
-export const EMAIL_CLIENTS = [
-  { id: 1, code: 'BESCOM', name: 'Bangalore Electricity Supply Company', provider: 'SMTP_PRIMARY', status: 'Active' },
-  { id: 2, code: 'UPCL', name: 'Uttarakhand Power Corporation', provider: 'SMTP_PRIMARY', status: 'Active' },
-  { id: 3, code: 'BTS', name: 'Bitchief Technology Services', provider: 'SES_API', status: 'Active' },
-  { id: 4, code: 'RE', name: 'Royal Enfield', provider: 'GRAPH_MAIL', status: 'Active' },
-  { id: 5, code: 'BSPHCL', name: 'Bihar State Power Holding Company', provider: 'SMTP_BACKUP', status: 'Inactive' },
-]

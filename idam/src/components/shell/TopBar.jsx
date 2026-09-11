@@ -5,19 +5,12 @@ import Menu from '../primitives/Menu'
 import { useApp } from '../../store/AppContext'
 import NavLink from './NavLink'
 import { ME } from '../../data/seed'
-import { usePublishedAnnouncements } from '../../pages/notifications/announcementStore'
-import { useRead } from '../../pages/notifications/readStore'
-import { unreadOf } from '../../pages/notifications/inboxModel'
 import { ROLE_OPTIONS } from '../../lib/access'
 import wordmark from '../../assets/tanflow-wordmark-white.png'
 
 export default function TopBar() {
-  const { navigate, setNavOpen, toast, setPaletteOpen, theme, toggleTheme, roleId, setRoleId, role } = useApp()
+  const { navigate, setNavOpen, toast, setPaletteOpen, theme, toggleTheme, roleId, setRoleId, role, signOut } = useApp()
   const [menu, setMenu] = useState(null)
-  // The bell used to count the seed flag alone, so it disagreed with both the
-  // navigation badge and the register the moment anything was read.
-  const unread = unreadOf(usePublishedAnnouncements(), useRead()).length
-
   return (
     <header className="topbar">
       <button className="top-btn burger" onClick={() => setNavOpen((v) => !v)} aria-label="Toggle navigation">
@@ -37,13 +30,9 @@ export default function TopBar() {
       </button>
 
       <div className="top-actions">
-        <button className="top-btn" title="Notifications" onClick={() => navigate('notifications')} aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}>
-          <Icon name="bell" />
-          {unread > 0 && <span className="top-btn-dot" />}
-        </button>
-        <button className="top-btn" title="Reports" onClick={() => navigate('reports')} aria-label="Reports">
-          <Icon name="activity" />
-        </button>
+        {/* One control. Notifications, Reports and Settings each duplicated a
+            navigation entry a few pixels to the left; the theme switch is the
+            only thing here with nowhere else to live. */}
         <button
           className="top-btn"
           title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -51,9 +40,6 @@ export default function TopBar() {
           aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         >
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-        </button>
-        <button className="top-btn" title="Settings" onClick={() => navigate('settings')} aria-label="Settings">
-          <Icon name="config" />
         </button>
 
         <div className="top-div" />
@@ -64,14 +50,14 @@ export default function TopBar() {
           onClick={(e) => setMenu({
             anchor: e.currentTarget,
             items: [
-              { label: `${ME.username} · ${role.name}`, header: true },
-              { label: `Last Login: ${ME.lastLogin}`, header: true },
-              { id: 'profile', label: 'My profile', icon: 'user', onSelect: () => navigate('profile') },
-              { divider: true },
+              { label: `Last login ${ME.lastLogin}`, header: true },
               /* Pages that fold an administrative surface into a user-facing
                  one — the Notification Center and Quick Links both do — decide
                  what to offer from the signed-in role. Switching it here is how
-                 that gate is exercised without a second account. */
+                 that gate is exercised without a second account, which is why
+                 it is the one thing this menu still carries besides the exit.
+                 My profile, Change password and Settings all left: each was a
+                 second door onto a screen already in the navigation. */
               { label: 'View console as', header: true },
               ...ROLE_OPTIONS.map((r) => ({
                 id: `role-${r.id}`,
@@ -82,14 +68,22 @@ export default function TopBar() {
                   toast('info', 'Role switched', `The console now renders what ${r.name} may reach.`)
                 },
               })),
-              { id: 'pw', label: 'Change password', icon: 'lock', onSelect: () => toast('info', 'Change password', 'Opens the credential change dialog.') },
-              { id: 'settings', label: 'Settings', icon: 'config', onSelect: () => navigate('settings') },
               { divider: true },
-              { id: 'out', label: 'Log Out', icon: 'power', danger: true, onSelect: () => toast('info', 'Log out', 'Session termination is disabled in the prototype.') },
+              { id: 'out', label: 'Log Out', icon: 'power', danger: true, onSelect: () => { signOut(); toast('ok', 'Signed out', 'The session was ended. Sign in again to return to the console.') } },
             ],
           })}
         >
           <Avatar first={ME.firstName} last={ME.lastName} />
+          {/* An avatar alone made the operator hover to learn who they were
+              signed in as, and the role they were viewing as was invisible
+              until the menu was open — on a console where that switch changes
+              what the whole navigation offers. */}
+          <span className="top-user-m">
+            <span className="top-user-n">{ME.firstName} {ME.lastName}</span>
+            <span className="top-user-r">{role.name}</span>
+            <span className="top-user-u">{ME.username}</span>
+          </span>
+          <Icon name="chevD" size={13} />
         </button>
       </div>
 

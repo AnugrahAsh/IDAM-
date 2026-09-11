@@ -16,15 +16,18 @@ export default function PageBar({ title, sub, badge, actions, rail, crumbs }) {
   }, [])
 
   const trail = crumbs && crumbs.length ? crumbs : [{ label: title }]
-  const atHome = typeof window !== 'undefined' && window.location.pathname === '/iam/myapps'
 
   return (
     <div className="pagebar" ref={ref} data-stuck={stuck}>
+      {/* Home leads every trail, My Apps included. It used to be dropped on
+          My Apps itself to avoid a link to the page you are already on, but
+          that left one page in the product with a shorter crumb line than
+          every other, which reads as a layout fault rather than as tact. */}
       <nav className="crumbs" aria-label="Breadcrumb">
-        {!atHome && <NavLink to="myapps" className="crumbs-link">Home</NavLink>}
+        <NavLink to="myapps" className="crumbs-link">Home</NavLink>
         {trail.map((c, i) => (
           <span key={c.label} style={{ display: 'contents' }}>
-            {(i > 0 || !atHome) && <span className="crumbs-sep">/</span>}
+            <span className="crumbs-sep">/</span>
             {c.to
               ? <NavLink to={c.to} className="crumbs-link">{c.label}</NavLink>
               : <span className="crumbs-cur">{c.label}</span>}

@@ -263,16 +263,6 @@ export const runHistory = (policy, matchedCount) => {
   })
 }
 
-export const changeLog = (policy) => {
-  const meta = metaFor(policy)
-  return [
-    { id: 1, tone: 'acc', icon: 'edit', title: 'Condition amended', body: `Predicate set saved as ${policy.condition}`, ts: meta.modifiedOn, actor: meta.modifiedBy },
-    { id: 2, tone: policy.active ? 'ok' : 'warn', icon: policy.active ? 'checkC' : 'ban', title: policy.active ? 'Policy activated' : 'Policy paused', body: policy.active ? 'Included in every scheduled evaluation cycle.' : 'Skipped by the evaluation cycle. Existing assignments retained.', ts: meta.modifiedOn, actor: meta.modifiedBy },
-    { id: 3, tone: 'acc', icon: 'group', title: groupList(policy).length > 1 ? 'Target groups set' : 'Target group set', body: `${groupList(policy).join(', ') || 'None'} (${policy.groupType} ${groupList(policy).length > 1 ? 'groups' : 'group'})`, ts: meta.createdOn, actor: meta.createdBy },
-    { id: 4, tone: 'ok', icon: 'plus', title: 'Policy created', body: `Raised under change ${meta.ticket}.`, ts: meta.createdOn, actor: meta.createdBy },
-  ]
-}
-
 export const groupsOfType = (type) => GROUPS.filter((g) => g.kind === type).map((g) => g.name)
 
 export const groupRecord = (name) => GROUPS.find((g) => g.name === name)

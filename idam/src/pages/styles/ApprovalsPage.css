@@ -31,9 +31,40 @@
 .apv-note .mono{font-size:var(--t-xs)}
 .apv-note-time{margin-left:auto;flex:none;color:var(--faint);white-space:nowrap}
 
-/* Approver timeline: level-by-level workflow with roles, decisions and edits */
-.apv-lvl-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.apv-lvl-role{margin-top:2px}
-.apv-lvl-note{margin-top:4px;font-style:italic}
-.apv-lvl-edits{margin-top:6px;display:flex;flex-direction:column;gap:4px;
-  padding:6px 8px;border-radius:var(--r-sm);background:var(--surface-2)}
+/* The level-by-level timeline and the depth view it expands into live in
+   ApprovalWorkflow.css — the requester's rail renders the same levels. */
+
+/* --- Revisions ------------------------------------------------------------- */
+/* A change struck out at this level stays on screen, crossed through, with its
+   undo beside it: removing it from the list would remove the evidence that it
+   was ever asked for. */
+.apv-diff[data-removed]{opacity:.62;background:var(--surface-2)}
+.apv-diff[data-removed] .apv-diff-field,
+.apv-diff[data-removed] .apv-old,
+.apv-diff[data-removed] .apv-new{text-decoration:line-through;text-decoration-color:var(--bad)}
+.apv-diff[data-added]{border-left-color:var(--accent);background:var(--accent-bg)}
+
+/* Add a change: a small form in the panel, not a dialog — the operator is
+   composing against the list they are looking at. */
+.apv-add{margin-top:10px;padding:12px 13px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r);display:flex;flex-direction:column;gap:10px}
+.apv-add-h{display:flex;align-items:center;gap:7px;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.apv-add-h svg{color:var(--accent)}
+
+/* The staged revision, stated once at the foot of the panel. */
+.apv-rev{margin-top:12px;padding:11px 13px;border:1px solid var(--accent-line);border-radius:var(--r);
+  background:var(--accent-bg);display:flex;flex-direction:column;gap:8px}
+.apv-rev-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--t-sm);
+  font-weight:var(--w-semi);color:var(--accent-deep)}
+.apv-rev-h svg{color:var(--accent)}
+.apv-rev-ops{display:flex;flex-wrap:wrap;gap:6px}
+.apv-op{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 4px 0 8px;
+  font-size:var(--t-xs);color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-xs);max-width:100%;min-width:0}
+.apv-op > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.apv-op[data-op="add"] > svg{color:var(--ok)}
+.apv-op[data-op="remove"] > svg{color:var(--bad)}
+.apv-op[data-op="modify"] > svg{color:var(--warn)}
+.apv-op button{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border-radius:var(--r-xs);color:var(--faint)}
+.apv-op button:hover{background:var(--surface-3);color:var(--ink)}

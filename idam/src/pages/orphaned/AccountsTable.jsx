@@ -3,10 +3,20 @@ import Pill from '../../components/primitives/Pill'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import { useApp } from '../../store/AppContext'
+import { useLocalState } from '../../lib/useLocalState'
+import { num } from '../../lib/format'
 import { NEVER_USED_DAYS, ageDays, orphanTone } from './orphanedData'
+
+const VIEWS = [
+  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense register with sortable columns' },
+  { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Split by application' },
+]
 
 export default function AccountsTable({ id, rows, onAssign, onDisable, onSuppress, onDelete, footNote }) {
   const { navigate, toast } = useApp()
+  // Keyed on the register id, so the rule detail's copy and the main list keep
+  // their own preference rather than sharing one.
+  const [view, setView] = useLocalState(`tf-idam-${id}-view`, 'table')
 
   const columns = [
     {
@@ -44,6 +54,16 @@ export default function AccountsTable({ id, rows, onAssign, onDisable, onSuppres
       rows={rows}
       columns={columns}
       selectable
+      views={VIEWS}
+      view={view}
+      onViewChange={setView}
+      /* An orphan is triaged application by application — the owner of the
+         target system is who claims or disables the accounts on it. */
+      groupOf={(r) => r.application}
+      groupSummary={(section) => {
+        const open = section.filter((r) => r.status !== 'Suppressed' && r.status !== 'Disabled').length
+        return `${num(open)} still open`
+      }}
       searchPlaceholder="Search by account, application or rule…"
       bulkActions={(ids, clear) => {
         const list = rows.filter((r) => ids.map(String).includes(String(r.id)))

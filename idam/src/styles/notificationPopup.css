@@ -1,0 +1,153 @@
+/* The notification popup.
+
+   Built out of the console's own dialog: the scrim, the 10px panel radius, the
+   34px tinted header mark and the surface-2 action bar are the ones `.modal`
+   uses, and the filter strip is the `.tabs` / `.tab` idiom from every detail
+   screen in the product. The radii follow the platform scale — 2px on a chip,
+   3px on a row, 10px on the panel — rather than a rounder set of its own.
+
+   What is particular to this one is the entrance. It opens by itself after a
+   sign-in, so it announces itself with a spring where a dialog the operator
+   asked for would simply appear. */
+
+/* Centred, like every other dialog in the console. Hung under the header it
+   read as a panel belonging to the bell rather than as the thing the screen is
+   currently about — and it is raised on sign-in, when there is no bell being
+   pressed for it to hang from. */
+.np-scrim{position:fixed;inset:0;z-index:var(--z-modal);
+  background:rgba(17,24,39,.42);
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  animation:fade var(--dur-2) var(--ease)}
+
+/* Wider than a dialog that only asks a question: this one is a list of
+   notifications whose titles and bodies were each ellipsing on their own line
+   at 520px. The extra width goes to the text, not to the chrome. */
+.np{position:relative;display:flex;flex-direction:column;
+  width:760px;max-width:100%;max-height:min(680px,calc(100vh - 48px));
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-xl);
+  box-shadow:var(--sh-lg);overflow:hidden;
+  animation:npIn var(--dur-4) var(--ease-spring)}
+@keyframes npIn{
+  from{opacity:0;transform:translateY(-12px) scale(.975)}
+  to{opacity:1;transform:none}
+}
+.np:focus{outline:none}
+
+/* --- Header ---------------------------------------------------------------- */
+/* `.modal-h` geometry: a 34px tinted mark, the title beside it, no rule under. */
+.np-h{display:flex;align-items:flex-start;gap:11px;flex:none;
+  padding:var(--sp-4) var(--sp-4) var(--sp-3)}
+.np-h-ic{position:relative;display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;flex:none;border-radius:var(--r);
+  background:var(--accent-bg);color:var(--accent-a)}
+/* The bell rings once when the popup opens — a single tilt, not a loop. */
+.np-h-ic svg{animation:npRing 620ms var(--ease-out) 140ms both;transform-origin:50% 15%}
+@keyframes npRing{
+  0%{transform:rotate(0)}
+  22%{transform:rotate(14deg)}
+  46%{transform:rotate(-10deg)}
+  68%{transform:rotate(6deg)}
+  86%{transform:rotate(-3deg)}
+  100%{transform:rotate(0)}
+}
+.np-h-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;
+  background:var(--bad);border:2px solid var(--surface)}
+.np-h-meta{flex:1;min-width:0;padding-top:2px}
+.np-h-t{margin:0;font-size:var(--t-h2);font-weight:var(--w-semi);
+  letter-spacing:var(--t-h2-ls);color:var(--ink)}
+.np-h-s{margin:2px 0 0;font-size:var(--t-xs);color:var(--mut);line-height:1.45}
+
+/* --- Filter strip ---------------------------------------------------------- */
+/* The `.tabs` bar, verbatim: a hairline underline, a 2px accent rule on the
+   active tab, and the pill count badge the console already uses on a tab. */
+.np-tabs{display:flex;gap:0;flex:none;padding:0 var(--sp-4);
+  border-bottom:1px solid var(--line)}
+.np-tabs button{display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px 8px;margin-bottom:-1px;
+  font-size:var(--t-body);font-weight:var(--w-med);color:var(--mut);white-space:nowrap;
+  background:none;border:0;border-bottom:2px solid transparent;cursor:pointer;
+  transition:color var(--dur-1) var(--ease),border-color var(--dur-2) var(--ease)}
+.np-tabs button:first-child{margin-left:-13px}
+.np-tabs button:hover{color:var(--ink)}
+.np-tabs button[data-on]{color:var(--ink);font-weight:var(--w-semi);border-bottom-color:var(--accent)}
+.np-tab-n{display:inline-flex;align-items:center;justify-content:center;
+  min-width:17px;height:16px;padding:0 5px;border-radius:var(--r-pill);
+  font-size:10px;font-weight:var(--w-bold);background:var(--surface-3);color:var(--mut)}
+.np-tabs button[data-on] .np-tab-n{background:var(--accent-bg);color:var(--accent-a)}
+
+/* --- List ------------------------------------------------------------------ */
+.np-list{flex:1;min-height:0;overflow-y:auto;padding:var(--sp-2) var(--sp-2) var(--sp-3)}
+.np-empty{padding:var(--sp-6) var(--sp-4)}
+
+.np-it{border-radius:var(--r-sm);
+  animation:npRow var(--dur-3) var(--ease-out) both;
+  animation-delay:calc(50ms + var(--i,0) * 26ms)}
+@keyframes npRow{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.np-it[data-open]{background:var(--surface-2)}
+
+.np-it-hit{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;
+  padding:9px 10px;border:0;background:none;cursor:pointer;border-radius:var(--r-sm);
+  transition:background var(--dur-1) var(--ease)}
+.np-it-hit:hover{background:var(--row-hover)}
+.np-it-hit:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* The same tinted square the inbox draws beside a notification title. */
+.np-it-ic{display:grid;place-items:center;width:26px;height:26px;flex:none;margin-top:1px;
+  border-radius:var(--r-xs);background:var(--surface-3);color:var(--mut);
+  border:1px solid var(--hair)}
+.np-it-ic[data-tone="bad"]{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad)}
+.np-it-ic[data-tone="warn"]{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.np-it-ic[data-tone="acc"]{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent-a)}
+
+.np-it-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.np-it-top{display:flex;align-items:center;gap:7px;min-width:0}
+.np-it-t{font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink-2);line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-it[data-unread] .np-it-t{font-weight:var(--w-semi);color:var(--ink)}
+/* The unread mark pulses twice and stops. A dot that pulses forever is an
+   alarm, and there are six of them on this list. */
+.np-it-new{width:6px;height:6px;flex:none;border-radius:50%;background:var(--accent);
+  animation:npPulse 1.6s var(--ease) 2}
+@keyframes npPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(15,98,254,0)}
+  50%{box-shadow:0 0 0 4px rgba(15,98,254,.18)}
+}
+
+.np-it-d{font-size:var(--t-xs);color:var(--mut);line-height:1.45;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-it[data-open] .np-it-d{display:none}
+
+.np-it-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  font-size:var(--t-micro);color:var(--faint)}
+.np-it-sev{font-weight:var(--w-semi);color:var(--mut)}
+.np-it-sev[data-tone="bad"]{color:var(--bad)}
+.np-it-sev[data-tone="warn"]{color:var(--warn)}
+.np-it-sev[data-tone="acc"]{color:var(--accent-a)}
+.np-it-sep{color:var(--line-2)}
+
+.np-it-chev{display:grid;place-items:center;width:18px;height:18px;flex:none;margin-top:4px;
+  color:var(--faint);opacity:0;
+  transition:opacity var(--dur-1) var(--ease),transform var(--dur-2) var(--ease)}
+.np-it-hit:hover .np-it-chev,.np-it[data-open] .np-it-chev{opacity:1}
+.np-it[data-open] .np-it-chev{transform:rotate(180deg)}
+
+.np-it-more{padding:0 10px 11px 46px;animation:npOpen var(--dur-2) var(--ease-out)}
+@keyframes npOpen{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.np-it-full{margin:0;font-size:var(--t-xs);line-height:1.6;color:var(--ink-2)}
+.np-it-acts{display:flex;align-items:center;gap:12px;margin-top:7px}
+.np-it-stamp{font-family:var(--mono);font-size:var(--t-micro);color:var(--faint)}
+
+/* --- Footer ---------------------------------------------------------------- */
+/* `.modal-f`, with the secondary action pushed left. */
+.np-f{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);flex:none;
+  padding:11px var(--sp-4);border-top:1px solid var(--hair);background:var(--surface-2)}
+
+@media(max-width:560px){
+  .np-scrim{padding:12px 10px}
+  .np-it-more{padding-left:10px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .np-scrim,.np,.np-it,.np-it-more,.np-h-ic svg,.np-it-new{animation:none}
+}

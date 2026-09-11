@@ -12,7 +12,6 @@ import SeverityBadge from '../../components/primitives/SeverityBadge'
 import Icon from '../../components/primitives/Icon'
 import Tag from '../../components/primitives/Tag'
 import AdvancedFilters, { BLANK_ADV, activeRules, matchesAdv as matchesRules, ruleLabel } from './AdvancedFilters'
-import IdentityCard from './IdentityCard'
 import { openResetPassword } from './ResetPasswordForm'
 import { useApp } from '../../store/AppContext'
 import { useUsers, writeUsers } from './usersStore'
@@ -132,22 +131,6 @@ const SCOPES = [
   { id: 'attention', label: 'Needs attention', of: needsAttention },
 ]
 
-const VIEWS = [
-  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense register with sortable columns' },
-  { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per identity' },
-  { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Directory split into sections' },
-]
-
-const GROUPINGS = [
-  { id: 'department', label: 'Department', of: (r) => r.department },
-  { id: 'source', label: 'Source of record', of: sourceOf },
-  { id: 'risk', label: 'Risk', of: (r) => riskOf(r).level },
-  { id: 'organization', label: 'Organization', of: (r) => r.organization },
-  { id: 'employeeType', label: 'Employee type', of: (r) => r.employeeType },
-  { id: 'status', label: 'Status', of: (r) => r.status },
-  { id: 'manager', label: 'Manager', of: (r) => r.manager || 'No manager' },
-]
-
 const QUICK = [
   { id: 'privileged', label: 'Privileged', icon: 'key' },
   { id: 'mfa', label: 'MFA gaps', icon: 'shield' },
@@ -204,8 +187,6 @@ export default function UsersList() {
   const [scope, setScope] = useState('all')
   const [adv, setAdv] = useState(BLANK_ADV)
   const advRef = useRef(BLANK_ADV)
-  const [view, setView] = useLocalState('tf-idam-dir-view', 'table')
-  const [groupBy, setGroupBy] = useLocalState('tf-idam-dir-groupby', 'department')
   const [views, setViews] = useLocalState('tf-idam-dir-views', [
     { id: 'v-priv', name: 'Privileged · needs attention', facet: 'privileged', scope: 'attention' },
     { id: 'v-mfa', name: 'MFA gaps', facet: 'mfa', scope: 'all' },
@@ -272,7 +253,6 @@ export default function UsersList() {
     },
   ]
 
-  const grouping = GROUPINGS.find((g) => g.id === groupBy) || GROUPINGS[0]
   const scopeOf = (SCOPES.find((sc) => sc.id === scope) || SCOPES[0]).of
   const matchesFacet = FACETS[facet] || FACETS.all
   const matchesAdv = (u) => matchesRules(u, adv)
@@ -544,12 +524,6 @@ export default function UsersList() {
     ...schemaColumns,
   ]
 
-  const groupSummary = (section) => {
-    const gaps = section.filter(mfaGap).length
-    const priv = section.filter(isPrivileged).length
-    return `${num(priv)} privileged · ${num(gaps)} MFA gaps`
-  }
-
   const openRecord = (r) => navigate(`/iam/users/${r.id}`)
 
   const rowActions = (r) => [
@@ -622,12 +596,6 @@ export default function UsersList() {
         rows={shown}
         columns={columns}
         selectable
-        views={VIEWS}
-        view={view}
-        onViewChange={setView}
-        renderCard={(r, ctx) => <IdentityCard user={r} ctx={ctx} />}
-        groupOf={grouping.of}
-        groupSummary={groupSummary}
         filters={(
           <>
             {QUICK.map((f) => (
@@ -670,19 +638,6 @@ export default function UsersList() {
         )}
         toolbar={(
           <>
-            {view === 'groups' && (
-              <span className="wb-groupby">
-                <span>Group by</span>
-                <select
-                  className="sel"
-                  value={groupBy}
-                  onChange={(e) => setGroupBy(e.target.value)}
-                  aria-label="Group identities by"
-                >
-                  {GROUPINGS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-                </select>
-              </span>
-            )}
             <div className="seg" role="group" aria-label="Scope">
               {SCOPES.map((sc) => (
                 <button
@@ -736,9 +691,7 @@ export default function UsersList() {
         emptyTitle="No identities match"
         emptyBody="Widen the filters above, or clear the search, to see more of the directory."
         emptyIcon="users"
-        footNote={view === 'groups'
-          ? `Sectioned by ${grouping.label.toLowerCase()}`
-          : 'Directory synchronized 6 minutes ago'}
+        footNote="Directory synchronized 6 minutes ago"
       />
 
       {menu && <Menu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}

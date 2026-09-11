@@ -210,12 +210,6 @@ export default function LdapUsers({ app }) {
         columns={columns}
         selectable
         searchPlaceholder="Search by identity, email or organizational unit…"
-        groupOf={(r) => r.ou}
-        groupSummary={(section) => `${num(section.length)} identities`}
-        views={[
-          { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense list with sortable columns' },
-          { id: 'groups', label: 'By unit', icon: 'layers', desc: 'Grouped by organizational unit' },
-        ]}
         toolbar={(
           <>
             <Button size="sm" icon="refresh" onClick={sync}>Sync</Button>

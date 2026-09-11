@@ -15,10 +15,14 @@ const stop = (e) => e.stopPropagation()
 //   footL / footR — the closing line: a figure on the left, timing on the right
 export default function RecordCard({
   media, title, sub, tags, line, meta = [], footL, footR, ctx = {}, label,
+  // A denser card, for registers whose rows are short enough that the standard
+  // card spent most of its height on padding and rules.
+  compact = false,
 }) {
   return (
     <article
       className="rcard"
+      data-compact={compact || undefined}
       data-selected={ctx.selected || undefined}
       data-active={ctx.active || undefined}
       onClick={ctx.open}

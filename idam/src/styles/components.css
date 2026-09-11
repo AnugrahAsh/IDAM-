@@ -21,7 +21,15 @@
 .btn-sm{height:26px;padding:0 9px;font-size:var(--t-xs)}
 .btn-sm svg{width:12px;height:12px}
 .btn-lg{height:34px;padding:0 15px;font-size:var(--t-body)}
-.btn-icon{width:30px;height:30px;padding:0;border-radius:var(--r-sm);color:var(--mut)}
+/* An icon button is a square box with one glyph centred in it. It carried no
+   layout of its own, so the button stayed a block and the glyph sat hard
+   against the left edge — the hover and focus box drew 15px to the side of the
+   mark it belonged to, which read as a broken control everywhere IconButton is
+   used: the notification popup's close, every drawer and card header, every
+   row's kebab. It gets the same centring and the same transition as .btn. */
+.btn-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:30px;height:30px;padding:0;border-radius:var(--r-sm);color:var(--mut);
+  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
 .btn-icon:hover{background:var(--surface-3);color:var(--ink)}
 .btn-icon.sm{width:26px;height:26px}
 .btn-icon svg{width:15px;height:15px}
@@ -108,13 +116,16 @@ textarea.inp{height:auto;min-height:76px;padding:8px 10px;line-height:1.55;resiz
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2366738C' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 9px center}
 
+/* The off-state track is a token, not a literal. It used to be hardcoded per
+   theme, and the dark override sat *after* the on-state rule at equal
+   specificity — so in dark mode every switch in the console painted its off
+   colour whether it was on or not, and a toggle could not be read at all. */
 .switch{position:relative;display:inline-block;width:32px;height:19px;border-radius:var(--r-pill);
-  background:#CBD3E0;flex:none;cursor:pointer;transition:background var(--dur-2) var(--ease)}
+  background:var(--line-2);flex:none;cursor:pointer;transition:background var(--dur-2) var(--ease)}
 .switch::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
   background:#fff;box-shadow:0 1px 3px rgba(13,21,38,.32);transition:transform var(--dur-2) var(--ease-spring)}
 .switch[data-on="true"]{background:var(--accent)}
 .switch[data-on="true"]::after{transform:translateX(13px)}
-:root[data-theme="dark"] .switch{background:#38435C}
 .switch:disabled{opacity:.5;cursor:not-allowed}
 .switch:disabled::after{box-shadow:none}
 
@@ -221,6 +232,19 @@ textarea.inp{height:auto;min-height:76px;padding:8px 10px;line-height:1.55;resiz
 .kv-k{display:block;font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-bold);color:var(--mut)}
 .kv-v{display:block;font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink);margin-top:2px;overflow-wrap:anywhere}
 @media(max-width:840px){.kv{grid-template-columns:minmax(0,1fr)}}
+
+/* Dense: the chip goes, the icon moves inline with the label, and the row
+   halves its padding — a summary that was five two-column rows of 60px reads
+   as three tighter rows across three columns. */
+.kv[data-dense]{gap:0 var(--sp-5)}
+.kv[data-dense][data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kv[data-dense][data-cols="4"]{grid-template-columns:repeat(4,minmax(0,1fr))}
+.kv[data-dense] .kv-row{gap:0;padding:6px 0}
+.kv[data-dense] .kv-k{display:flex;align-items:center;gap:5px}
+.kv[data-dense] .kv-k svg{width:11px;height:11px;color:var(--faint);flex:none}
+.kv[data-dense] .kv-v{font-size:var(--t-sm);margin-top:1px}
+@media(max-width:1180px){.kv[data-dense][data-cols="3"],.kv[data-dense][data-cols="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.kv[data-dense][data-cols="3"],.kv[data-dense][data-cols="4"]{grid-template-columns:minmax(0,1fr)}}
 
 .otree{display:flex;flex-direction:column;gap:1px;padding:10px var(--sp-3) 14px}
 .otree-node{display:flex;flex-direction:column}
@@ -850,3 +874,31 @@ button.legend-it:hover{border-color:var(--line-2)}
 .map-tbl tr.map-add td{background:var(--surface-2)}
 .map-tbl tr.map-add:hover td{background:var(--surface-2)}
 .map-tbl tr.map-add .row{align-items:center;flex-wrap:wrap}
+
+/* --- Record card, dense ------------------------------------------------------
+   The standard card is sized for registers whose rows carry a logo, a status,
+   four facts and a timing line. A template register carries a name, a code and
+   a subject, and at the standard size a screen of them was mostly padding and
+   horizontal rules. The content is unchanged — the spacing, the type scale and
+   the rules between blocks are not. */
+.rcard[data-compact]{gap:6px;padding:9px 10px}
+.rcard[data-compact] .rcard-top{gap:7px}
+.rcard[data-compact] .rcard-name{font-size:var(--t-sm);line-height:1.25}
+.rcard[data-compact] .rcard-sub{font-size:var(--t-micro)}
+.rcard[data-compact] .rcard-line{font-size:var(--t-xs);padding:0}
+.rcard[data-compact] .rcard-meta{
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;
+  padding:6px 0;border-bottom:0;
+}
+.rcard[data-compact] .rcard-meta dd{font-size:var(--t-xs)}
+.rcard[data-compact] .rcard-foot{font-size:var(--t-micro);gap:8px;min-width:0}
+/* One line. The closing line is a caption, and a caption that wraps to three
+   lines is the single biggest thing standing between these cards and the size
+   the Reports cards are. */
+.rcard[data-compact] .rcard-stat{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.rcard[data-compact] .rcard-line{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.rcard[data-compact] .rcard-stat b{font-size:var(--t-sm)}
+.rcard[data-compact] .rcard-when{font-size:var(--t-micro)}
+.rcard[data-compact] .feed-ic,.rcard[data-compact] .rcard-ic{width:26px;height:26px}

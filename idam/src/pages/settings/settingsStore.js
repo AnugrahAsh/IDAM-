@@ -115,8 +115,11 @@ export const DEFAULT_SETTINGS = {
     idleWarning: '2 minutes',
     enforceMfa: true,
     privilegedStepUp: true,
+    /* The two outbound-channel master switches. Every template, link and
+       one-time code on that channel depends on its switch, so they sit
+       together rather than one per section. */
     smsService: true,
-    passwordCreationLinkSms: false,
+    emailService: true,
     deviceBasedAuth: false,
   },
   lifetimes: {
@@ -160,6 +163,56 @@ export const DEFAULT_SETTINGS = {
     { id: 2, name: 'Resource Owner', role: 'Resource Owner', detail: 'Application owner signs off on the entitlement', sla: 16 },
     { id: 3, name: 'Security', role: 'Global Identity Administrator', detail: 'Security review for privileged and conflicting access', sla: 24 },
   ],
+  /**
+   * The vocabulary the Notification Center is authored against.
+   *
+   * Category and Severity are the two selects on an announcement, and they
+   * were hard-coded lists in the module that happened to render them: adding a
+   * category meant a code change. They are tenant vocabulary, so they are
+   * tenant settings.
+   *
+   * `tone` is the colour a category's chip carries, `icon` the mark beside it
+   * in the inbox. A severity carries `level`, which is the three-step scale the
+   * notification centre files, counts and sorts by — an authored severity can
+   * be named anything, but it has to resolve to one of Info, High or Critical
+   * for the tiles above the register to add up.
+   *
+   * Order is meaningful in one respect: the first entry of each list is what a
+   * new announcement opens on, which is why the section offers arrows rather
+   * than sorting alphabetically.
+   */
+  notificationTaxonomy: {
+    categories: [
+      { id: 'cat-announcements', label: 'Announcements', tone: 'acc',  icon: 'bell' },
+      { id: 'cat-compliance',    label: 'Compliance',    tone: 'warn', icon: 'sod' },
+      { id: 'cat-governance',    label: 'Governance',    tone: 'viol', icon: 'certify' },
+      { id: 'cat-operations',    label: 'Operations',    tone: 'info', icon: 'provision' },
+      { id: 'cat-security',      label: 'Security',      tone: 'bad',  icon: 'shield' },
+      { id: 'cat-platform',      label: 'Platform',      tone: 'mut',  icon: 'server' },
+    ],
+    severities: [
+      { id: 'sev-info',     label: 'info',     level: 'info' },
+      { id: 'sev-warn',     label: 'warn',     level: 'high' },
+      { id: 'sev-high',     label: 'high',     level: 'high' },
+      { id: 'sev-critical', label: 'critical', level: 'critical' },
+    ],
+  },
+  /**
+   * The severity register a segregation-of-duties rule is authored against.
+   *
+   * The four names were a literal array inside the SoD module, so a tenant that
+   * grades its controls on anything but critical/high/medium/low had to wait for
+   * a build. Every entry carries the badge step it is drawn as, so however a
+   * tenant names its grades the register's colours stay consistent.
+   */
+  sodSeverities: {
+    levels: [
+      { id: 'sod-sev-critical', label: 'critical', badge: 'critical' },
+      { id: 'sod-sev-high', label: 'high', badge: 'high' },
+      { id: 'sod-sev-medium', label: 'medium', badge: 'medium' },
+      { id: 'sod-sev-low', label: 'low', badge: 'low' },
+    ],
+  },
   provisioning: {
     cadence: 'Every 6 hours',
     autoDeprovision: true,
@@ -173,6 +226,12 @@ export const DEFAULT_SETTINGS = {
   },
   transport: {
     encryptPayloads: false,
+    /* Whether a plain request is refused or merely allowed alongside an
+       encrypted one. Soft exists because a tenant cannot cut every client over
+       at the same instant — during a key rotation or a client migration both
+       shapes have to be accepted, and Strict is what you switch to once the
+       last client is across. */
+    enforceEncryption: false,
     lastChange: '',
   },
   /**
@@ -196,6 +255,8 @@ export const DEFAULT_SETTINGS = {
     passwordFlows: { by: 'elena.ferrer', at: '2026-07-14 08:35', ticket: 'CHG-4388' },
     regionFlows: { by: 'elena.ferrer', at: '2026-07-14 09:02', ticket: 'CHG-4388' },
     approvalLevels: { by: 'SHUBHAM_JAIN', at: '2026-06-30 10:18', ticket: 'CHG-4221' },
+    notificationTaxonomy: { by: 'SHUBHAM_JAIN', at: '2026-07-22 11:36', ticket: 'CHG-4390' },
+    sodSeverities: { by: 'priya.nair', at: '2026-06-18 10:12', ticket: 'CHG-4265' },
     provisioning: { by: 'nikhil.rao', at: '2026-08-03 07:40', ticket: 'CHG-4478' },
     privacyConsent: { by: 'priya.nair', at: '2026-04-11 13:05', ticket: 'CHG-3840' },
     transport: null,
@@ -268,6 +329,47 @@ export const useSettingsSection = (key) => useSyncExternalStore(
 /** The ordered approval chain every request runs through. */
 export const useApprovalLevels = () => useSettingsSection('approvalLevels')
 export const approvalLevels = () => state.approvalLevels
+
+/**
+ * The Notification Center vocabulary.
+ *
+ * Exposed as both a hook and a plain read: the announcement editor and the
+ * register subscribe, while the inbox model resolves a severity outside of
+ * React when it shapes a row.
+ */
+export const useNotificationTaxonomy = () => useSettingsSection('notificationTaxonomy')
+export const notificationTaxonomy = () => state.notificationTaxonomy
+
+/** The three-step scale the inbox files a severity under. */
+export const severityLevel = (label, s = state) => {
+  const hit = (s.notificationTaxonomy?.severities || []).find((x) => x.label === label)
+  return hit ? hit.level : 'info'
+}
+
+/** The chip tone and inbox mark a category carries. */
+export const categoryStyle = (label, s = state) => (
+  (s.notificationTaxonomy?.categories || []).find((x) => x.label === label) || null
+)
+
+/**
+ * The severity register a segregation-of-duties rule is graded against.
+ *
+ * Both a hook and a plain read, for the same reason as the notification
+ * taxonomy: the rule builder subscribes, while the list and detail surfaces
+ * resolve a badge step outside of React when they shape a row.
+ */
+export const useSodSeverities = () => useSettingsSection('sodSeverities')
+export const sodSeverities = () => state.sodSeverities
+
+/** The labels offered by the Severity dropdown when a rule is authored. */
+export const sodSeverityOptions = (s = state) => (s.sodSeverities?.levels || []).map((x) => x.label)
+
+/** The badge step a configured severity is drawn as. An unknown label — a rule
+ *  authored before the register was edited — keeps rendering at its own name. */
+export const sodSeverityBadge = (label, s = state) => {
+  const hit = (s.sodSeverities?.levels || []).find((x) => x.label === label)
+  return hit ? hit.badge : String(label || 'low').toLowerCase()
+}
 
 /** Active regions are the only ones a new binding may reference. */
 export const activeRegions = (s = state) => s.regions.filter((r) => r.active)

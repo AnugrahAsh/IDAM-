@@ -16,24 +16,32 @@ import StickyActions from '../../components/shell/StickyActions'
 import { num } from '../../lib/format'
 import { useApp } from '../../store/AppContext'
 import Switch from '../../components/primitives/Switch'
-import { CHANNELS, POPUP_FREQUENCIES, POPUP_SIZES, SEVERITIES } from '../comms/commsData'
+import { CHANNELS, POPUP_FREQUENCIES, POPUP_SIZES } from '../comms/commsData'
 import { useState } from 'react'
 import AudiencePicker from '../comms/AudiencePicker'
 import {
-  CATEGORY_TONE, NOTIFICATION_CATEGORIES, audienceIssue, describeAudience, reachIsExact, reachOf,
-  readAudience, writeAudience,
+  audienceIssue, describeAudience, reachIsExact, reachOf, readAudience, writeAudience,
 } from '../comms/audienceModel'
+import { useNotificationTaxonomy } from '../settings/settingsStore'
 import { statusTone } from './announcementData'
 
 export default function AnnouncementEditor({ record, onSave, onCancel, onDelete, onPublish }) {
-  const { toast } = useApp()
+  const { toast, navigate } = useApp()
+  /* Both dropdowns are tenant vocabulary, edited under Settings → Notification
+     Management Setup. Read rather than imported, so a category added there is
+     offered here without a build. */
+  const taxonomy = useNotificationTaxonomy()
+  const categories = taxonomy.categories.map((c) => c.label)
+  const severities = taxonomy.severities.map((sv) => sv.label)
+  const toneOf = (label) => taxonomy.categories.find((c) => c.label === label)?.tone || 'mut'
+
   const [form, setForm] = useState(() => ({
     popupFrequency: POPUP_FREQUENCIES[0],
     popupSize: POPUP_SIZES[1],
     popupDismissLabel: 'Got it',
     popupAcknowledge: false,
     popupBlocking: false,
-    category: NOTIFICATION_CATEGORIES[0],
+    category: taxonomy.categories[0]?.label || '',
     ...record,
   }))
   // The audience is edited as its own object and flattened back onto the record
@@ -74,7 +82,7 @@ export default function AnnouncementEditor({ record, onSave, onCancel, onDelete,
         badges={
           <>
             <Pill tone={statusTone[form.status]} dot>{form.status}</Pill>
-            <Pill tone={CATEGORY_TONE[form.category] || 'mut'}>{form.category}</Pill>
+            <Pill tone={toneOf(form.category)}>{form.category}</Pill>
             <SeverityBadge level={form.severity === 'info' ? 'low' : form.severity === 'warn' ? 'medium' : form.severity === 'high' ? 'high' : 'critical'}>
               {form.severity}
             </SeverityBadge>
@@ -123,12 +131,23 @@ export default function AnnouncementEditor({ record, onSave, onCancel, onDelete,
                 </Field>
                 <div className="grid grid-2">
                   <Field label="Category" hint="How the notice is filed and filtered in the notification center." htmlFor="an-cat">
-                    <Select id="an-cat" value={form.category} options={NOTIFICATION_CATEGORIES} onChange={set('category')} />
+                    <Select id="an-cat" value={form.category} options={categories} onChange={set('category')} />
                   </Field>
                   <Field label="Severity" hint="Drives the icon tone and whether it pins to the top." htmlFor="an-sev">
-                    <Select id="an-sev" value={form.severity} options={SEVERITIES} onChange={set('severity')} />
+                    <Select id="an-sev" value={form.severity} options={severities} onChange={set('severity')} />
                   </Field>
                 </div>
+                {/* Where these two lists come from. Without it the only way to
+                    discover that they are editable is to go looking. */}
+                <p className="t-xs t-mut" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="sliders" size={12} />
+                  <span>
+                    These options are tenant vocabulary.{' '}
+                    <button type="button" className="link" onClick={() => navigate('settings')}>
+                      Manage categories and severities in Settings
+                    </button>.
+                  </span>
+                </p>
               </div>
             </Card>
 

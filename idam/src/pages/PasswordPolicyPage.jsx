@@ -291,7 +291,6 @@ export default function PasswordPolicyPage({ segments = [] }) {
         searchPlaceholder="Search by policy name, description, organization…"
         toolbar={
           <>
-            <Button size="sm" icon="plus" onClick={() => navigate(`${LIST_PATH}/add`)}>Add Policy</Button>
             <Button size="sm" icon="building" onClick={() => navigate(`${LIST_PATH}/mappings`)}>Policy mappings</Button>
           </>
         }

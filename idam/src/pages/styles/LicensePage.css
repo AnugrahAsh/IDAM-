@@ -57,3 +57,33 @@
 /* Referenced by both module tables but never defined, so a table wider than
    its column simply overflowed the card. It scrolls in its own box instead. */
 .tbl-wrap{max-width:100%;overflow-x:auto}
+
+/* --- Licence picker ---------------------------------------------------------
+   The chip named the licence in force, which is the one nobody has to look up.
+   Every licence the installation has held is selectable here, so the page can
+   be read as of a superseded one — which is what an audit question is about. */
+.lic-pick{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 9px;
+  border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);
+  font-size:var(--t-xs);color:var(--ink-2);cursor:pointer;max-width:100%;min-width:0;
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.lic-pick:hover{background:var(--surface-2);border-color:#AEB6C6;color:var(--ink)}
+.lic-pick:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+.lic-pick .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lic-pick svg{flex:none;color:var(--faint)}
+.lic-pick-st{flex:none;color:var(--mut)}
+
+/* Status carries the colour, in the menu and on the trigger alike. */
+.lic-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--mut-solid)}
+.lic-dot[data-state="active"]{background:var(--ok-solid)}
+.lic-dot[data-state="expiring"]{background:var(--warn-core)}
+.lic-dot[data-state="expired"]{background:var(--mut-solid)}
+
+.lic-opt{display:flex;align-items:center;gap:9px;width:100%;min-width:0}
+.lic-opt-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.lic-opt-k{font-size:var(--t-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lic-opt-s{font-size:var(--t-micro);color:var(--mut);white-space:nowrap}
+.lic-opt[data-on] .lic-opt-k{color:var(--accent-deep);font-weight:var(--w-semi)}
+.lic-opt-st{flex:none;font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);
+  text-transform:uppercase;font-weight:var(--w-semi);color:var(--mut)}
+.lic-opt-st[data-state="active"]{color:var(--ok)}
+.lic-opt-st[data-state="expiring"]{color:var(--warn)}

@@ -41,24 +41,9 @@ const FACETS = {
   disabled: (o) => o.status === 'Disabled',
 }
 
-const VIEWS = [
-  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense register with sortable columns' },
-  { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per organization' },
-  { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Register split into sections' },
-]
-
-const GROUPINGS = [
-  { id: 'parent', label: 'Parent', of: (o) => o.parent || 'Root' },
-  { id: 'status', label: 'Status', of: (o) => o.status },
-  { id: 'policy', label: 'Password policy', of: (o) => o.passwordPolicy },
-]
-
 function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
   const [facet, setFacet] = useState('all')
-  const [view, setView] = useLocalState('tf-idam-orgs-view', 'table')
-  const [groupBy, setGroupBy] = useLocalState('tf-idam-orgs-groupby', 'parent')
 
-  const grouping = GROUPINGS.find((g) => g.id === groupBy) || GROUPINGS[0]
   const visible = useMemo(() => rows.filter(FACETS[facet] || FACETS.all), [rows, facet])
 
   const cards = [
@@ -192,20 +177,6 @@ function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
         rows={visible}
         columns={columns}
         selectable
-        views={VIEWS}
-        view={view}
-        onViewChange={setView}
-        renderCard={renderCard}
-        groupOf={grouping.of}
-        groupSummary={groupSummary}
-        toolbar={view === 'groups' ? (
-          <span className="wb-groupby">
-            <span>Group by</span>
-            <select className="sel" value={groupBy} onChange={(e) => setGroupBy(e.target.value)} aria-label="Group organizations by">
-              {GROUPINGS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-            </select>
-          </span>
-        ) : null}
         searchPlaceholder="Search by organization, parent or code…"
         bulkActions={bulkActions}
         rowActions={rowActions}
@@ -213,9 +184,7 @@ function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
         emptyTitle="No organizations match"
         emptyBody="Adjust the search to widen the result set."
         emptyIcon="building"
-        footNote={view === 'groups'
-          ? `Sectioned by ${grouping.label.toLowerCase()}`
-          : 'Structure synchronized from Workday HR 6 minutes ago'}
+        footNote={'Structure synchronized from Workday HR 6 minutes ago'}
       />
     </>
   )

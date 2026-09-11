@@ -100,9 +100,17 @@ export const stepState = (row, i) => {
 
 export const withAudit = (r) => {
   const h = hashOf(r.id)
-  const l0 = r.status === 'Approved' || r.level > 0
-  const l1 = r.status === 'Approved' || r.level > 1
-  const l2 = r.status === 'Approved' || r.level > 2
+  /* A level is stamped when it has closed — approved or rejected — and not
+     before. These read `r.level > i - 1`, which is the level the request is
+     *sitting at*, so an open request arrived carrying a decision timestamp, an
+     approver name and a comment for the level still deciding it. The evidence
+     card and the register printed them, and the workflow view put a signed
+     comment under an approver who had not answered yet. `stepState` already
+     knows which levels are closed; ask it rather than re-deriving it. */
+  const closed = (i) => ['done', 'rejected'].includes(stepState(r, i))
+  const l0 = closed(1)
+  const l1 = closed(2)
+  const l2 = closed(3)
   return {
     ...r,
     approvedOn: l0 ? shiftStamp(r.raised, 1 + (h % 5)) : '',
@@ -283,6 +291,24 @@ export const BIRTHRIGHT = {
 }
 export const birthrightFor = (dept) => BIRTHRIGHT[dept] || ['Google Workspace', 'Slack']
 
+/* How a group grant's lifetime reads on a row, in a summary and to an
+   approver. One function, so the three cannot disagree. */
+export const grantWindow = (v) => {
+  if (v.permanent) return 'Permanent'
+  if (v.startDate && v.endDate) return `${v.startDate} → ${v.endDate}`
+  if (v.endDate) return `Until ${v.endDate}`
+  if (v.startDate) return `From ${v.startDate}`
+  return 'No window set'
+}
+
+/* How a set of cleared factors reads on a register row and to an approver. */
+export const factorText = (list) => {
+  const f = Array.isArray(list) ? list : []
+  if (f.length === 0) return 'No factor selected'
+  if (f.length <= 2) return f.join(' + ')
+  return `${f.length} factors`
+}
+
 export const TYPE_SPECS = {
   adduser: {
     key: 'adduser',
@@ -300,7 +326,6 @@ export const TYPE_SPECS = {
           { id: 'firstName', label: 'First name', kind: 'text', required: true, placeholder: 'Jane' },
           { id: 'lastName', label: 'Last name', kind: 'text', required: true, placeholder: 'Doe' },
           { id: 'email', label: 'Email', kind: 'text', required: true, placeholder: 'jane.doe@tanflow.com', span: 2 },
-          { id: 'employeeType', label: 'Employee type', kind: 'select', required: true, options: LOOKUPS.employee_type, value: 'Internal' },
           { id: 'mobileNo', label: 'Mobile no', kind: 'text', placeholder: '+91 9800000001' },
         ],
       },
@@ -339,7 +364,6 @@ export const TYPE_SPECS = {
         sub: 'What approvers read before deciding',
         fields: [
           { id: 'costCenter', label: 'Cost center', kind: 'text', placeholder: 'CC-4410' },
-          { id: 'ticket', label: 'HR ticket reference', kind: 'text', placeholder: 'HR-20418' },
           { id: 'justification', label: 'Business justification', kind: 'textarea', span: 2, required: true, placeholder: 'Role, start date and the business unit funding the seat.' },
         ],
       },
@@ -390,7 +414,6 @@ export const TYPE_SPECS = {
         title: 'Justification',
         sub: 'What approvers read before deciding',
         fields: [
-          { id: 'ticket', label: 'Ticket reference', kind: 'text', placeholder: 'HR-20418' },
           { id: 'justification', label: 'Business justification', kind: 'textarea', span: 2, required: true, placeholder: 'Why the attribute is changing and who authorized it.' },
         ],
       },
@@ -437,8 +460,15 @@ export const TYPE_SPECS = {
         sub: 'Mark every group to add and every group to remove — all of it travels as one request',
         fields: [
           { id: 'groupChanges', label: 'Groups', kind: 'groupdual', value: { add: [], remove: [] }, span: 2 },
-          { id: 'duration', label: 'Duration of additions', kind: 'select', options: DURATIONS, value: DURATIONS[0], hint: 'Time-bound grants expire automatically. Removals are permanent.' },
-          { id: 'application', label: 'Application context', kind: 'select', options: APPLICATION_OPTIONS, placeholder: 'Optional' },
+          /* "30 days / 60 days / Until project close" made the requester pick a
+             label and left the approver to work out what date it meant. A grant
+             is either permanent or it runs between two dates; both approver and
+             provisioning read the dates directly. Removals are unaffected —
+             they are always permanent. */
+          { id: 'permanent', label: 'Permanent access', kind: 'checkbox', value: '', span: 2, checkboxLabel: 'This membership does not expire', hint: 'Permanent grants count against the standing-privilege posture and are attested every quarter. Leave it off to grant access for a fixed window.' },
+          { id: 'startDate', label: 'Access from', kind: 'date', required: true, showIf: (v) => !v.permanent, hint: 'The membership is provisioned on this date.' },
+          { id: 'endDate', label: 'Access until', kind: 'date', required: true, showIf: (v) => !v.permanent, hint: 'The membership is withdrawn automatically at the end of this day.' },
+          { id: 'application', label: 'Application context', kind: 'select', options: APPLICATION_OPTIONS, placeholder: 'Optional', span: 2 },
         ],
       },
       {
@@ -446,7 +476,6 @@ export const TYPE_SPECS = {
         title: 'Justification',
         sub: 'What approvers read before deciding',
         fields: [
-          { id: 'ticket', label: 'Ticket reference', kind: 'text', placeholder: 'CHG-88214' },
           { id: 'justification', label: 'Business justification', kind: 'textarea', span: 2, required: true, placeholder: 'The task this membership unblocks and how long it is needed.' },
         ],
       },
@@ -463,7 +492,7 @@ export const TYPE_SPECS = {
         target: adds[0] || rems[0] || '',
         risk: sod ? 'high' : adds.length > 0 ? 'medium' : 'low',
         sodConflict: sod,
-        detail: `Add ${adds.length} · Remove ${rems.length} · ${v.duration || DURATIONS[0]}${v.application ? ` · ${v.application}` : ''}`,
+        detail: `Add ${adds.length} · Remove ${rems.length} · ${grantWindow(v)}${v.application ? ` · ${v.application}` : ''}`,
         addGroups: adds,
         removeGroups: rems,
         changes: [
@@ -497,7 +526,10 @@ export const TYPE_SPECS = {
         title: 'Factors to clear',
         sub: 'What is removed and why',
         fields: [
-          { id: 'factors', label: 'Factors', kind: 'select', required: true, options: MFA_FACTOR_OPTIONS, value: 'All factors' },
+          /* Was a single select whose first option was "All factors", so
+             clearing two of three was not expressible. Each enrolled factor is
+             its own choice now. */
+          { id: 'factors', label: 'Factors to clear', kind: 'factors', required: true, value: [], span: 2, hint: 'Only the factors this identity has actually enrolled are listed.' },
           { id: 'reason', label: 'Reason', kind: 'select', required: true, options: MFA_REASONS, value: MFA_REASONS[0] },
           { id: 'verified', label: 'Identity verification', kind: 'select', required: true, options: ['Verified in person', 'Verified by manager', 'Verified by helpdesk script', 'Not yet verified'], value: 'Verified by helpdesk script', span: 2 },
           { id: 'revokeSessions', label: 'Active sessions', kind: 'select', options: ['Revoke every session', 'Leave sessions running'], value: 'Revoke every session', span: 2 },
@@ -508,7 +540,6 @@ export const TYPE_SPECS = {
         title: 'Justification',
         sub: 'What approvers read before deciding',
         fields: [
-          { id: 'ticket', label: 'Ticket reference', kind: 'text', placeholder: 'INC-55210' },
           { id: 'justification', label: 'Business justification', kind: 'textarea', span: 2, required: true, placeholder: 'How the requester confirmed the identity of the person asking.' },
         ],
       },
@@ -521,7 +552,7 @@ export const TYPE_SPECS = {
         target: 'MFA_FACTORS',
         risk: v.reason === 'Compromised factor' || v.verified === 'Not yet verified' ? 'high' : 'medium',
         sodConflict: false,
-        detail: `${v.factors} · ${v.reason} · ${v.verified}`,
+        detail: `${factorText(v.factors)} · ${v.reason} · ${v.verified}`,
       }
     },
   },
@@ -605,15 +636,20 @@ export const policyChecks = (spec, v) => {
         ? `${flagged.map((g) => g.name).join(', ')} participate${flagged.length === 1 ? 's' : ''} in anti-affinity rules. A conflict will be raised on submission.`
         : adds.length ? `${adds.length === 1 ? adds[0] : `None of the ${adds.length} additions`} conflict${adds.length === 1 ? 's' : ''} with anything this identity holds.` : 'Mark groups to add to run the pre-check.',
     })
+    const badWindow = !v.permanent && v.startDate && v.endDate && v.endDate <= v.startDate
     out.push({
       id: 'dur',
-      tone: adds.length && v.duration === 'Permanent' ? 'warn' : 'ok',
+      tone: badWindow ? 'bad' : adds.length && v.permanent ? 'warn' : 'ok',
       label: 'Grant lifetime',
       detail: adds.length === 0
         ? rems.length ? 'Removals only — nothing new is granted, and removed memberships do not return automatically.' : 'Nothing selected yet.'
-        : v.duration === 'Permanent'
-          ? 'Permanent grants count against the standing-privilege posture score and must be attested every quarter.'
-          : `${adds.length === 1 ? 'The addition expires' : `All ${adds.length} additions expire`} automatically after ${v.duration || DURATIONS[0]}.`,
+        : badWindow
+          ? 'The end date is on or before the start date, so the grant would expire before it began.'
+          : v.permanent
+            ? 'Permanent grants count against the standing-privilege posture score and must be attested every quarter.'
+            : !v.startDate || !v.endDate
+              ? 'Set both dates, or mark the access permanent.'
+              : `${adds.length === 1 ? 'The addition runs' : `All ${adds.length} additions run`} from ${v.startDate} to ${v.endDate} and is withdrawn automatically.`,
     })
     if (rems.length) {
       out.push({

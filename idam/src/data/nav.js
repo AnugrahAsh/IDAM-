@@ -18,8 +18,9 @@ export const ROUTES = [
   { id: 'groups', path: '/iam/groups', label: 'Groups', icon: 'group', detail: true, module: 'Application Groups' },
   { id: 'dynamicPolicy', path: '/iam/dynamicPolicy', label: 'Dynamic Policies', icon: 'policy', detail: true, module: 'Dynamic Policy' },
   { id: 'segregationofduties', path: '/iam/segregationofduties/rules', label: 'Segregation of Duties', icon: 'sod', detail: true, module: 'Segregation Of Duties' },
+  { id: 'signOnPolicy', path: '/iam/signOnPolicy', label: 'Sign-On Policies', icon: 'signon', detail: true, module: 'Sign-On Policy' },
   { id: 'applications', path: '/iam/applications', label: 'Applications', icon: 'provision', detail: true, module: 'Provision Applications' },
-  { id: 'attributeConfigurations', path: '/iam/attributeConfigurations', label: 'Attribute Configuration', icon: 'swap', module: 'Configurations' },
+  { id: 'attributeConfigurations', path: '/iam/attributeConfigurations', label: 'Attribute Configuration', icon: 'swap', detail: true, module: 'Configurations' },
   { id: 'trustReconciliation', path: '/iam/trustReconciliation', label: 'Trust Reconciliation', icon: 'recon', detail: true, module: 'Trust Reconciliation' },
   { id: 'ldapapplications', path: '/iam/ldapapplications', label: 'LDAP Applications', icon: 'directory', detail: true, module: 'LDAP Applications' },
   { id: 'ipRestrictionPolicy', path: '/iam/ip/restriction/policy', label: 'Network Access Policies', icon: 'noentry', detail: true, module: 'Network Access Policies' },
@@ -72,7 +73,7 @@ export const NAV = [
     id: 'groups',
     label: 'Groups',
     icon: 'group',
-    items: ['groups', 'dynamicPolicy', 'segregationofduties'],
+    items: ['groups', 'dynamicPolicy', 'segregationofduties', 'signOnPolicy'],
   },
   {
     id: 'applications',
@@ -121,8 +122,8 @@ export const NAV_BADGES = {
 }
 
 export const LEGACY = {
-  '/iam': '/iam/users',
-  '/iam/': '/iam/users',
+  '/iam': '/iam/myapps',
+  '/iam/': '/iam/myapps',
   // The dictionary is a tab of the Password Policy section now, not a screen
   // of its own. Existing links and bookmarks land on the tab.
   '/iam/passwordDictionary': '/iam/passwordPolicy/dictionary',
@@ -130,6 +131,8 @@ export const LEGACY = {
   '/iam/orphaned': '/iam/orphanedpolicy',
   '/iam/policies': '/iam/dynamicPolicy',
   '/iam/sod': '/iam/segregationofduties/rules',
+  // The previous console answered to both casings of this address.
+  '/iam/signonpolicy': '/iam/signOnPolicy',
   '/iam/provisioning': '/iam/applications',
   '/iam/provisionapplications': '/iam/applications',
   '/iam/reconciliation': '/iam/trustReconciliation',
@@ -155,8 +158,10 @@ export const LEGACY = {
   // The relay settings are one provider record among several now, and the
   // outbound queue is the Messages tab. The three addresses the old Email
   // Management tabs used land on the tab that replaced each of them.
-  '/iam/emailConfigurations': '/iam/emails/providers',
-  '/iam/emails/configuration': '/iam/emails/providers',
+  '/iam/emailConfigurations': '/iam/emails/smtp',
+  '/iam/emails/configuration': '/iam/emails/smtp',
+  '/iam/emails/providers': '/iam/emails/smtp',
+  '/iam/emails/clients': '/iam/emails/smtp',
   '/iam/emails/emails': '/iam/emails/messages',
   '/iam/emailTemplates': '/iam/emails/templates',
   '/iam/smsTemplates': '/iam/sms/providers',

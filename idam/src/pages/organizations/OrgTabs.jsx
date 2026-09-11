@@ -297,7 +297,6 @@ export function ChildrenTab({ org, kids }) {
       ]}
       toolbar={(
         <>
-          <Button size="sm" icon="plus" onClick={() => navigate('/iam/organizations/add')}>New sub-organization</Button>
           <Button size="sm" icon="hierarchy" onClick={() => navigate('/iam/organizationHierarchy')}>Hierarchy</Button>
           <Button size="sm" icon="download" onClick={() => toast('ok', 'Export queued', `${kids.length} sub-organizations queued for CSV export.`)}>Export</Button>
         </>

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { ANNOUNCEMENTS } from '../comms/commsData'
+import { severityLevel } from '../settings/settingsStore'
 
 /**
  * The announcement collection behind the Notification Center.
@@ -25,8 +26,10 @@ export const writeAnnouncements = (next) => {
 
 export const useAnnouncements = () => useSyncExternalStore(subscribe, getAnnouncements, getAnnouncements)
 
-/** Announcement severities are authored on a four-step scale; the inbox reads three. */
-const INBOX_SEVERITY = { info: 'info', warn: 'high', high: 'high', critical: 'critical' }
+/* An announcement is authored against whatever severities the tenant has
+   defined; the inbox files, counts and sorts on three steps. The mapping is
+   part of the severity itself, held in Settings → Notification Management Setup, so a
+   tenant that renames or adds one does not fall through to Info. */
 
 /**
  * What an identity actually sees: published announcements, newest first,
@@ -41,7 +44,7 @@ export const publishedAnnouncements = (list = state) => list
     title: a.title,
     description: a.description,
     scheduleOn: a.scheduleOn,
-    severity: INBOX_SEVERITY[a.severity] || 'info',
+    severity: severityLevel(a.severity),
     category: 'Announcements',
     unread: true,
     announcement: true,

@@ -1,4 +1,5 @@
 import './styles/RequestsPage.css'
+import './styles/ApprovalWorkflow.css'
 import { useMemo, useState } from 'react'
 import PageBar from '../components/shell/PageBar'
 import DataWorkbench from '../components/workbench/DataWorkbench'
@@ -32,27 +33,12 @@ const FACETS = {
   rejected: (r) => r.status === 'Rejected',
 }
 
-const VIEWS = [
-  { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense list with sortable columns' },
-  { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per request' },
-  { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'List split into sections' },
-]
-
-const GROUPINGS = [
-  { id: 'status', label: 'Status', of: (r) => r.status },
-  { id: 'type', label: 'Request type', of: (r) => r.type },
-  { id: 'risk', label: 'Risk', of: (r) => r.risk },
-]
-
 function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
   const levels = useApprovalLevels()
   const { navigate, toast } = useApp()
   const [menu, setMenu] = useState(null)
   const [facet, setFacet] = useState('all')
-  const [view, setView] = useLocalState('tf-idam-requests-view', 'table')
-  const [groupBy, setGroupBy] = useLocalState('tf-idam-requests-groupby', 'status')
 
-  const grouping = GROUPINGS.find((g) => g.id === groupBy) || GROUPINGS[0]
   const visible = useMemo(() => rows.filter(FACETS[facet] || FACETS.all), [rows, facet])
 
   const cards = [
@@ -155,25 +141,11 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
         }
       />
 
+      {/* The four request-type tiles duplicated the "Add request" menu in the
+          page bar, which already lists every type — including the ones the row
+          of four could not fit. A whole band of the page repeating a control
+          beside it earned its place from neither. */}
       <div className="stack">
-        <div className="grid grid-4">
-          {TYPE_ORDER.slice(0, 4).map((k) => {
-            const spec = TYPE_SPECS[k]
-            return (
-              <button
-                key={k}
-                className="tile"
-                data-nav="true"
-                style={{ textAlign: 'left' }}
-                onClick={() => navigate(`/iam/requests/new/${k}`)}
-              >
-                <span className="tile-k"><Icon name={spec.icon} size={12} />{spec.label}</span>
-                <span className="t-xs t-mut" style={{ marginTop: 4, lineHeight: 1.45 }}>{spec.sub}</span>
-              </button>
-            )
-          })}
-        </div>
-
         <StatCards
           items={cards}
           value={facet}
@@ -184,20 +156,6 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
         <DataWorkbench
           id="requests"
           rows={visible}
-          views={VIEWS}
-          view={view}
-          onViewChange={setView}
-          renderCard={renderCard}
-          groupOf={grouping.of}
-          groupSummary={groupSummary}
-          toolbar={view === 'groups' ? (
-            <span className="wb-groupby">
-              <span>Group by</span>
-              <select className="sel" value={groupBy} onChange={(e) => setGroupBy(e.target.value)} aria-label="Group requests by">
-                {GROUPINGS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-              </select>
-            </span>
-          ) : null}
           columns={columns}
           selectable
           searchPlaceholder="Search by request id, identity, entitlement or approver…"
@@ -206,7 +164,6 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
           onRowClick={(r) => navigate(`/iam/requests/${r.id}`)}
           toolbar={(
             <>
-              <Button size="sm" icon="plus" iconRight="chevD" onClick={typeMenu}>Add request</Button>
               <Button
                 size="sm"
                 icon="approve"

@@ -40,6 +40,25 @@ export const atRecord = () => (segments) => (
 )
 
 /**
+ * Matches a fixed-length address whose `:named` parts are parameters —
+ * `atPattern(':id/rules/:ruleId/edit')` answers `/iam/signOnPolicy/7/rules/3/edit`
+ * with `{ id: '7', ruleId: '3' }`. For addresses deeper than one record, and for
+ * the older shapes a module keeps answering to after it moves.
+ */
+export const atPattern = (pattern) => {
+  const parts = pattern.split('/').filter(Boolean)
+  return (segments) => {
+    if (segments.length !== parts.length) return null
+    const params = {}
+    for (let i = 0; i < parts.length; i += 1) {
+      if (parts[i].startsWith(':')) params[parts[i].slice(1)] = segments[i]
+      else if (parts[i] !== segments[i]) return null
+    }
+    return params
+  }
+}
+
+/**
  * Resolves `segments` against an ordered screen list.
  *
  * Returns the rendered screen, or `fallback()` when nothing matches — which is

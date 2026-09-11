@@ -179,3 +179,39 @@
   color:var(--faint);border-radius:var(--r-xs);
 }
 .nav-filter-x:hover{color:var(--ink-2);background:var(--surface-3)}
+
+/* The signed-in identity in the header.
+
+   It was an avatar on its own, so who you were signed in as took a hover to
+   read and the role you were *viewing* as — which changes what the whole
+   navigation offers — could not be read at all without opening the menu.
+
+   The base rule above fixes this control at 34x34. Three lines of text need
+   more than 34px, so the stack was overflowing its own container: the height
+   is released here and the box sizes to its content, which is what actually
+   centres it against the avatar and inside the 50px bar. The type is a step
+   tighter than the body scale for the same reason — three lines have to sit in
+   a header, not fill it. */
+.top-user{display:flex;align-items:center;gap:10px;
+  width:auto;max-width:250px;height:auto;min-height:34px;
+  padding:2px 8px 2px 4px;border-radius:var(--r)}
+
+.top-user-m{display:none;flex-direction:column;align-items:flex-start;justify-content:center;
+  gap:1px;min-width:0;flex:1}
+.top-user-n{font-size:11px;line-height:1.2;font-weight:var(--w-semi);color:var(--shell-ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.top-user-r{font-size:9.5px;line-height:1.2;color:#8FB4F0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.top-user-u{font-family:var(--mono);font-size:8.5px;line-height:1.2;color:var(--shell-mut);
+  letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.top-user > svg{color:var(--shell-mut);flex:none;margin-left:-2px}
+
+/* Below this the bar has no room for three lines of text beside the search, so
+   the avatar carries the identity on its own as it did before. */
+@media(max-width:1240px){
+  .top-user{max-width:none;width:34px;height:34px;min-height:0;padding:0;gap:0}
+  .top-user > svg{display:none}
+}
+@media(min-width:1241px){
+  .top-user-m{display:flex}
+}

@@ -15,6 +15,13 @@ const DENSITIES = [
   { id: 'compact', label: 'Compact', icon: 'menu' },
 ]
 
+/* "All" is a page size rather than a separate mode, so nothing downstream has
+   to special-case it: the page count collapses to one and the slice returns
+   everything. Registers in this console top out in the low hundreds of rows,
+   so there is no size at which this becomes a trap. */
+const ALL_ROWS = 100000
+const PAGE_SIZES = [10, 25, 50, 100, 250]
+
 export default function DataWorkbench({
   id,
   rows = [],
@@ -33,9 +40,10 @@ export default function DataWorkbench({
   filters,
   // A second row under the toolbar — saved views, scope banners, and the like.
   subBar,
-  // Registers that name the column read better than a blank header, and a
-  // real header is what a screen reader announces.
-  actionsLabel,
+  // The actions column carries a real header. It was blank unless a caller
+  // opted in, which left most registers with an unlabelled column and nothing
+  // for a screen reader to announce.
+  actionsLabel = 'Actions',
   // Rendered inside the panel above the toolbar: a register header owns the
   // counts and the filter for the rows below it.
   header,
@@ -47,6 +55,8 @@ export default function DataWorkbench({
   onViewChange,
   defaultView = 'table',
   renderCard,
+  // 'compact' tightens the card grid to match the denser cards a page renders.
+  cardSize,
   groupOf,
   groupSummary,
   emptyTitle = 'Nothing to show',
@@ -306,6 +316,23 @@ export default function DataWorkbench({
               />
             </span>
           )}
+          {/* Page size sat beside the pager at the foot of the register, which
+              put "show me more than ten rows" underneath the ten rows it was
+              meant to change: on a full page the control could only be reached
+              by scrolling past everything it governs. It belongs with the other
+              controls that shape the view, at the top. */}
+          <span className="rows-picker">
+            <span className="rows-picker-l">Rows</span>
+            <select
+              className="sel"
+              value={per}
+              onChange={(e) => setPer(Number(e.target.value))}
+              aria-label="Rows per page"
+            >
+              {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+              <option value={ALL_ROWS}>All</option>
+            </select>
+          </span>
           {!asCards && (
             <IconButton
               icon="columns"
@@ -343,7 +370,7 @@ export default function DataWorkbench({
             />
           ) : <EmptyState icon={emptyIcon} title={emptyTitle} body={emptyBody} />
         ) : asCards ? (
-          <div className="wb-cards">
+          <div className="wb-cards" data-size={cardSize}>
             {pageRows.map((r) => {
               const rid = getRowId(r)
               return (
@@ -420,9 +447,6 @@ export default function DataWorkbench({
             </button>
           ))}
         </div>
-        <select className="sel" style={{ width: 96, height: 25 }} value={per} onChange={(e) => setPer(Number(e.target.value))} aria-label="Rows per page">
-          {[10, 25, 50, 100, 250].map((n) => <option key={n} value={n}>{n} rows</option>)}
-        </select>
         <div className="pager">
           <button disabled={current === 1} onClick={() => setPage(current - 1)} aria-label="Previous page"><Icon name="chevL" size={12} /></button>
           {Array.from(new Set([1, 2, current - 1, current, current + 1, pages - 1, pages]))

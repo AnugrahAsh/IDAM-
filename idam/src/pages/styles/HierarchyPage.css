@@ -48,9 +48,12 @@
 .hier-results-list svg{flex:none;color:var(--faint)}
 .hier-results-p{flex:none;max-width:44%;margin-left:auto;font-size:var(--t-xs);color:var(--faint)}
 
-/* The chain from the root to the selection, so a deep unit keeps its context. */
-.otree-row[data-lineage]{background:var(--accent-bg);opacity:.75}
-.otree-row[data-lineage] .ot-n{color:var(--accent-a);font-weight:var(--w-semi)}
+/* The path from the root to the selection is marked on the indent guide only.
+
+   It used to tint the whole ancestor row — background and name both — so
+   selecting one unit lit up every unit above it and three or four rows read as
+   selected at once. The guide already draws the path; the rows do not need to
+   repeat it. */
 .otree-kids[data-lineage]{border-left-color:var(--accent-line)}
 
 /* The configuration drawer. */
@@ -86,46 +89,21 @@
 .hier-rel-none{font-size:var(--t-xs);color:var(--faint);font-style:italic}
 .hier-rel-kids{display:flex;flex-direction:column;gap:4px;max-height:210px;overflow-y:auto}
 
-/* --- Configure hierarchy ---------------------------------------------------- */
+/* The reading strip under the page title.
 
-/* Level to attribute, one row each. A table would be lighter to write and
-   harder to read: the pairing is the whole point, so each row states the level
-   on the left and the attribute that fills it on the right. */
-.hier-bind{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
-.hier-bind-h{display:grid;grid-template-columns:1fr 190px;gap:var(--sp-3);align-items:center;
-  padding:7px var(--sp-3);background:var(--surface-2);border-bottom:1px solid var(--hair)}
-.hier-bind-h span{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
-  font-weight:var(--w-semi);color:var(--faint)}
-.hier-bind-row{display:grid;grid-template-columns:1fr 190px;gap:var(--sp-3);align-items:center;
-  padding:9px var(--sp-3);border-bottom:1px solid var(--hair)}
-.hier-bind-row:last-child{border-bottom:0}
-.hier-bind-row[data-off]{background:var(--warn-bg)}
-.hier-bind-lv{display:flex;align-items:center;gap:9px;min-width:0}
-.hier-bind-n{flex:none;width:20px;height:20px;display:grid;place-items:center;border-radius:var(--r-pill);
-  background:var(--accent-bg-2);color:var(--accent-a);font-size:var(--t-micro);font-weight:var(--w-semi)}
-.hier-bind-row[data-off] .hier-bind-n{background:var(--warn-line);color:var(--warn)}
-.hier-bind-m{display:flex;flex-direction:column;gap:1px;min-width:0}
-.hier-bind-m b{font-size:var(--t-sm);color:var(--ink)}
-.hier-bind-m span{font-size:var(--t-xs);color:var(--mut)}
+   Five figures about the tree on screen. They are stated, not offered: no
+   border, no hover, no pointer — the row used filter chips before, so it read
+   as a set of controls that did nothing when pressed.
 
-/* Keeping unmatched identities is a choice with a consequence, so it reads as a
-   sentence with a switch rather than a bare checkbox. */
-.hier-opt{display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3);
-  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2)}
-.hier-opt-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.hier-opt-m b{font-size:var(--t-sm);color:var(--ink)}
-.hier-opt-m span{font-size:var(--t-xs);color:var(--mut)}
-
-/* What the selection would do, before it is applied. */
-.hier-cmp{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);
-  border:1px solid var(--line);border-radius:var(--r-lg)}
-.hier-cmp > svg{flex:none;color:var(--faint)}
-.hier-cmp-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.hier-cmp-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
-  font-weight:var(--w-semi);color:var(--faint)}
-.hier-cmp-v{font-size:var(--t-h1);font-weight:var(--w-semi);color:var(--ink);line-height:1.1}
-.hier-cmp-col[data-next="true"] .hier-cmp-v{color:var(--accent-a)}
-.hier-cmp-s{font-size:var(--t-xs);color:var(--mut)}
-
-/* The bound attributes, read as a chain on the record. */
-.hier-bound{display:flex;flex-wrap:wrap;gap:4px}
+   Label and value sit at the same size. The first pass set the label in micro
+   caps and the value two steps larger and bolder, which made each reading look
+   like a heading with a number stuck to it rather than one phrase; the console
+   already solves this in `.detail-fact`, and this follows it. */
+.hy-stats{display:flex;align-items:center;flex-wrap:wrap;gap:4px var(--sp-5);margin:0}
+.hy-stats > div{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.hy-stats dt{display:inline-flex;align-items:center;gap:6px;margin:0;
+  font-size:var(--t-xs);color:var(--mut);white-space:nowrap}
+.hy-stats dt svg{color:var(--faint);flex:none}
+.hy-stats dd{margin:0;font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hy-stats dd.num{font-variant-numeric:tabular-nums}

@@ -129,3 +129,13 @@
   background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line);
   font-weight:var(--w-semi);
 }
+
+/* The remove control on an application tile. It appears on hover and on
+   keyboard focus — a tile that showed it permanently would put a delete next to
+   every application on the page, which reads as the point of the grid. */
+.apptile-main{position:relative}
+.apptile-del{position:absolute;top:-4px;right:-4px;opacity:0;color:var(--faint);
+  transition:opacity var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.apptile:hover .apptile-del,
+.apptile-del:focus-visible{opacity:1}
+.apptile-del:hover{background:var(--bad-bg);color:var(--bad)}
