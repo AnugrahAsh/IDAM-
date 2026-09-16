@@ -1,0 +1,212 @@
+/* Page-owned styles for SMS Management.
+
+   The page bar, tabs, register (search, filters, table, card grid, pagination,
+   row actions), record cards, stat tiles, detail headers and action bars all
+   come from the shared shell and workbench components in src/styles. What is
+   left here is the form rhythm inside a card, the signature builder, and one
+   density override for the card view. */
+
+/* --- Register ---------------------------------------------------------------- */
+
+/* An endpoint is long and rarely read in full — it is truncated to keep the
+   row on one line, with the whole value on the title attribute. */
+.sms-url {
+  display: block;
+  max-width: 320px;
+}
+
+/* A labelled select in the register's filter slot, set like the other labelled
+   selects in the workbench bar. */
+.sms-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-xs);
+  font-weight: var(--w-semi);
+  color: var(--mut);
+  white-space: nowrap;
+}
+
+.sms-filter .sel {
+  height: 28px;
+  width: auto;
+  min-width: 150px;
+}
+
+/* --- Record editors ----------------------------------------------------------
+   Each editor is a page: the page scrolls and the shared action bar closes
+   it, so the form owns nothing but the space between its sections. */
+.sms-form-b {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.sms-fs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* A section label, set like every other label in the console (table headers,
+   key/value keys, tile captions): micro caps in the muted ink. */
+.sms-fs-h {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-micro);
+  letter-spacing: var(--t-micro-ls);
+  text-transform: uppercase;
+  font-weight: var(--w-bold);
+  color: var(--mut);
+}
+
+.sms-fs-h svg {
+  width: 12px;
+  height: 12px;
+  color: var(--faint);
+  flex: none;
+}
+
+/* A qualifier that tells you what to type belongs beside the label, where it
+   is read before the control rather than after it. */
+.sms-lbl-hint {
+  font-size: var(--t-micro);
+  font-weight: var(--w-reg);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mut);
+}
+
+/* The field label is a flex row and spaces the hint itself; the signature
+   builder's heading is plain text and needs the same gap put back. */
+.sig-inputs-t .sms-lbl-hint { margin-left: 5px }
+
+.sms-form .code {
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+/* Two boolean rows that share one frame: the encryption switch and the
+   password-link role. Both light up when on, because each grants something
+   the operator should be able to see without reading. */
+.sms-enc,
+.sms-tog {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 9px var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  transition: background var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease);
+}
+
+.sms-tog { gap: var(--sp-3) }
+
+.sms-enc[data-on="true"],
+.sms-tog[data-on="true"] {
+  background: var(--accent-bg);
+  border-color: var(--accent-line);
+}
+
+.sms-enc-l {
+  font-size: var(--t-sm);
+  font-weight: var(--w-med);
+  color: var(--ink);
+}
+
+.sms-enc .pill { margin-left: auto }
+
+.sms-tog-l {
+  min-width: 0;
+  font-size: var(--t-sm);
+  color: var(--mut);
+}
+
+.sms-tog[data-on="true"] .sms-tog-l { color: var(--ink) }
+
+.sms-tog .switch { margin-left: auto }
+
+/* --- Signature builder --------------------------------------------------------
+   A signature is an ordered recipe, not a set of options, so the inputs are a
+   list the operator arranges and the result is stated back underneath. */
+.sig{display:flex;flex-direction:column;gap:var(--sp-4);padding:var(--sp-4);
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r)}
+
+.sig-inputs{display:flex;flex-direction:column;gap:9px;padding:var(--sp-4);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.sig-inputs-h{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.sig-inputs-t{flex:1;min-width:0;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.sig-err{display:flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--bad)}
+.sig-err svg{flex:none}
+
+.sig-rows{display:flex;flex-direction:column;gap:7px}
+/* Ordinal, source, field, controls. The ordinal is the point of the list — it
+   is the signing order, and without it the rows read as an unordered set. */
+.sig-row{display:grid;grid-template-columns:22px minmax(120px,180px) minmax(0,1fr) auto;
+  gap:8px;align-items:center;min-width:0}
+.sig-row-n{font-size:var(--t-xs);color:var(--faint);text-align:right;
+  font-variant-numeric:tabular-nums}
+.sig-row-a{display:inline-flex;align-items:center;gap:2px}
+.sig-row-del{color:var(--bad)}
+.sig-row-del:hover{background:var(--bad-bg);color:var(--bad)}
+
+/* What the gateway is actually handed, which four separate controls cannot
+   be read off individually. */
+.sig-preview{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+  padding:9px 11px;border:1px dashed var(--line-2);border-radius:var(--r-sm);
+  background:var(--surface-2);min-width:0}
+.sig-preview-k{flex:none;font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);
+  text-transform:uppercase;color:var(--mut)}
+.sig-preview-v{min-width:0;font-size:var(--t-xs);color:var(--accent-deep);
+  overflow-wrap:anywhere}
+
+@media (max-width:760px){
+  .sig-row{grid-template-columns:22px minmax(0,1fr);grid-auto-rows:min-content}
+  .sig-row-a{grid-column:1 / -1;justify-content:flex-end}
+}
+
+/* --- Card view: sized to the Reports catalogue cards ---------------------------
+   The templates render the shared compact record card, but at the default
+   (comfortable) density the shared density rules carry one more selector than
+   the compact variant and win, so the cards came out at the full card scale —
+   a screen of them was mostly padding. This restores the compact geometry at
+   the proportions of the Reports cards (same grid minimum, padding, gap, name
+   size and rule under the facts). Scoped to this register, and only to the
+   comfortable density: the compact density turns cards into a list and is
+   left exactly as the workbench draws it. */
+:root[data-density="comfortable"] .sms-tpl-cards .wb-cards[data-size="compact"] {
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: var(--sp-3);
+}
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] {
+  padding: 13px 14px;
+  gap: 8px;
+}
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] .rcard-top { gap: 9px }
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] .rcard-name {
+  font-size: var(--t-h3);
+  line-height: 1.3;
+}
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] .rcard-sub { font-size: var(--t-xs) }
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] .rcard-line { font-size: var(--t-sm) }
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] .rcard-meta {
+  gap: 4px 10px;
+  padding: 7px 0;
+}
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] .rcard-meta dd { font-size: var(--t-xs) }
+
+:root[data-density="comfortable"] .sms-tpl-cards .rcard[data-compact] .rcard-foot {
+  font-size: var(--t-xs);
+  padding-top: 8px;
+  border-top: 1px solid var(--hair);
+}

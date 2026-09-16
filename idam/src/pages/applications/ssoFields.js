@@ -15,6 +15,42 @@
 
 const URL_HINT = 'Must include http:// or https://'
 
+// -------------------------------------------------------- Client identifier ----
+
+/**
+ * The client identifier is the one field every SSO application type carries,
+ * so it is declared once and asked for once — directly under the protocol
+ * picker, the moment a protocol is chosen — rather than repeated inside each
+ * protocol's own register under a slightly different label. It stays a field
+ * of the register (`clientId`) so validation, review, view and edit all read
+ * it the same way; only where it is rendered is fixed.
+ */
+export const CLIENT_SECTION_ID = 'client'
+
+const clientHint = {
+  SAML: 'The service provider entity ID, exactly as it appears in the SP metadata.',
+  OIDC: 'Unique identifier the client presents at the authorization and token endpoints.',
+  JWT: 'Unique identifier the token is issued to.',
+  Link: 'Optional. Identifies the catalog tile in audit records.',
+}
+
+const clientSection = (spec, required = true) => ({
+  id: CLIENT_SECTION_ID,
+  title: 'Client identifier',
+  sub: 'How the application identifies itself to the platform.',
+  common: true,
+  fields: [
+    {
+      id: 'clientId',
+      label: 'Client identifier',
+      type: 'text',
+      required,
+      placeholder: spec === 'SAML' ? 'https://app.example.com/sp' : 'my-client',
+      hint: clientHint[spec],
+    },
+  ],
+})
+
 // ---------------------------------------------------------------- OIDC ----
 
 const SIG_ALGS = ['RS256', 'RS384', 'RS512', 'PS256', 'PS512', 'ES256', 'ES384', 'ES512', 'HS256', 'HS512']
@@ -23,12 +59,12 @@ const ENC_CONTENT_ALGS = ['None', 'A128GCM', 'A192GCM', 'A256GCM', 'A128CBC-HS25
 const ANY_ALGS = ['Any', 'None', ...SIG_ALGS]
 
 export const OIDC_SECTIONS = [
+  clientSection('OIDC'),
   {
     id: 'general',
     title: 'General settings',
-    sub: 'How the client identifies itself. The name, description and image are held once, in Basics.',
+    sub: 'Where the client lives. The name, description and image are held once, in Basics; the client identifier is asked for with the protocol.',
     fields: [
-      { id: 'clientId', label: 'Client ID', type: 'text', required: true, placeholder: 'my-oidc-client', hint: 'Unique identifier for the client application.' },
       { id: 'applicationUrl', label: 'Application URL', type: 'text', required: true, placeholder: 'https://app.example.com', hint: `Primary entry URL for the application. ${URL_HINT}` },
     ],
   },
@@ -149,6 +185,7 @@ export const OIDC_SECTIONS = [
 // ---------------------------------------------------------------- SAML ----
 
 export const SAML_SECTIONS = [
+  clientSection('SAML'),
   {
     /* The configuration method decides how the endpoints are supplied, not
        which of them are asked for: metadata import adds an XML upload above the
@@ -173,10 +210,12 @@ export const SAML_SECTIONS = [
   {
     id: 'endpoints',
     title: 'Core access & endpoint settings',
-    sub: 'Where assertions are sent, and where the user lands.',
+    sub: 'Where assertions are sent, where the user lands, and the certificate the service provider signs with.',
     fields: [
-      { id: 'clientId', label: 'Client ID', type: 'text', required: true, span: 2, placeholder: 'https://app.example.com/sp', hint: 'The service provider entity ID.' },
-      { id: 'certificate', label: 'Certificate', type: 'textarea', span: 2, placeholder: '-----BEGIN CERTIFICATE-----', hint: 'X.509 public key, used to verify signed requests and encrypt assertions.' },
+      /* The one certificate field for a SAML application. It used to be
+         accompanied by a separate Certificate card that held the same
+         material a second time; the card is gone and this field is it. */
+      { id: 'certificate', label: 'Certificate', type: 'textarea', span: 2, placeholder: '-----BEGIN CERTIFICATE-----', hint: 'X.509 public key, used to verify signed requests and encrypt assertions. Filled from the descriptor on a metadata import.' },
       { id: 'acsUrl', label: 'Consume assertion URL', type: 'text', required: true, span: 2, placeholder: 'https://app.example.com/saml/acs', hint: `The ACS endpoint. ${URL_HINT}` },
       { id: 'applicationUrl', label: 'Application URL', type: 'text', required: true, span: 2, placeholder: 'https://app.example.com', hint: URL_HINT },
       { id: 'idpInitiatedSsoRelayState', label: 'IDP initiated SSO relay state', type: 'text', placeholder: '/dashboard', hint: 'Where the user lands after an IdP-initiated sign-in.' },
@@ -288,12 +327,12 @@ export const SAML_SECTIONS = [
  * register would be asking for settings it can never use.
  */
 export const JWT_SECTIONS = [
+  clientSection('JWT'),
   {
     id: 'delivery',
     title: 'Token delivery',
     sub: 'Where the signed token is delivered. Everything else about this application is held in Basics.',
     fields: [
-      { id: 'clientId', label: 'Client ID', type: 'text', required: true, span: 2, placeholder: 'my-jwt-client', hint: 'Unique identifier for the client application.' },
       { id: 'redirectUris', label: 'Redirect URL', type: 'list', span: 2, required: true, placeholder: 'https://app.example.com/callback', hint: 'The token is posted to these URLs and nowhere else. Add as many as the application uses.' },
     ],
   },
@@ -301,9 +340,10 @@ export const JWT_SECTIONS = [
 
 // ---------------------------------------------------------------- Link ----
 
-/** A link application opens a URL. It asserts nothing, so it has no register of
- *  its own — the destination is edited by the link form. */
-export const LINK_SECTIONS = []
+/** A link application opens a URL. It asserts nothing, so the only register
+ *  field it carries is the identifier every application type has — the
+ *  destination is edited by the link form. */
+export const LINK_SECTIONS = [clientSection('Link', false)]
 
 export const SECTIONS_FOR = (protocol) => {
   if (protocol === 'SAML') return SAML_SECTIONS
@@ -316,6 +356,17 @@ export const SECTIONS_FOR = (protocol) => {
  *  configuration method is neither rendered nor validated. */
 export const VISIBLE_SECTIONS = (protocol, values = {}) =>
   SECTIONS_FOR(protocol).filter((sec) => !sec.showIf || sec.showIf(values))
+
+/** The sections a protocol renders as cards of its own — everything visible
+ *  less the common client identifier, which is drawn beside the protocol. */
+export const PROTOCOL_SECTIONS = (protocol, values = {}) =>
+  VISIBLE_SECTIONS(protocol, values).filter((sec) => sec.id !== CLIENT_SECTION_ID)
+
+/** The client identifier field of a protocol's register. */
+export const clientIdField = (protocol) => {
+  const sec = SECTIONS_FOR(protocol).find((s) => s.id === CLIENT_SECTION_ID)
+  return sec ? sec.fields[0] : null
+}
 
 /** A blank record with every default from the specification already applied. */
 export const defaultsFor = (protocol) => {

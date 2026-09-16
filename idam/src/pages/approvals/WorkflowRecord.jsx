@@ -7,7 +7,7 @@ import Avatar from '../../components/primitives/Avatar'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
 import EmptyState from '../../components/primitives/EmptyState'
 import { useApp } from '../../store/AppContext'
-import { OPEN, nameOf, statusTone } from '../requests/data'
+import { OPEN, nameOf, statusTone } from '../accessRequests/data'
 import ApprovalWorkflow, { useWorkflow } from './ApprovalWorkflow'
 import { durationText } from './workflow'
 

@@ -235,6 +235,7 @@ export const CONNECTOR_TYPES = [
   { id: 'ad', name: 'Active Directory', kind: 'Directory', color: '#0078D4', icon: 'branch' },
   { id: 'ldap', name: 'LDAP', kind: 'Directory', color: '#5B6C8F', icon: 'directory' },
   { id: 'api', name: 'REST API', kind: 'Custom', color: '#6941C6', icon: 'code' },
+  { id: 'custom', name: 'Custom API', kind: 'Custom', color: '#B54708', icon: 'bolt' },
   { id: 'msentra', name: 'Microsoft Entra ID', kind: 'Cloud', color: '#0B65B8', icon: 'cloud' },
   { id: 'scim', name: 'SCIM 2.0', kind: 'Standard', color: '#0E7D74', icon: 'swap' },
   { id: 'none', name: 'No provisioning', kind: 'Manual', color: '#5D6776', icon: 'ban' },
@@ -249,6 +250,7 @@ export const APPLICATIONS = [
   { id: 6, name: 'MYSQL_BILLING', displayName: 'Billing Platform', connector: 'mysql', method: 'MySQL', status: 'Healthy', accounts: 214, orphans: 2, lastSync: stamp(0, 3), owner: 'Finance', host: 'mysql-prod.tanflow.internal', port: '3306' },
   { id: 7, name: 'DB2_CORE', displayName: 'Core Banking (DB2)', connector: 'db2', method: 'IBM DB2', status: 'Healthy', accounts: 640, orphans: 0, lastSync: stamp(0, 2), owner: 'Finance', host: 'db2-core.tanflow.internal', port: '50000' },
   { id: 8, name: 'ORACLE_ERP', displayName: 'Oracle ERP', connector: 'oracle', method: 'Oracle', status: 'Degraded', accounts: 512, orphans: 7, lastSync: stamp(2, 11), owner: 'Finance', host: 'erp.tanflow.internal', port: '1521' },
+  { id: 9, name: 'PEOPLESTRONG_HRMS', displayName: 'PeopleStrong HRMS', connector: 'custom', method: 'Custom API', status: 'Healthy', accounts: 268, orphans: 4, lastSync: stamp(0, 7), owner: 'Human Resources', host: 'hrms.peoplestrong.com', port: '443' },
 ]
 
 export const SSO_APPS = [

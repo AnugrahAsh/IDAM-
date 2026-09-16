@@ -1,0 +1,6 @@
+/* Page-owned styles for SmsPage. Shared primitives remain in src/styles. */
+
+/* The failure reason reads as prose, not as a status token, so it keeps the
+   body colour and leans on the icon alone to mark it as a problem. */
+.sms-err{display:inline-flex;align-items:center;gap:6px;color:var(--bad);font-size:var(--t-xs)}
+.sms-err svg{flex:none}

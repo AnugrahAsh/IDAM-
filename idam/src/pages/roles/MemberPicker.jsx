@@ -1,4 +1,4 @@
-import '../styles/RolesPage.css'
+import './RolesPage.css'
 import { useMemo, useState } from 'react'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import Avatar from '../../components/primitives/Avatar'

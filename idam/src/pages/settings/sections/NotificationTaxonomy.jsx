@@ -12,7 +12,7 @@ import Banner from '../../../components/primitives/Banner'
 import SeverityBadge from '../../../components/primitives/SeverityBadge'
 import EmptyState from '../../../components/primitives/EmptyState'
 import { useApp } from '../../../store/AppContext'
-import { useAnnouncements } from '../../notifications/announcementStore'
+import { useAnnouncements } from '../../notificationCenter/announcementStore'
 import { writeSection } from '../settingsStore'
 
 /**

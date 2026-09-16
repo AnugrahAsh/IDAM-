@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { APPLICATIONS, JOBS, LOGS, ORPHANS, REQUESTS, SOD_VIOLATIONS, CAMPAIGNS } from '../data/seed'
-import { useRead } from '../pages/notifications/readStore'
-import { usePublishedAnnouncements } from '../pages/notifications/announcementStore'
-import { unreadOf } from '../pages/notifications/inboxModel'
+import { useRead } from '../pages/notificationCenter/readStore'
+import { usePublishedAnnouncements } from '../pages/notificationCenter/announcementStore'
+import { unreadOf } from '../pages/notificationCenter/inboxModel'
 
 export function useBadges() {
   // Read state is the operator's, not the seed's: marking everything read has

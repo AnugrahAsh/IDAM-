@@ -1,4 +1,4 @@
-import '../styles/RolesPage.css'
+import './RolesPage.css'
 import PageBar from '../../components/shell/PageBar'
 import Button from '../../components/primitives/Button'
 import Icon from '../../components/primitives/Icon'

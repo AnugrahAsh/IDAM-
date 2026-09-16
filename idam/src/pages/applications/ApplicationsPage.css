@@ -1,0 +1,347 @@
+/* Page-owned styles for the unified Applications page. Shared primitives remain in src/styles. */
+
+/* Capability picker cards in the Add Application wizard sit on the shared .card
+   primitive; these rules give them their layout and selected state. */
+.app-cap-card{
+  display:flex;flex-direction:column;gap:8px;
+  padding:var(--sp-4);text-align:left;cursor:pointer;
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease);
+}
+.app-cap-card:hover{border-color:var(--accent-line)}
+.app-cap-card[data-on]{border-color:var(--accent);background:var(--accent-bg)}
+.app-cap-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Facet summary rows on the linkage tab: keep the label column from collapsing
+   when the value wraps onto a second line. */
+.app-facet-row .kv-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* URL-pattern cells hold long addresses with attribute placeholders. Allow the
+   pattern to break rather than force the table into a horizontal scroll. */
+.app-url-pattern {
+  overflow-wrap: anywhere;
+  max-width: 420px;
+}
+
+/* Certificate fingerprints are long colon-separated hex strings. */
+.app-cert-fingerprint {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+/* Capability tags stay on one line — wrapping them buys ~30px of column width
+   at the cost of a taller row, which is the wrong trade in a dense register. */
+.app-caps{display:flex;align-items:center;gap:4px;white-space:nowrap}
+
+/* --- Matter-type picker -------------------------------------------------- */
+/* The picker is the first decision in the attribute editor, so it reads as a
+   row of choices rather than yet another select. */
+.matter-grid{
+  display:grid;gap:8px;
+  grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+}
+.matter-card{
+  display:flex;flex-direction:column;gap:6px;
+  padding:11px 12px;text-align:left;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+  cursor:pointer;
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease);
+}
+.matter-card:hover{border-color:var(--accent)}
+.matter-card[data-on]{border-color:var(--accent);background:var(--accent-bg)}
+.matter-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* The editor panel sits inside a flush card, so it supplies its own padding
+   and the rule that separates it from the rows below. */
+.attr-editor{border-bottom:1px solid var(--hair);background:var(--surface-2)}
+
+/* --- Categorised field groups -------------------------------------------- */
+/* Each group is one category of the protocol form. The rule above the heading
+   is what makes the categories legible at a glance. */
+.fgroup + .fgroup{border-top:1px solid var(--hair);padding-top:18px}
+.fgroup .section-head{margin-bottom:10px}
+
+/* --- Operation / grant checks -------------------------------------------- */
+.op-grid{
+  display:grid;gap:10px;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+}
+.op-row{
+  display:flex;align-items:flex-start;gap:9px;
+  padding:10px 11px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+  cursor:pointer;
+}
+.op-row:hover{border-color:var(--line-2)}
+.op-row .check{margin-top:1px;flex:none}
+.op-m{display:flex;flex-direction:column;gap:2px;min-width:0}
+.op-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.op-s{font-size:var(--t-xs);color:var(--mut);line-height:1.45}
+
+/* --- Attribute mapping table --------------------------------------------- */
+/* Fixed layout so the inline editor row occupies exactly the columns the rows
+   above it do. Under auto layout the selects and inputs in the editor row
+   renegotiated every column width the moment Add mapping was pressed, which is
+   what made the new row look misaligned. */
+/* Controls fill their cell rather than sitting at their intrinsic width. */
+/* The flag columns centre on the header label above them. */
+/* Two icon buttons need more than the 44px a single-action column gets. */
+/* The editor row is taller than a display row; give it the breathing space
+   rather than letting the controls touch the row rules. */
+/* A new row is appended last, where the shared rule strips the bottom border.
+   Put it back so the editor still reads as a row of the table. */
+
+/* Correlation rules table on the Reconciliation tab. */
+.recon-tbl{table-layout:fixed;min-width:780px}
+.recon-tbl td,.recon-tbl th{white-space:normal}
+.recon-tbl th.map-flag,.recon-tbl td.map-flag{text-align:center}
+
+/* Advanced SAML: a disclosure, so the four fields most service providers need
+   are not buried under the eleven they do not. */
+.adv-saml{
+  border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);
+  overflow:hidden;
+}
+.adv-saml>summary{
+  display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;
+  font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);list-style:none;
+}
+.adv-saml>summary::-webkit-details-marker{display:none}
+.adv-saml>summary:hover{background:var(--surface-3)}
+.adv-saml>summary svg{color:var(--faint);transition:transform var(--dur-2) var(--ease)}
+.adv-saml[open]>summary{border-bottom:1px solid var(--hair);background:var(--surface-3)}
+.adv-saml[open]>summary svg{transform:rotate(90deg)}
+.adv-saml>summary>.t-xs{font-weight:var(--w-reg,400);margin-left:auto;text-align:right}
+.adv-saml-body{padding:16px 14px;display:flex;flex-direction:column;gap:20px;background:var(--surface)}
+@media(max-width:640px){
+  .adv-saml>summary{flex-wrap:wrap}
+  .adv-saml>summary>.t-xs{margin-left:0;width:100%;text-align:left}
+}
+
+/* The capability step is one choice of two, so each card carries a radio mark:
+   a round well that fills when chosen, which reads as "instead of" rather than
+   the "as well as" a checkbox promises. */
+.app-cap-dot{flex:none;width:18px;height:18px;border-radius:var(--r-pill);
+  border:1.5px solid var(--line-2);background:var(--surface);
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:border-color var(--dur-1) var(--ease)}
+.app-cap-dot[data-on]{border-color:var(--accent);border-width:5px}
+
+/* --- Unique attribute strip ---------------------------------------------- */
+/* The attribute-mapping card is flush, so the strip above the table supplies
+   its own padding and the rule that separates it from the rows. */
+/* The two sides of the key are read together, so they hold one row and neither
+   stretches across the whole card on a wide screen. */
+/* The unique row carries its marker beside the attribute name rather than in a
+   column of its own — one row in the table is ever marked. */
+
+/* --- Error classification ------------------------------------------------ */
+/* Same fixed layout as the mapping table: the controls fill their cell instead
+   of renegotiating the column widths as values are typed. */
+.ec-tbl{table-layout:fixed;min-width:480px}
+.ec-tbl td,.ec-tbl th{white-space:normal}
+.ec-tbl td .inp,.ec-tbl td .sel{width:100%;min-width:0}
+.ec-tbl th.td-act,.ec-tbl td.td-act{width:56px}
+
+/* --- Wizard review ---------------------------------------------------------
+   A review is read, not filled in, so the values carry the weight and the
+   labels recede. Missing-but-required reads as a fault rather than as an
+   absence, because at this point in the flow it is one. */
+.rvw{gap:var(--sp-3)}
+.rvw-card .card-h-actions{gap:var(--sp-2)}
+.rvw-val{color:var(--ink);font-weight:var(--w-med)}
+.rvw-pre{color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;display:block;max-height:120px;overflow:auto}
+.rvw-list{display:flex;flex-direction:column;gap:2px}
+.rvw-list .mono{color:var(--ink);overflow-wrap:anywhere}
+.rvw-missing{display:inline-flex;align-items:center;gap:5px;color:var(--bad);font-weight:var(--w-semi)}
+.rvw-missing svg{flex:none}
+.rvw-jump{margin-right:8px}
+.rvw-disclose{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-xs);font-weight:var(--w-semi);
+  color:var(--accent-a);border-radius:var(--r-xs)}
+.rvw-disclose:hover{text-decoration:underline;text-underline-offset:2px}
+.rvw-collapsed{display:flex;align-items:center;gap:8px;font-size:var(--t-sm);color:var(--mut)}
+.rvw-collapsed svg{color:var(--ok);flex:none}
+.rvw-collapsed b{color:var(--ink)}
+.rvw-tbl td{vertical-align:middle}
+.rvw-foot{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;padding:9px var(--sp-4);
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface-2);
+  font-size:var(--t-xs);color:var(--mut)}
+.rvw-foot > svg{color:var(--faint);flex:none}
+.rvw-foot b{color:var(--ink)}
+
+/* --- Add-a-row control ---------------------------------------------------- */
+/* The trigger for a new mapping is the last row of the table, so it reads as
+   "add a row here" rather than as a card-level action at the other end of the
+   card. It carries the reason when it is unavailable, because a disabled button
+   with nothing beside it is a dead end. */
+
+/* The legacy notice inside the flush URL card supplies the padding the card
+   itself does not. */
+.url-note{padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--hair)}
+
+/* --- Specification fields --------------------------------------------------
+   The published SAML and OIDC registers are rendered by SpecFields, and three
+   of their controls need shape the shared primitives do not give them. */
+
+/* A toggle stated as a sentence about the client, with its consequence under
+   it. Used where a section carries only a handful of switches. */
+.sso-toggle{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-3);
+  padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+}
+.sso-toggle-m{min-width:0}
+.sso-toggle-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.sso-toggle-s{font-size:var(--t-xs);color:var(--mut);line-height:1.5;margin-top:3px}
+
+/* Signature, Encryption and the capability sets are read as a grid of stated
+   capabilities: the switch sits on the title line so the eye runs down one
+   column of states, and the card lights up when the capability is on. */
+.sso-switch{
+  display:flex;flex-direction:column;gap:4px;
+  padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--surface);
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease);
+}
+.sso-switch[data-on]{border-color:var(--accent-line);background:var(--accent-bg)}
+.sso-switch-h{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3)}
+.sso-switch-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);min-width:0}
+.sso-switch-s{font-size:var(--t-xs);color:var(--mut);line-height:1.5}
+
+/* A field holding several values: one entry control, then the values as rows
+   that can be removed individually. */
+.mv{display:flex;flex-direction:column;gap:8px}
+.mv-add{display:flex;gap:8px;align-items:flex-start}
+.mv-add .inp{flex:1;min-width:0}
+.mv-list{display:flex;flex-direction:column;gap:0;margin:0;padding:0;list-style:none;
+  border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.mv-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);
+  padding:7px 10px;background:var(--surface);font-size:var(--t-xs)}
+.mv-row + .mv-row{border-top:1px solid var(--hair)}
+.mv-row > span:first-child{min-width:0;color:var(--ink)}
+.mv-foot{font-size:var(--t-xs);color:var(--mut)}
+
+/* A number with its unit stated beside it rather than folded into the hint. */
+.sso-num{display:flex;align-items:center;gap:8px}
+.sso-num .inp{flex:1;min-width:0}
+.sso-num-u{font-size:var(--t-xs);color:var(--mut);white-space:nowrap}
+
+/* Advanced sections disclose themselves from the card header. */
+.sso-disclose{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-xs);
+  font-weight:var(--w-semi);color:var(--accent-a);border-radius:var(--r-xs)}
+.sso-disclose:hover{text-decoration:underline;text-underline-offset:2px}
+.sso-collapsed{display:flex;align-items:center;gap:8px;font-size:var(--t-sm);color:var(--mut)}
+.sso-collapsed svg{color:var(--ok);flex:none}
+.sso-sec-bad{border-color:var(--bad)}
+
+/* --- Client scope side table -----------------------------------------------
+   Two tables side by side rather than a dropdown: scoping a client is a
+   comparison between what it could see and what it may see, and both halves
+   have to be on screen for that to be a decision rather than a guess. */
+.cs-pair{display:grid;grid-template-columns:1fr 1fr;align-items:stretch}
+.cs-side{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--hair)}
+.cs-side:last-child{border-right:0}
+.cs-side[data-assigned] .cs-side-h{background:var(--accent-bg)}
+.cs-side-h{
+  display:flex;align-items:center;gap:8px;padding:9px var(--sp-4);
+  border-bottom:1px solid var(--hair);background:var(--surface-2);
+}
+.cs-side-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.cs-side-n{
+  font-size:var(--t-xs);color:var(--mut);background:var(--surface);
+  border:1px solid var(--hair);border-radius:var(--r-pill);padding:0 7px;
+}
+.cs-side-s{padding:9px var(--sp-4);border-bottom:1px solid var(--hair)}
+.cs-side-s .inp{width:100%}
+.cs-scroll{flex:1;min-height:120px;max-height:420px;overflow:auto}
+.cs-scroll .tbl{table-layout:fixed;width:100%}
+.cs-empty{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:var(--sp-6) var(--sp-4);text-align:center;
+  font-size:var(--t-xs);color:var(--mut);
+}
+.cs-side-f{padding:9px var(--sp-4);border-top:1px solid var(--hair);display:flex}
+
+@media (max-width: 860px){
+  .cs-pair{grid-template-columns:1fr}
+  .cs-side{border-right:0;border-bottom:1px solid var(--hair)}
+  .cs-side:last-child{border-bottom:0}
+}
+
+/* --- SSO view page ----------------------------------------------------------
+   A configuration read rather than edited. A list field is several values, and
+   stacking them keeps a four-entry redirect allow-list readable where a comma
+   run would not be. */
+.sso-view-list{display:flex;flex-direction:column;gap:2px;min-width:0}
+.sso-view-list .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sso-view-block{
+  display:block;white-space:pre-wrap;word-break:break-all;
+  max-height:120px;overflow:auto;
+  background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-sm);
+  padding:6px 8px;line-height:1.55;
+}
+
+/* --- Custom API connector ----------------------------------------------------
+   The connector is not one form. Authentication, response handling and one
+   configuration per lifecycle operation are separate decisions, and a flat run
+   of twenty-six fields asked the reader to work out for themselves which six
+   belonged to Create. */
+.conn-group + .conn-group{margin-top:var(--sp-5);padding-top:var(--sp-4);border-top:1px solid var(--hair)}
+.conn-group-h{
+  display:flex;align-items:center;gap:6px;margin-bottom:var(--sp-3);
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut);
+}
+.conn-empty{padding:var(--sp-4);font-size:var(--t-xs);color:var(--mut)}
+
+/* Error classification: a category, and the responses that fall into it. */
+.ec-cats{display:flex;flex-direction:column;gap:10px}
+.ec-cat{display:flex;flex-direction:column;gap:5px}
+.ec-cat-k{
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--faint);
+}
+.ec-cat-list{display:flex;flex-wrap:wrap;gap:5px}
+.ec-add{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+  align-items:end;gap:var(--sp-3);
+  padding-top:var(--sp-3);border-top:1px solid var(--hair);
+}
+@media (max-width: 640px){
+  .ec-add{grid-template-columns:1fr}
+}
+
+/* --- Custom API connector: operation-specific attribute mapping -------------
+   Each lifecycle section carries its own table, opened from a "Configure
+   attribute mapping" action so a section reads as its three API fields until
+   the operator asks for the mapping beneath them. */
+.capi-block{grid-column:1 / -1;min-width:0}
+.capi-head{display:flex;align-items:flex-start;gap:var(--sp-3);flex-wrap:wrap}
+.capi-head .section-head{flex:1;min-width:0;flex-direction:column;align-items:flex-start;gap:2px}
+.capi-tbl{table-layout:fixed;min-width:560px}
+.capi-tbl td,.capi-tbl th{white-space:normal;vertical-align:middle}
+.capi-tbl td .inp,.capi-tbl td .sel{width:100%;min-width:0}
+.capi-tbl th.map-flag,.capi-tbl td.map-flag{text-align:center}
+.capi-tbl td.map-flag .check{display:inline-flex;vertical-align:middle}
+.capi-tbl th.td-act,.capi-tbl td.td-act{width:48px}
+.capi-tbl td.capi-arrow,.capi-tbl th.capi-arrow{width:36px;text-align:center;color:var(--faint)}
+.capi-lc{min-width:900px}
+.capi-foot{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;padding:var(--sp-3) 0 0}
+.capi-summary{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--mut)}
+.capi-summary b{color:var(--ink)}
+
+/* --- URL configuration preview ---------------------------------------------
+   The pattern as stored and the address one identity is actually launched at,
+   side by side, so a `{nonce}` or an `{email}` can be read against the value
+   it becomes. */
+.url-preview{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-top:14px}
+.url-preview .code{overflow-wrap:anywhere;word-break:break-all}
+.url-preview-launch{border-color:var(--accent-line);background:var(--accent-bg)}
+@media (max-width: 860px){ .url-preview{grid-template-columns:1fr} }
+
+/* --- SSO view / edit basics --------------------------------------------------
+   The application image as it reads on the record: the tile beside its name. */
+.sso-basics-media{display:flex;align-items:center;gap:10px;min-width:0}

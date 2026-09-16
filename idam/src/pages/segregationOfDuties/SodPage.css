@@ -1,0 +1,13 @@
+/* Page-owned styles for SodPage. Shared primitives remain in src/styles. */
+
+/* --- Exception register ------------------------------------------------------
+   One column per entitlement in the combination. Held and not-held are glyphs
+   rather than words: a reader scanning eleven columns is looking for a shape,
+   and eleven repetitions of "TRUE" is not one. */
+.sod-held{text-align:center}
+.sod-yes,.sod-no{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;
+}
+.sod-yes{background:var(--ok-bg);color:var(--ok)}
+.sod-no{background:var(--bad-bg);color:var(--bad)}

@@ -1,0 +1,541 @@
+/* Page-owned styles for ConfigurationsPage. Shared primitives remain in src/styles. */
+
+/* ---- Username / User Email policy panels ---- */
+.cfg-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .cfg-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cfg-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.cfg-token {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--r);
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background var(--dur-2) var(--ease);
+}
+.cfg-token:hover { background: var(--accent-bg-2); }
+
+.cfg-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.cfg-preview-id {
+  font-size: var(--t-h1);
+  font-weight: var(--w-semi);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+/* ---- Combination rule: one row per selected attribute ---- */
+/* The multi-select chooses and orders the attributes; the rows beneath it show
+   how each one is treated and carry the overrides. A row reads its whole
+   treatment closed, so the common case (whole value, shared separator) never
+   needs opening. The handle is always drawn: a reorder affordance that only
+   appears on hover is invisible on touch and to anyone reading the list. */
+.cfg-seq { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
+.cfg-seq-row { border-bottom: 1px solid var(--hair); transition: background var(--dur-1) var(--ease); }
+.cfg-seq-row:last-child { border-bottom: 0; }
+.cfg-seq-row[data-dragging] { opacity: .45; }
+.cfg-seq-row[data-drop="before"] { box-shadow: inset 0 2px 0 var(--accent); }
+.cfg-seq-row[data-drop="after"] { box-shadow: inset 0 -2px 0 var(--accent); }
+.cfg-seq-row[data-open] { background: var(--surface-2); }
+.cfg-seq-head { display: flex; align-items: center; gap: var(--sp-2); min-height: 38px; padding: 4px 8px 4px 6px; }
+.cfg-grip { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 28px;
+  border-radius: var(--r-sm); color: var(--mut); cursor: grab;
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
+.cfg-grip:hover { background: var(--surface-3); color: var(--ink); }
+.cfg-grip:active { cursor: grabbing; }
+.cfg-grip:focus-visible { outline: none; box-shadow: var(--sh-focus); }
+.cfg-grip[data-off] { cursor: default; opacity: .35; }
+.cfg-grip[data-off]:hover { background: none; color: var(--mut); }
+.cfg-seq-name { flex: 0 1 150px; min-width: 0; font-size: var(--t-sm); font-weight: var(--w-semi); color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfg-seq-sum { flex: 1; min-width: 0; font-size: var(--t-xs); color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cfg-seq-sum[data-custom] { color: var(--accent-a); }
+.cfg-seq-sum b { font-family: var(--mono); font-weight: var(--w-reg); color: var(--ink-2); }
+/* Up / down sit beside the handle for anyone without a pointer or arrow keys. */
+.cfg-seq-nudge { display: inline-flex; gap: 0; flex: none; }
+.cfg-seq-nudge .btn-icon { width: 22px; height: 24px; }
+.cfg-seq-nudge .btn-icon svg { width: 12px; height: 12px; }
+.cfg-seq-adjust { display: inline-flex; align-items: center; gap: 4px; flex: none; height: 26px; padding: 0 8px;
+  border-radius: var(--r-sm); font-size: var(--t-xs); font-weight: var(--w-semi); color: var(--accent-a); cursor: pointer;
+  transition: background var(--dur-1) var(--ease); }
+.cfg-seq-adjust:hover { background: var(--accent-bg); }
+.cfg-seq-adjust:focus-visible { outline: none; box-shadow: var(--sh-focus); }
+.cfg-seq-adjust svg { transition: transform var(--dur-2) var(--ease); }
+.cfg-seq-adjust[aria-expanded="true"] svg { transform: rotate(180deg); }
+.cfg-seq-body { display: grid; grid-template-columns: 92px minmax(0, 1fr); row-gap: 12px; column-gap: var(--sp-3);
+  padding: 4px 12px 14px 38px; border-top: 1px dashed var(--hair); }
+.cfg-seq-k { font-size: var(--t-xs); font-weight: var(--w-semi); color: var(--ink-2); padding-top: 5px; }
+.cfg-choices { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cfg-choice { display: flex; align-items: center; gap: 8px; min-height: 26px; font-size: var(--t-sm); color: var(--ink-2); cursor: pointer; }
+.cfg-choice input[type="radio"] { width: 14px; height: 14px; margin: 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+.cfg-choice input[type="radio"]:focus-visible { outline: none; box-shadow: var(--sh-focus); border-radius: 50%; }
+.cfg-choice[data-on] { color: var(--ink); }
+.cfg-choice .inp, .cfg-choice .sel { height: 26px; }
+/* The box of an unchosen option stays live (clicking it chooses the option) but reads as secondary. */
+.cfg-choice:not([data-on]) .inp, .cfg-choice:not([data-on]) .sel { opacity: .6; }
+.cfg-choice-n { width: 64px !important; text-align: center; }
+.cfg-choice-sel { width: 92px !important; }
+.cfg-choice-note { font-size: var(--t-xs); color: var(--mut); }
+.cfg-choice-err { display: flex; align-items: center; gap: 4px; font-size: var(--t-xs); color: var(--bad); }
+.cfg-seq-empty { padding: 10px 12px; font-size: var(--t-xs); color: var(--mut); }
+.cfg-seq-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 640px) {
+  .cfg-seq-body { grid-template-columns: minmax(0, 1fr); padding-left: 12px; }
+  .cfg-seq-name { flex-basis: 110px; }
+}
+
+/* ---- Employee type applicability matrix ---- */
+/* The grid must survive any number of employee types: the attribute column is
+   pinned, the body scrolls sideways under a sticky header, and columns can be
+   hidden without losing their values. */
+.etm-card .card-h-actions{flex-wrap:wrap;justify-content:flex-end}
+.etm-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.etm-unsaved{color:var(--warn);font-weight:var(--w-semi)}
+.etm-bar{border-bottom:1px solid var(--hair)}
+.etm-bar .wb-search{flex:0 1 260px;min-width:200px}
+.etm-bar .sel,.etm-bar select{max-width:200px}
+.etm-bar-r{display:flex;align-items:center;gap:var(--sp-3);margin-left:auto}
+.etm-cols{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.etm-cols .chip{height:25px;padding:0 8px}
+.etm-cols .chip[data-on="false"]{opacity:.62;text-decoration:line-through;text-decoration-color:var(--line-2)}
+.etm-chip-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none}
+.etm-legend{display:inline-flex;align-items:center;gap:12px;font-size:var(--t-xs);color:var(--mut);white-space:nowrap}
+.etm-legend > span{display:inline-flex;align-items:center;gap:5px}
+
+.etm-scroll{max-height:min(66vh,720px)}
+.etm-tbl{table-layout:fixed}
+.etm-tbl th,.etm-tbl td{white-space:nowrap}
+.etm-th-attr,.etm-td-attr{position:sticky;left:0;z-index:2;width:260px;min-width:260px;max-width:260px;
+  background:var(--surface);box-shadow:inset -1px 0 0 var(--line)}
+.etm-tbl thead .etm-th-attr{z-index:4;background:var(--surface-2)}
+.etm-tbl tbody tr:hover .etm-td-attr{background:var(--row-hover)}
+.etm-th{text-align:center;width:120px;min-width:120px;padding:0 4px;height:auto}
+.etm-th[data-active]{background:var(--accent-bg)}
+.etm-th-row,.etm-td-row{width:40px;min-width:40px;text-align:right;padding-right:8px !important}
+/* A column header is the column's menu: bulk set, copy, hide, remove. */
+.etm-th-btn{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:5px 4px;
+  border-radius:var(--r-sm);font:inherit;color:inherit;text-transform:none;letter-spacing:0;cursor:pointer;
+  transition:background var(--dur-1) var(--ease)}
+.etm-th-btn:hover{background:var(--surface-3)}
+.etm-th-btn:hover .etm-th-chev{opacity:1}
+.etm-th-name{display:inline-flex;align-items:center;gap:5px;max-width:100%;font-size:var(--t-xs);font-weight:var(--w-semi);
+  letter-spacing:0;text-transform:none;color:var(--ink);line-height:1.15}
+.etm-th-name .trunc{white-space:normal;overflow:visible;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.etm-th-name svg{flex:none;opacity:1 !important;color:var(--accent)}
+.etm-th-chev{opacity:0;transition:opacity var(--dur-1) var(--ease);color:var(--mut) !important}
+.etm-th-sub{display:inline-flex;align-items:center;gap:4px;font-size:var(--t-micro);font-weight:var(--w-reg);color:var(--mut);letter-spacing:0;text-transform:none}
+.etm-th-sub b{color:var(--ink-2)}
+
+.etm-grp td{background:var(--surface-2);padding:0 !important;height:30px;border-bottom:1px solid var(--hair);
+  position:sticky;left:0}
+.etm-grp-btn{display:flex;align-items:center;gap:8px;width:100%;height:30px;padding:0 var(--sp-4);text-align:left;
+  font-size:var(--t-xs);color:var(--ink);position:sticky;left:0;max-width:100%}
+.etm-grp-btn:hover{background:var(--surface-3)}
+.etm-grp-chev{color:var(--faint);transition:transform var(--dur-2) var(--ease)}
+
+.etm-attr{min-width:0}
+.etm-attr-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;
+  border-radius:var(--r-sm);background:var(--surface-3);border:1px solid var(--line);color:var(--mut)}
+.etm-attr-ic[data-core]{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.etm-cell{text-align:center;padding:4px 4px !important}
+.etm-cell[data-active]{background:var(--accent-bg)}
+
+/* One cell: a compact three-state toggle. Width is fixed so columns line up
+   whatever the label; a value away from its default carries a dot. */
+.etm-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:5px;width:96px;height:24px;
+  font-size:var(--t-xs);font-weight:var(--w-semi);border-radius:var(--r-sm);border:1px solid var(--line);
+  background:var(--surface-2);color:var(--mut);cursor:pointer;
+  transition:background var(--dur-2) var(--ease),color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease),transform var(--dur-1) var(--ease)}
+.etm-btn.is-wide{width:auto;padding:0 10px}
+.etm-btn svg{flex:none}
+.etm-btn:hover{border-color:var(--line-2);color:var(--ink)}
+.etm-btn:active{transform:scale(.97)}
+.etm-btn:focus-visible{outline:none;box-shadow:var(--sh-focus);border-color:var(--accent)}
+.etm-btn[data-state="opt"]{background:var(--info-bg);border-color:var(--info-line);color:var(--info)}
+.etm-btn[data-state="req"]{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.etm-btn[data-lock]{cursor:not-allowed;opacity:.9}
+.etm-btn[data-changed]::after{content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 0 2px var(--surface)}
+
+.etm-dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--line-2);flex:none}
+.etm-dot[data-state="opt"]{background:var(--info)}
+.etm-dot[data-state="req"]{background:var(--warn-core)}
+.etm-dot[data-changed]{background:var(--accent)}
+.etm-none{padding:var(--sp-6) var(--sp-4) !important;text-align:center;color:var(--mut);font-size:var(--t-sm)}
+
+/* Stacked label + sub outside a table cell (rail, pane header, pane rows). */
+.etm-card .cell-stack{display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}
+.etm-card .cell-stack .cell-sub{margin-top:0}
+
+/* By-type view: rail of types on the left, one column edited on the right. */
+.etm-split{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:420px}
+.etm-rail{display:flex;flex-direction:column;border-right:1px solid var(--hair);background:var(--surface-2);min-width:0}
+.etm-rail-search{margin:10px 10px 4px;width:auto !important;height:28px}
+.etm-rail-list{display:flex;flex-direction:column;gap:1px;padding:8px;overflow:auto;max-height:min(60vh,640px);flex:1}
+.etm-rail-it{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border-radius:var(--r);text-align:left;
+  font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink-2);border:1px solid transparent;
+  transition:background var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
+.etm-rail-it:hover{background:var(--surface-3)}
+.etm-rail-it[data-on]{background:var(--surface);border-color:var(--accent-line);color:var(--ink);box-shadow:var(--sh)}
+.etm-rail-it .cell-stack{flex:1;min-width:0}
+.etm-rail-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:26px;height:26px;border-radius:var(--r-sm);
+  background:var(--accent-bg);border:1px solid var(--accent-line);color:var(--accent-a)}
+.etm-rail-ic[data-nonhuman]{background:var(--viol-bg);border-color:var(--viol-line);color:var(--viol)}
+.etm-rail-ic.lg{width:36px;height:36px;border-radius:var(--r)}
+.etm-rail-add{display:flex;align-items:center;gap:7px;margin:4px 8px 10px;padding:8px 10px;border-radius:var(--r);
+  border:1px dashed var(--line-2);font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--accent-a)}
+.etm-rail-add:hover{background:var(--accent-bg);border-color:var(--accent-line)}
+.etm-pane{display:flex;flex-direction:column;min-width:0}
+.etm-pane-h{display:flex;align-items:center;gap:12px;padding:12px var(--sp-4);border-bottom:1px solid var(--hair);flex-wrap:wrap}
+.etm-pane-title{font-size:var(--t-h3);color:var(--ink)}
+.etm-pane-acts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.etm-pane-list{overflow:auto;max-height:min(60vh,640px)}
+.etm-pane-grp header{display:flex;align-items:center;gap:8px;padding:7px var(--sp-4);background:var(--surface-2);
+  border-bottom:1px solid var(--hair);font-size:var(--t-xs);color:var(--ink);position:sticky;top:0;z-index:1}
+.etm-pane-row{display:flex;align-items:center;gap:var(--sp-3);padding:6px var(--sp-4);border-bottom:1px solid var(--hair)}
+.etm-pane-row:hover{background:var(--row-hover)}
+.etm-pane-row[data-changed]{box-shadow:inset 2px 0 0 var(--accent)}
+.etm-pane-row .etm-attr{flex:1;min-width:0}
+.etm-seg{flex:none}
+.etm-seg button{height:26px;padding:0 9px;font-size:var(--t-xs)}
+.etm-seg button[data-on="true"][data-state="req"]{background:var(--warn-bg);color:var(--warn)}
+.etm-seg button[data-on="true"][data-state="opt"]{background:var(--info-bg);color:var(--info)}
+.etm-seg button[data-on="true"][data-state="off"]{background:var(--surface-3);color:var(--ink-2)}
+.etm-preview{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--surface-2);font-size:var(--t-sm);color:var(--ink);flex-wrap:wrap}
+.etm-preview svg{color:var(--accent)}
+
+@media (max-width:900px){
+  .etm-split{grid-template-columns:1fr}
+  .etm-rail{border-right:none;border-bottom:1px solid var(--hair)}
+  .etm-rail-list{flex-direction:row;flex-wrap:wrap;max-height:none}
+  .etm-rail-it{width:auto}
+  .etm-bar-r{margin-left:0}
+}
+
+/* ---- CSV upload form (lookups + multi-level lookups) ---- */
+.csv-drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.csv-drop-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.csv-preview {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.csv-preview-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.csv-preview .tbl { border: 0; }
+
+/* ---- Editor panels (attributes, sections, lookups, smart populate) ---- */
+/* A rule the platform enforces should be visible, not merely absent: where a
+   control is replaced by a fixed value, or a guard is worth stating before it
+   fires, these carry the explanation at the weight of a hint rather than of a
+   warning. */
+.cfg-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  font-size: var(--t-sm);
+  line-height: var(--t-sm-lh);
+  color: var(--mut);
+}
+.cfg-note b { color: var(--ink-2); font-weight: var(--w-semi); }
+.cfg-note code {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: var(--accent);
+}
+.cfg-ops { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+
+.cfg-fixed { display: inline-flex; align-items: center; min-height: 32px; }
+
+/* The entry table shared by lookups and smart populate. It carries the whole
+   list rather than a set of pending additions, because saving replaces it. */
+.cfg-pairs {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.cfg-pairs-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.cfg-pairs .tbl { border: 0; }
+.cfg-pairs .tbl td { padding-top: 5px; padding-bottom: 5px; }
+.cfg-pairs .inp { height: 28px; }
+
+/* Condition problems are listed as they are typed: a mistyped attribute name
+   is otherwise silent — the rule parses and then never fires. */
+.cfg-errors {
+  margin-top: 12px;
+  border: 1px solid var(--bad-line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.cfg-error-row {
+  padding: 7px 12px;
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+}
+.cfg-error-row + .cfg-error-row { border-top: 1px solid var(--bad-line); }
+
+/* A default attribute is shown, not hidden, so its protection is legible. */
+.cell-id[data-locked="true"] { color: var(--mut); }
+
+/* ---- Single-option add and remove inside the lookup / rule editors ---- */
+/* The server replaces the whole list on save, but the everyday job is one
+   option in or one option out. The quick-add strip is that single action; the
+   table below stays the complete list that Submit actually sends. */
+.cfg-quick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: 14px;
+  padding: 9px 11px;
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--accent-bg);
+}
+.cfg-quick-l {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--t-xs);
+  font-weight: var(--w-semi);
+  color: var(--accent-a);
+  white-space: nowrap;
+}
+.cfg-quick .inp { height: 28px; }
+@media (max-width: 620px) {
+  .cfg-quick { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cfg-pairs-scroll { max-height: min(46vh, 420px); overflow: auto; }
+.cfg-pairs-find { flex: 0 1 190px; min-width: 140px; height: 26px; }
+
+.cfg-delta {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 8px;
+  font-size: var(--t-xs);
+  line-height: var(--t-xs-lh);
+  color: var(--mut);
+}
+.cfg-delta svg { flex: none; margin-top: 2px; color: var(--faint); }
+.cfg-delta b { color: var(--ink-2); font-weight: var(--w-semi); }
+
+/* ---- Multi-level lookup: the hierarchy view ---- */
+/* A flat six-column table shows the rows but not the shape. Folding the
+   repeated prefixes back up is the only view in which the cascade — the thing
+   the lookup exists to provide — is actually visible. */
+.mll-card .card-h-actions { flex-wrap: wrap; justify-content: flex-end; }
+
+.mll-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: 8px var(--sp-4);
+  border-bottom: 1px solid var(--hair);
+  background: var(--surface-2);
+}
+.mll-search { flex: 0 1 280px; min-width: 180px; }
+
+.mll-lvl {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  letter-spacing: var(--t-micro-ls);
+  text-transform: uppercase;
+  color: var(--mut);
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+.mll-tree { max-height: min(62vh, 660px); overflow: auto; padding: var(--sp-2) 0; }
+/* The option and its stored value are one fact and stay together; the slack
+   goes after them, so the count is what sits against the right edge rather
+   than the option name being stretched across the whole panel. */
+.mll-node {
+  display: grid;
+  grid-template-columns: 22px auto minmax(0, auto) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 30px;
+  padding: 3px var(--sp-4) 3px var(--sp-2);
+  border-radius: var(--r-sm);
+}
+.mll-node:hover { background: var(--row-hover); }
+.mll-node[data-hit] { box-shadow: inset 2px 0 0 var(--accent); }
+.mll-node[data-depth="0"] .mll-opt { font-weight: var(--w-semi); color: var(--ink); }
+
+.mll-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  color: var(--mut);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease);
+}
+.mll-toggle:hover { background: var(--surface-3); color: var(--ink); }
+.mll-toggle:focus-visible { outline: none; box-shadow: var(--sh-focus); }
+.mll-toggle svg { transition: transform var(--dur-2) var(--ease); }
+.mll-toggle.is-leaf { cursor: default; color: var(--faint); }
+.mll-toggle.is-leaf:hover { background: transparent; }
+
+.mll-opt { font-size: var(--t-sm); color: var(--ink-2); min-width: 0; }
+.mll-val { font-size: var(--t-xs); color: var(--mut); white-space: nowrap; }
+.mll-count { display: inline-flex; align-items: center; justify-self: end; gap: 6px; white-space: nowrap; }
+
+/* Nesting carries the indent, with a guide line so a deep branch stays readable. */
+.mll-kids { margin-left: 21px; border-left: 1px solid var(--hair); }
+.mll-none { padding: var(--sp-6) var(--sp-4); text-align: center; color: var(--mut); font-size: var(--t-sm); }
+
+/* --- Value sets ------------------------------------------------------------
+   The lookups register as master-detail: the sets on the left with their
+   sizes, the one being read open beside them. A lookup is a short list read
+   against one other list, and a paged table of lookups answered neither
+   without a round trip into a drawer. */
+.vs{display:grid;grid-template-columns:264px minmax(0,1fr);gap:var(--sp-4);align-items:start}
+
+.vs-side{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  overflow:hidden;position:sticky;top:0}
+.vs-side-h{display:flex;align-items:center;gap:var(--sp-3);padding:11px var(--sp-4);
+  border-bottom:1px solid var(--hair)}
+.vs-side-m{flex:1;min-width:0}
+.vs-side-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.vs-side-s{font-size:var(--t-xs);color:var(--mut);margin-top:1px}
+.vs-list{display:flex;flex-direction:column;padding:6px;gap:1px;max-height:min(66vh,620px);overflow-y:auto}
+
+/* The selected set is marked on its leading edge rather than by weight alone:
+   the names are already mono and one of them being bolder is not a reliable
+   signal at a glance down a list of nine. */
+.vs-it{display:flex;align-items:center;gap:8px;width:100%;min-width:0;
+  padding:0 9px;height:32px;border-radius:var(--r-sm);border:0;background:none;
+  cursor:pointer;text-align:left;position:relative;color:var(--ink-2);
+  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.vs-it:hover{background:var(--surface-2);color:var(--ink)}
+.vs-it:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+.vs-it > svg{flex:none;color:var(--faint)}
+.vs-it-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:var(--t-sm)}
+.vs-it-c{flex:none;min-width:20px;height:18px;padding:0 5px;border-radius:var(--r-pill);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:var(--t-micro);font-variant-numeric:tabular-nums;
+  background:var(--surface-3);color:var(--mut)}
+.vs-it[data-on]{background:var(--accent-bg);color:var(--accent-deep);font-weight:var(--w-semi)}
+.vs-it[data-on] > svg{color:var(--accent)}
+.vs-it[data-on] .vs-it-c{background:var(--surface);color:var(--accent-deep)}
+.vs-it[data-on]::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;
+  border-radius:0 2px 2px 0;background:var(--accent)}
+
+.vs-main{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  min-width:0;overflow:hidden}
+.vs-main-h{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;
+  padding:11px var(--sp-4);border-bottom:1px solid var(--hair)}
+.vs-main-m{flex:1;min-width:0}
+.vs-main-t{margin:0;font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.vs-main-s{font-size:var(--t-xs);color:var(--mut);margin-top:2px}
+.vs-main-a{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+.vs-tbl-wrap{overflow-x:auto}
+.vs-tbl{width:100%}
+.vs-tbl th{white-space:nowrap}
+.vs-c-n{width:52px}
+.vs-c-s{width:132px}
+/* Reserved whether or not the control is showing, so a row does not reflow
+   under the pointer as it arrives. */
+.vs-c-a{width:56px;text-align:right}
+.vs-none{padding:22px var(--sp-4);font-size:var(--t-sm);color:var(--mut)}
+
+/* The control appears on the row under the pointer, and on the row holding
+   focus — otherwise it is unreachable from the keyboard. */
+.vs-acts{display:inline-flex;align-items:center;gap:2px;justify-content:flex-end;
+  opacity:0;transition:opacity var(--dur-1) var(--ease)}
+.vs-tbl tr:hover .vs-acts,
+.vs-acts:focus-within{opacity:1}
+
+.vs-foot{display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  padding:10px var(--sp-4);border-top:1px solid var(--hair);background:var(--surface-2)}
+.vs-foot-k{font-size:var(--t-xs);color:var(--mut)}
+.vs-foot .link{font-size:var(--t-xs);display:inline-flex;align-items:center;gap:4px}
+.vs-foot-del{color:var(--bad)}
+
+/* Under a laptop width the sidebar stops being a column and becomes the strip
+   of sets above the one being read. */
+@media (max-width:1000px){
+  .vs{grid-template-columns:1fr}
+  .vs-side{position:static}
+  .vs-list{flex-direction:row;flex-wrap:wrap;max-height:none}
+  .vs-it{width:auto;flex:0 0 auto}
+  .vs-it[data-on]::before{display:none}
+  .vs-it[data-on]{box-shadow:inset 0 0 0 1px var(--accent-line)}
+}

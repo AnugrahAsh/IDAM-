@@ -1,10 +1,10 @@
 import {
-  APPLICATIONS, ATTR_MAPPINGS, DIRECTORIES, ORGS, SSO_APPS,
+  APPLICATIONS, ATTR_MAPPINGS, DIRECTORIES, ORGS, SSO_APPS, USERS,
 } from '../../data/seed'
 import {
   CONNECTORS, IDAM_ATTRS, brandFor as provisioningBrand, kindOf, mappingsFor, operationsFor,
   profileFor, settingsFor, withDescription,
-} from '../provisioning/shared'
+} from '../shared/provisioning/shared'
 import { defaultsFor } from './ssoFields'
 
 export { CONNECTORS, kindOf, profileFor }
@@ -104,19 +104,23 @@ export const BEARER_DEFAULT = BEARER_METHODS[0]
 export const BEARER_DYNAMIC = BEARER_METHODS[1]
 
 /**
- * API connector sub-type (client items 6 and 9).
+ * The two HTTP connectors.
  *
- * This is a sub-type rather than a second top-level connector because both
- * variants speak HTTP to the same base URL with the same credential — only the
- * shape of the call differs. Making it a connector of its own would have forked
- * the id, and every application already pointing at `api` would have had to be
- * migrated to keep working.
+ * REST API and Custom API used to be one connector with an `apiType` sub-type.
+ * They are two entries in the catalogue now (`CONNECTOR_TYPES` in the seed):
+ * the REST connector drives one base URL and keeps the fields it always had,
+ * and the Custom API connector carries its own configuration — authentication,
+ * token API, response keys, and one API plus one attribute mapping per
+ * lifecycle operation. Records written under the old sub-type are read through
+ * `migrateProvisioningFacet` so nothing already registered stops working.
  */
-export const API_TYPES = ['REST API', 'Custom API']
-export const API_REST = API_TYPES[0]
-export const API_CUSTOM = API_TYPES[1]
+export const REST_API_CONNECTOR = 'api'
+export const CUSTOM_API_CONNECTOR = 'custom'
+export const isCustomApiConnector = (connector) => connector === CUSTOM_API_CONNECTOR
 
-export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+/** The one list every HTTP method dropdown reads from. */
+export const apiMethodOptions = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+export const HTTP_METHODS = apiMethodOptions
 
 // Categories the platform knows how to act on: a validation error is a bad
 // record and is not retried, an auth error stops the run, a server error and a
@@ -130,7 +134,6 @@ const isBearer = (c) => c.authType === AUTH_BEARER_TYPE
 const isBasic = (c) => c.authType === AUTH_BASIC
 const isDynamicBearer = (c) => isBearer(c) && c.authMethod === BEARER_DYNAMIC
 const isDefaultBearer = (c) => isBearer(c) && c.authMethod !== BEARER_DYNAMIC
-const isCustomApi = (c) => c.apiType === API_CUSTOM
 
 /* Lifecycle sections follow the operations ticked for the application, not the
    connection: a connector that may not delete is never asked for a delete
@@ -195,7 +198,6 @@ export const CONNECTION_SPECS = {
    */
   Custom: [
     { group: 'Connection', id: 'baseUrl', label: 'Base URL', required: true, mono: true, span: 2, placeholder: 'https://api.example.com/v1' },
-    { group: 'Connection', id: 'apiType', label: 'API connector type', options: API_TYPES, hint: 'A REST API connector drives one resource path. A custom API connector takes an endpoint and a verb for each operation.' },
     {
       group: 'Connection',
       id: 'timeoutSeconds',
@@ -321,7 +323,174 @@ export const CONNECTION_SPECS = {
   Manual: [],
 }
 
-export const specFor = (connector) => CONNECTION_SPECS[kindOf(connector)] || CONNECTION_SPECS.Custom
+// ---------------------------------------------------------------------------
+// The Custom API connector.
+//
+// Its own connector, not a variant of REST. Every field below belongs to it
+// alone: the authentication applied to every API it calls, the token API a
+// default bearer connector mints from, the keys a response is read by, and one
+// API configuration per lifecycle operation the application is allowed to
+// perform. Field ids follow the connector's own configuration names
+// (`maxAPIRequestTimeout`, `getTokenAPIUrl`, `createUserAPIUrl`, …) rather than
+// the REST connector's, so the two never share a stored key by accident.
+// ---------------------------------------------------------------------------
+
+/** Value formats offered on a Create or Update attribute mapping row. */
+export const CUSTOM_API_VALUE_FORMATS = ['Direct', 'Lowercase', 'Uppercase', 'Trim', 'Concatenate', 'Lookup']
+
+/* Which application attributes a Custom API connection already names, so the
+   unique attribute can be chosen from them as well as from the catalogue. */
+const customApiAppAttributes = (conn = {}) => [
+  ...(conn.getUserMappings || []).map((r) => r.applicationAttribute),
+  ...(conn.createMappings || []).map((r) => r.applicationAttribute),
+  ...(conn.updateMappings || []).map((r) => r.applicationAttribute),
+  conn.uniqueAppAttribute,
+].map((v) => String(v || '').trim()).filter(Boolean)
+
+const customApiUniqueOptions = (conn = {}) =>
+  [...new Set([...TARGET_ATTR_CATALOG.Custom, ...customApiAppAttributes(conn)])]
+
+const uniqueIdamOptions = () => IDAM_ATTRS
+
+/* The unique attribute pair is asked for once, on the first lifecycle section
+   that needs it: Create when the application may create, otherwise Update. The
+   two entries share an id and are never visible together, so the value is one
+   value however it is reached. */
+const uniquePairFields = (group, when) => [
+  {
+    group,
+    id: 'uniqueAppAttribute',
+    label: 'Application unique attribute',
+    mono: true,
+    options: customApiUniqueOptions,
+    placeholder: 'Select an application attribute',
+    when,
+    required: when,
+    hint: 'The attribute an account is identified by on the target. Changing it clears the Create and Update attribute mappings.',
+  },
+  {
+    group,
+    id: 'uniqueIdamAttribute',
+    label: 'IDAM unique attribute',
+    options: uniqueIdamOptions,
+    placeholder: 'Select an IDAM attribute',
+    when,
+    required: when,
+    hint: 'The identity attribute matched against it during provisioning and reconciliation.',
+  },
+]
+
+const payloadField = (group, id, label, extra = {}) => ({
+  group,
+  id,
+  label,
+  type: 'textarea',
+  mono: true,
+  rows: 5,
+  span: 2,
+  json: true,
+  ...extra,
+})
+
+export const CUSTOM_API_SPEC = [
+  // -- Authentication. Applied to every API in this configuration. ---------
+  { group: 'Authentication', id: 'authType', label: 'Auth type', required: true, options: AUTH_TYPES, default: AUTH_BEARER_TYPE, hint: 'The authentication mechanism used by every API configured below.' },
+  {
+    group: 'Authentication',
+    id: 'maxAPIRequestTimeout',
+    label: 'API request timeout (seconds)',
+    required: true,
+    numeric: true,
+    default: '30',
+    min: 1,
+    max: 600,
+    placeholder: '30',
+    hint: 'How long the platform waits for an API response before the request is treated as failed.',
+  },
+  { group: 'Authentication', id: 'username', label: 'Username', mono: true, when: isBasic, required: isBasic },
+  // Registered without required validation, as the connector's own form does
+  // (validation summary: "Basic Password — registered without required
+  // validation").
+  { group: 'Authentication', id: 'password', label: 'Password', secret: true, when: isBasic },
+  { group: 'Authentication', id: 'authMethod', label: 'Auth method', options: BEARER_METHODS, default: BEARER_DEFAULT, when: isBearer, required: isBearer, hint: 'Default obtains a token from the Get Token API below. Dynamic sends the authorization value supplied here.' },
+  {
+    group: 'Authentication',
+    id: 'authorization',
+    label: 'Authorization',
+    secret: true,
+    span: 2,
+    when: isDynamicBearer,
+    required: isDynamicBearer,
+    hint: 'The authorization value sent on every API request. Extra key/value pairs can be added beneath it.',
+  },
+
+  // -- Get Token API. Only a default bearer connector mints its own token. -
+  // The connector's form marks the token URL and method as required while
+  // registering them as optional. Treated as required here: a default bearer
+  // connector with no token endpoint cannot authenticate a single call.
+  { group: 'Get Token API', id: 'getTokenAPIUrl', label: 'Get Token API URL', mono: true, span: 2, when: isDefaultBearer, required: isDefaultBearer, placeholder: 'https://example.com/oauth/token' },
+  { group: 'Get Token API', id: 'getTokenAPIMethod', label: 'Get Token API method', options: apiMethodOptions, default: 'POST', when: isDefaultBearer, required: isDefaultBearer },
+  { group: 'Get Token API', id: 'clientId', label: 'Client ID', mono: true, when: isDefaultBearer, required: isDefaultBearer },
+  { group: 'Get Token API', id: 'clientSecret', label: 'Client secret', secret: true, when: isDefaultBearer, required: isDefaultBearer },
+  payloadField('Get Token API', 'getTokenAPIPayload', 'Get Token API payload', {
+    when: isDefaultBearer,
+    required: isDefaultBearer,
+    placeholder: '{\n  "grant_type": "client_credentials"\n}',
+    hint: 'Body sent to the token endpoint. Validated as JSON when the field loses focus.',
+  }),
+
+  // -- How a response is read. Every key is optional. ---------------------
+  { group: 'Get Response Error Keys', id: 'successKey', label: 'Success key', mono: true, placeholder: 'status', hint: 'Key in the response body that says whether a call succeeded.' },
+  { group: 'Get Response Error Keys', id: 'successValue', label: 'Success value', mono: true, placeholder: 'success', hint: 'The value that key carries on a successful call.' },
+  { group: 'Get Response Error Keys', id: 'messageKey', label: 'Message key', mono: true, placeholder: 'message', hint: 'Key carrying the human-readable outcome.' },
+  { group: 'Get Response Error Keys', id: 'errorKey', label: 'Error key', mono: true, placeholder: 'error', hint: 'Key that carries the failure reason. The error classification keywords beneath are matched against it.' },
+
+  // -- Get User. Always configured. ---------------------------------------
+  { group: 'Get User API Configurations', id: 'getUserAPIUrl', label: 'Get API URL', mono: true, span: 2, placeholder: 'https://example.com/api/users', hint: 'Endpoint the connector retrieves users from.' },
+  { group: 'Get User API Configurations', id: 'getUserAPIMethod', label: 'Get API method', options: apiMethodOptions, default: 'GET' },
+  payloadField('Get User API Configurations', 'getUserAPIPayload', 'Get API payload', {
+    required: true,
+    default: '{}',
+    placeholder: '{}',
+    hint: 'Body sent on the read. Validated as JSON when the field loses focus.',
+  }),
+
+  // -- Create. Shown only when the application may create accounts. --------
+  { group: 'Create User API Configurations', id: 'createUserAPIUrl', label: 'Create API URL', mono: true, span: 2, url: true, when: canCreate, required: canCreate, placeholder: 'https://example.com/api/users' },
+  { group: 'Create User API Configurations', id: 'createUserAPIMethod', label: 'Create API method', options: apiMethodOptions, default: 'POST', when: canCreate, required: canCreate },
+  payloadField('Create User API Configurations', 'createUserAPIPayload', 'Create API payload', {
+    when: canCreate,
+    required: canCreate,
+    placeholder: '{\n  "userName": "{username}",\n  "email": "{email}"\n}',
+    hint: 'A {token} is replaced with the value the Create attribute mapping writes for it.',
+  }),
+  ...uniquePairFields('Create User API Configurations', canCreate),
+
+  // -- Update. The same shape as Create, against the update endpoint. ------
+  { group: 'Update User API Configurations', id: 'updateUserAPIUrl', label: 'Update API URL', mono: true, span: 2, url: true, when: canUpdate, required: canUpdate, placeholder: 'https://example.com/api/users/{id}' },
+  { group: 'Update User API Configurations', id: 'updateUserAPIMethod', label: 'Update API method', options: apiMethodOptions, default: 'PUT', when: canUpdate, required: canUpdate },
+  payloadField('Update User API Configurations', 'updateUserAPIPayload', 'Update API payload', {
+    when: canUpdate,
+    required: canUpdate,
+    placeholder: '{\n  "email": "{email}"\n}',
+    hint: 'A {token} is replaced with the value the Update attribute mapping writes for it.',
+  }),
+  ...uniquePairFields('Update User API Configurations', (c, ctx) => !canCreate(c, ctx) && canUpdate(c, ctx)),
+
+  // -- Delete. An endpoint and a verb; there is no body to send. -----------
+  { group: 'Delete User API Configurations', id: 'deleteUserAPIUrl', label: 'Delete API URL', mono: true, span: 2, url: true, when: canDelete, required: canDelete, placeholder: 'https://example.com/api/users/{id}' },
+  { group: 'Delete User API Configurations', id: 'deleteUserAPIMethod', label: 'Delete API method', options: apiMethodOptions, default: 'DELETE', when: canDelete, required: canDelete },
+]
+
+/* A connector with a spec of its own is looked up by id before its kind, so
+   the two HTTP connectors share a family without sharing a form. */
+const CONNECTOR_SPECS = { [CUSTOM_API_CONNECTOR]: CUSTOM_API_SPEC }
+
+export const specFor = (connector) =>
+  CONNECTOR_SPECS[connector] || CONNECTION_SPECS[kindOf(connector)] || CONNECTION_SPECS.Custom
+
+/** The options a select field offers, for the connection as it currently reads. */
+export const fieldOptions = (f, conn = {}, ctx = {}) => (typeof f.options === 'function' ? f.options(conn, ctx) : f.options)
 
 /** Whether a conditional field applies to the connection as it currently reads. */
 /* `ctx` carries what the connection itself cannot know — currently the
@@ -446,37 +615,199 @@ export const errorClassIssues = (conn = {}) => {
 export const blankConnection = (connector) => {
   const out = {}
   specFor(connector).forEach((f) => {
-    out[f.id] = f.default != null ? f.default : f.options ? f.options[0] : ''
+    // A select whose options depend on the connection starts empty: there is
+    // nothing to pick from until the operator has named some attributes.
+    out[f.id] = f.default != null ? f.default : Array.isArray(f.options) ? f.options[0] : ''
   })
   if (out.port !== undefined) out.port = profileFor(connector).port || ''
   if (kindOf(connector) === 'Custom') {
     out.errorClasses = blankErrorClasses()
     out.authExtras = blankAuthExtras()
   }
+  if (isCustomApiConnector(connector)) {
+    out.getUserMappings = []
+    out.createMappings = []
+    out.updateMappings = []
+  }
   return out
 }
 
+// ---------------------------------------------------------------------------
+// Custom API attribute mappings.
+//
+// Operation-specific: Get, Create and Update each carry their own table, so
+// the attributes read back from the target and the attributes written on a
+// create can differ, as they do on most real APIs. A Get row is a pair; a
+// Create or Update row also says whether the value may be blank, whether the
+// key must be present at all, how the value is formatted, and whether the
+// application attribute name was typed by hand.
+// ---------------------------------------------------------------------------
+
+export const blankGetUserMapping = (rows = []) => ({
+  id: rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1,
+  applicationAttribute: '',
+  idamAttribute: '',
+})
+
+export const blankLifecycleMapping = (rows = []) => ({
+  id: rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1,
+  idamAttribute: '',
+  applicationAttribute: '',
+  manualInputAttribute: false,
+  valueFormat: CUSTOM_API_VALUE_FORMATS[0],
+  mandatory: false,
+  notNull: false,
+})
+
+const mappingRowIssues = (rows, label) => {
+  const out = []
+  if (rows.some((r) => !String(r.applicationAttribute || '').trim() || !String(r.idamAttribute || '').trim())) {
+    out.push(`Every ${label} attribute mapping row needs both an application attribute and an IDAM attribute.`)
+  }
+  const seen = new Set()
+  rows.forEach((r) => {
+    const key = String(r.applicationAttribute || '').trim().toLowerCase()
+    if (!key) return
+    if (seen.has(key)) out.push(`${r.applicationAttribute} is mapped more than once in the ${label} attribute mapping. Only the first row is written.`)
+    seen.add(key)
+  })
+  return out
+}
+
+/** Everything wrong with a Custom API connection that is not a single field. */
+export const customApiMappingIssues = (conn = {}, ctx = {}) => {
+  const out = [...mappingRowIssues(conn.getUserMappings || [], 'Get User')]
+  if (canCreate(conn, ctx)) out.push(...mappingRowIssues(conn.createMappings || [], 'Create'))
+  if (canUpdate(conn, ctx)) out.push(...mappingRowIssues(conn.updateMappings || [], 'Update'))
+  return [...new Set(out)]
+}
+
+/**
+ * A stored provisioning facet, read forward.
+ *
+ * Applications registered while Custom API was a sub-type of the REST
+ * connector carry `connector: 'api'` with `apiType: 'Custom API'` on the
+ * connection. They are moved onto the Custom API connector here, with each
+ * value carried to the field that now holds it, so the record opens on the
+ * form it was configured on. A REST record simply loses the sub-type key.
+ */
+const LEGACY_CUSTOM_KEYS = {
+  timeoutSeconds: 'maxAPIRequestTimeout',
+  getTokenApiUrl: 'getTokenAPIUrl',
+  getTokenApiMethod: 'getTokenAPIMethod',
+  getTokenApiPayload: 'getTokenAPIPayload',
+  getUserApiUrl: 'getUserAPIUrl',
+  getUserApiMethod: 'getUserAPIMethod',
+  getUserApiPayload: 'getUserAPIPayload',
+  createPath: 'createUserAPIUrl',
+  createMethod: 'createUserAPIMethod',
+  createPayload: 'createUserAPIPayload',
+  updatePath: 'updateUserAPIUrl',
+  updateMethod: 'updateUserAPIMethod',
+  updatePayload: 'updateUserAPIPayload',
+  deletePath: 'deleteUserAPIUrl',
+  deleteMethod: 'deleteUserAPIMethod',
+}
+
+export const migrateProvisioningFacet = (facet) => {
+  if (!facet || !facet.connection) return facet
+  const { apiType, ...rest } = facet.connection
+  const legacyCustom = facet.connector === REST_API_CONNECTOR && (apiType === 'Custom API' || facet.method === 'Custom API')
+  if (!legacyCustom) {
+    return apiType === undefined ? facet : { ...facet, connection: rest }
+  }
+  const conn = blankConnection(CUSTOM_API_CONNECTOR)
+  Object.entries(rest).forEach(([k, v]) => {
+    const key = LEGACY_CUSTOM_KEYS[k] || k
+    if (key in conn || k === 'errorClasses' || k === 'authExtras') conn[key] = v
+  })
+  if (facet.uniqueTargetAttribute) conn.uniqueAppAttribute = facet.uniqueTargetAttribute
+  if (facet.uniqueAttribute) conn.uniqueIdamAttribute = facet.uniqueAttribute
+  return {
+    ...facet,
+    connector: CUSTOM_API_CONNECTOR,
+    method: CONNECTORS[CUSTOM_API_CONNECTOR] ? CONNECTORS[CUSTOM_API_CONNECTOR].name : 'Custom API',
+    connection: conn,
+  }
+}
+
 export const connectionIssues = (connector, conn = {}, ctx = {}) => {
-  // An HTTP connector is named by its sub-type in the message, so an operator
-  // reading "required for a Custom API connector" is told which of the two
-  // shapes the requirement belongs to.
-  const named = CONNECTORS[connector] ? CONNECTORS[connector].name : connector
-  const name = kindOf(connector) === 'Custom' ? conn.apiType || named : named
+  // The message names the connector — "required for a Custom API connector" —
+  // so an operator reading the save bar is told which form it belongs to.
+  const name = CONNECTORS[connector] ? CONNECTORS[connector].name : connector
   const out = specFor(connector).map((f) => fieldIssue(f, conn, name, ctx)).filter(Boolean)
   if (kindOf(connector) === 'Custom') {
     out.push(...errorClassIssues(conn))
     out.push(...authExtraIssues(conn))
   }
+  if (isCustomApiConnector(connector)) out.push(...customApiMappingIssues(conn, ctx))
   return out
 }
 
 export const connectionEndpoint = (connector, conn = {}) => {
   if (conn.host) return conn.port ? `${conn.host}:${conn.port}` : conn.host
-  return conn.baseUrl || conn.endpoint || conn.tenantId || '—'
+  // A Custom API connector has no base URL: the user read is the address it is
+  // reachable at, and the token endpoint stands in until one is configured.
+  return conn.baseUrl || conn.endpoint || conn.tenantId || conn.getUserAPIUrl || conn.getTokenAPIUrl || '—'
+}
+
+/* The illustrative configuration from the connector's specification, for a
+   seeded application on the Custom API connector. */
+const customApiSeed = (a) => {
+  const s = settingsFor(a)
+  const base = s.container
+  return {
+    ...blankConnection(CUSTOM_API_CONNECTOR),
+    authType: AUTH_BEARER_TYPE,
+    authMethod: BEARER_DEFAULT,
+    maxAPIRequestTimeout: String(s.timeout),
+    getTokenAPIUrl: `${base}/oauth/token`,
+    getTokenAPIMethod: 'POST',
+    clientId: s.principal,
+    clientSecret: 'stored',
+    getTokenAPIPayload: '{ "grant_type": "client_credentials" }',
+    successKey: 'status',
+    successValue: 'success',
+    messageKey: 'message',
+    errorKey: 'error',
+    getUserAPIUrl: `${base}${s.object}`,
+    getUserAPIMethod: 'GET',
+    getUserAPIPayload: '{}',
+    getUserMappings: [
+      { id: 1, applicationAttribute: 'employeeId', idamAttribute: 'username' },
+      { id: 2, applicationAttribute: 'emailAddress', idamAttribute: 'email' },
+      { id: 3, applicationAttribute: 'firstName', idamAttribute: 'firstName' },
+      { id: 4, applicationAttribute: 'lastName', idamAttribute: 'lastName' },
+    ],
+    createUserAPIUrl: `${base}${s.object}`,
+    createUserAPIMethod: 'POST',
+    createUserAPIPayload: '{\n  "employeeId": "{username}",\n  "emailAddress": "{email}",\n  "firstName": "{firstName}",\n  "lastName": "{lastName}"\n}',
+    uniqueAppAttribute: 'employeeId',
+    uniqueIdamAttribute: 'username',
+    createMappings: [
+      { id: 1, idamAttribute: 'username', applicationAttribute: 'employeeId', manualInputAttribute: true, valueFormat: 'Direct', mandatory: true, notNull: true },
+      { id: 2, idamAttribute: 'email', applicationAttribute: 'emailAddress', manualInputAttribute: true, valueFormat: 'Lowercase', mandatory: true, notNull: true },
+      { id: 3, idamAttribute: 'firstName', applicationAttribute: 'FirstName', manualInputAttribute: false, valueFormat: 'Direct', mandatory: false, notNull: false },
+      { id: 4, idamAttribute: 'lastName', applicationAttribute: 'LastName', manualInputAttribute: false, valueFormat: 'Direct', mandatory: false, notNull: false },
+    ],
+    updateUserAPIUrl: `${base}${s.object}/{id}`,
+    updateUserAPIMethod: 'PUT',
+    updateUserAPIPayload: '{\n  "emailAddress": "{email}",\n  "firstName": "{firstName}",\n  "lastName": "{lastName}"\n}',
+    updateMappings: [
+      { id: 1, idamAttribute: 'email', applicationAttribute: 'emailAddress', manualInputAttribute: true, valueFormat: 'Lowercase', mandatory: true, notNull: true },
+      { id: 2, idamAttribute: 'firstName', applicationAttribute: 'FirstName', manualInputAttribute: false, valueFormat: 'Direct', mandatory: false, notNull: false },
+      { id: 3, idamAttribute: 'lastName', applicationAttribute: 'LastName', manualInputAttribute: false, valueFormat: 'Direct', mandatory: false, notNull: false },
+    ],
+    deleteUserAPIUrl: `${base}${s.object}/{id}`,
+    deleteUserAPIMethod: 'DELETE',
+    errorClasses: blankErrorClasses(),
+    authExtras: blankAuthExtras(),
+  }
 }
 
 const connectionSeed = (a) => {
   const s = settingsFor(a)
+  if (isCustomApiConnector(a.connector)) return customApiSeed(a)
   switch (kindOf(a.connector)) {
     case 'Database':
       return { host: a.host, port: a.port, database: s.container, username: s.principal, password: 'stored', accountTable: s.object }
@@ -485,7 +816,6 @@ const connectionSeed = (a) => {
     case 'Custom':
       return {
         baseUrl: s.container,
-        apiType: API_REST,
         timeoutSeconds: String(s.timeout),
         authType: AUTH_BEARER_TYPE,
         authMethod: BEARER_DEFAULT,
@@ -687,14 +1017,13 @@ export const JWT_KEY_SOURCES = [
   { value: 'External JWKS', label: 'External JWKS endpoint' },
 ]
 
+/* A link opens in the browser's own tab handling; the "open in" choice the
+   form used to ask for was removed with the field. */
 export const blankLink = () => ({
   targetUrl: '',
-  openIn: 'New tab',
   passIdentity: false,
   identityParam: 'user',
 })
-
-export const LINK_TARGETS = ['New tab', 'Same tab']
 
 export const jwtIssues = (j = {}) => {
   const out = []
@@ -874,6 +1203,34 @@ export const oidcIssues = (o = {}, protocol = 'OIDC') => {
   if (o.clientType === 'public' && o.clientAuthentication !== 'none') out.push('A public client cannot authenticate; set client authentication to None.')
   if (!o.fullScopeAllowed && !(o.scopeRoles || []).length) out.push('Full scope is off, so at least one role must be assigned to the client scope.')
   return out
+}
+
+// ---------------------------------------------------------------------------
+// Client scope
+//
+// Which of the identity's roles an application is told about. It began as a
+// setting of the OIDC client record, but a SAML service provider and a JWT
+// application receive roles too, so it is read and written through one pair
+// of helpers whatever the protocol. OIDC-family records keep the values on
+// their `oidc` object as well, so nothing that reads them there changes.
+// ---------------------------------------------------------------------------
+
+export const clientScopeOf = (facet) => {
+  const src = (facet && (facet.clientScope || facet.oidc)) || {}
+  return {
+    fullScopeAllowed: src.fullScopeAllowed !== false,
+    scopeRoles: src.scopeRoles || [],
+  }
+}
+
+export const withClientScope = (facet, patch) => {
+  const next = { ...clientScopeOf(facet), ...patch }
+  const oidcFamily = ['OIDC', 'OAuth', 'OAuth Mobile'].includes(facet.protocol)
+  return {
+    ...facet,
+    clientScope: next,
+    ...(oidcFamily ? { oidc: { ...(facet.oidc || {}), ...next } } : {}),
+  }
 }
 
 const samlSeed = (s) => {
@@ -1142,24 +1499,34 @@ export const patternAttrs = (pattern) =>
 // ---------------------------------------------------------------------------
 
 /**
- * How the query string is opened.
+ * How a parameter is joined to what precedes it.
  *
- * One choice per configuration, not per parameter: the launch path decides
- * whether the parameters hang off `?`, off `&` because the address already
- * carries a query, or off `/?` because the path ends in a slash. Everything
- * after the first parameter is joined with `&`, which is not a decision anyone
- * needs to make.
+ * One choice per parameter. The first decides how the query string is opened
+ * after the base address — `?`, `&` because the address already carries a
+ * query, or `/?` because the launch path ends in a slash — and the rest almost
+ * always join with `&`, but a launch path that nests a second query is not
+ * unheard of, so each parameter states its own join.
  */
 export const PARAM_SEPARATORS = ['/?', '?', '&']
 
 export const DEFAULT_PARAM_SEPARATOR = '?'
 
-/** Where a parameter's value comes from. */
-export const PARAM_INPUT_TYPES = ['Manual', 'IDAM Attribute', 'nonce']
-
 /* Reserved: a parameter of this name in a pattern is the generated token, not
    an attribute the application releases. */
 export const NONCE_TOKEN = 'nonce'
+
+/** Where a parameter's value comes from. Stored values are stable; the label
+ *  is what the picker shows. */
+export const PARAM_INPUT_TYPES = [
+  { value: 'Manual', label: 'Manual' },
+  { value: 'IDAM Attribute', label: 'IDAM Attribute' },
+  { value: NONCE_TOKEN, label: 'Nonce' },
+]
+
+export const paramInputLabel = (t) => {
+  const hit = PARAM_INPUT_TYPES.find((x) => x.value === (t || 'Manual'))
+  return hit ? hit.label : 'Manual'
+}
 
 /** The IDAM attribute picker, spelled so the stored value is visible beside
  *  the label an administrator recognises it by. */
@@ -1167,6 +1534,16 @@ export const IDAM_ATTR_PARAM_OPTIONS = IDAM_ATTRS.map((a) => ({
   value: a.value,
   label: `${String(a.label).split(' · ')[0]} ( value = ${a.value})`,
 }))
+
+/** A blank parameter. The first parameter of a configuration opens the query
+ *  string; every later one joins with `&`. */
+export const blankParam = (index = 0) => ({
+  separator: index === 0 ? DEFAULT_PARAM_SEPARATOR : '&',
+  key: '',
+  inputType: 'Manual',
+  attr: '',
+  value: '',
+})
 
 /** The stored `key=value` half of one parameter. */
 export const paramValueText = (p) => {
@@ -1181,43 +1558,68 @@ export const paramReady = (p) => Boolean(p && p.key && (
   || (p.inputType === 'IDAM Attribute' ? p.attr : String(p.value || '').trim())
 ))
 
-/** Build the stored pattern from a base address, its separator and parameters. */
-export const buildPattern = (base, separator, params = []) => {
+/** Build the stored pattern from a base address and its parameters, each
+ *  joined with the separator it chose. */
+export const buildPattern = (base, params = []) => {
   const head = String(base || '').trim()
   if (!head) return ''
-  const ready = params.filter(paramReady)
-  if (!ready.length) return head
-  const query = ready.map((p) => `${p.key}=${paramValueText(p)}`).join('&')
-  return `${head}${separator || DEFAULT_PARAM_SEPARATOR}${query}`
+  return params.filter(paramReady).reduce(
+    (acc, p) => `${acc}${p.separator || DEFAULT_PARAM_SEPARATOR}${p.key}=${paramValueText(p)}`,
+    head,
+  )
 }
 
 /**
- * Read a stored pattern back into a base, a separator and parameters.
+ * Read a stored pattern back into a base and parameters.
  *
- * Scans for the separator rather than splitting on `?`, so a `/?` survives a
+ * Tokenises on every join rather than splitting on `?`, so a `/?` survives a
  * round trip instead of being rewritten as `?` with a stray slash left on the
- * base.
+ * base, and a parameter joined with something other than `&` keeps its join.
  */
 export const parsePattern = (raw) => {
   const s = String(raw || '')
-  let at = -1
-  let separator = DEFAULT_PARAM_SEPARATOR
-  for (let i = 0; i < s.length; i += 1) {
-    if (s[i] === '?') { at = s[i - 1] === '/' ? i - 1 : i; separator = s[i - 1] === '/' ? '/?' : '?'; break }
-    if (s[i] === '&') { at = i; separator = '&'; break }
-  }
-  if (at === -1) return { base: s, separator: DEFAULT_PARAM_SEPARATOR, params: [] }
-  const params = s.slice(at + separator.length).split('&').map((chunk) => {
+  const at = s.search(/\/\?|\?|&/)
+  if (at === -1) return { base: s, params: [] }
+  const base = s.slice(0, at)
+  const rest = s.slice(at)
+  const params = []
+  const re = /(\/\?|\?|&)([^?&]*)/g
+  let m = re.exec(rest)
+  while (m) {
+    const [, separator, chunk] = m
     const eq = chunk.indexOf('=')
     const key = eq === -1 ? chunk : chunk.slice(0, eq)
     const value = eq === -1 ? '' : chunk.slice(eq + 1)
     const token = /^\{([^}]+)\}$/.exec(value)
-    if (token && token[1] === NONCE_TOKEN) return { key, inputType: NONCE_TOKEN, attr: '', value: NONCE_TOKEN }
-    if (token) return { key, inputType: 'IDAM Attribute', attr: token[1], value: '' }
-    return { key, inputType: 'Manual', attr: '', value }
-  }).filter((p) => p.key)
-  return { base: s.slice(0, at), separator, params }
+    if (key) {
+      if (token && token[1] === NONCE_TOKEN) params.push({ separator, key, inputType: NONCE_TOKEN, attr: '', value: NONCE_TOKEN })
+      else if (token) params.push({ separator, key, inputType: 'IDAM Attribute', attr: token[1], value: '' })
+      else params.push({ separator, key, inputType: 'Manual', attr: '', value })
+    }
+    m = re.exec(rest)
+  }
+  return { base, params }
 }
+
+/* The values a launch preview substitutes: one real identity from the seed for
+   every IDAM attribute, and a fresh token for the nonce. Deterministic per
+   call apart from the nonce, which is the point of a nonce. */
+const SAMPLE_USER = USERS[0]
+
+const sampleValueFor = (attr) => {
+  const direct = SAMPLE_USER[attr]
+  if (direct != null && direct !== '') return String(direct)
+  const alias = { mail: SAMPLE_USER.email, userName: SAMPLE_USER.username, uid: SAMPLE_USER.username }
+  return alias[attr] || `<${attr}>`
+}
+
+export const sampleNonce = () => Array.from({ length: 4 }, () => Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0')).join('')
+
+/** What the launch URL looks like for one identity, with a nonce generated. */
+export const sampleLaunchUrl = (pattern, nonce = sampleNonce()) =>
+  String(pattern || '').replace(/\{([a-zA-Z0-9_.]+)\}/g, (_, name) => (
+    name === NONCE_TOKEN ? nonce : encodeURIComponent(sampleValueFor(name))
+  ))
 
 export const URL_LIMIT = 1
 
@@ -1366,7 +1768,7 @@ export const targetAttrsFor = (connector, rows = []) => {
 // Operation configuration (client item 11)
 // ---------------------------------------------------------------------------
 
-export { EXTRA_OPERATION_SPECS, OPERATION_SPECS } from '../provisioning/shared'
+export { EXTRA_OPERATION_SPECS, OPERATION_SPECS } from '../shared/provisioning/shared'
 
 export const blankOperations = () => ({
   create: true,
@@ -1432,7 +1834,14 @@ const orgForOwner = (owner) => OWNER_ORG[owner] || 'Tanflow'
 
 const provFacet = (a) => {
   const mappings = provMappingsFor(a.connector)
-  return {
+  const connection = connectionSeed(a)
+  // The account key lives on the facet for every connector. A Custom API
+  // connection names it in its Create section, so the facet mirrors that pair
+  // rather than designating a second one.
+  const unique = isCustomApiConnector(a.connector)
+    ? { uniqueAttribute: connection.uniqueIdamAttribute, uniqueTargetAttribute: connection.uniqueAppAttribute }
+    : defaultUniquePair(mappings)
+  return migrateProvisioningFacet({
     sourceName: a.name,
     connector: a.connector,
     method: a.method,
@@ -1442,11 +1851,11 @@ const provFacet = (a) => {
     host: a.host,
     port: a.port,
     description: a.description,
-    connection: connectionSeed(a),
+    connection,
     operations: operationsFor(a),
     mappings,
-    ...defaultUniquePair(mappings),
-  }
+    ...unique,
+  })
 }
 
 const ssoFacet = (s) => ({
@@ -1463,7 +1872,7 @@ const ssoFacet = (s) => ({
   createdOn: s.createdOn,
   saml: samlSeed(s),
   link: s.protocol === 'Link'
-    ? { ...blankLink(), targetUrl: `https://${s.name.replace(/_/g, '-')}.tanflow.internal`, openIn: 'New tab' }
+    ? { ...blankLink(), targetUrl: `https://${s.name.replace(/_/g, '-')}.tanflow.internal` }
     : blankLink(),
   jwt: s.protocol === 'JWT'
     ? { ...blankJwt(), audience: `https://${s.name.replace(/_/g, '-')}.example.com`, issuer: 'https://id.tanflow.com' }

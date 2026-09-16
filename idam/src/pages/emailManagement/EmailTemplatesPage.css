@@ -1,0 +1,52 @@
+/* Page-owned styles for EmailTemplatesPage. Shared primitives remain in src/styles. */
+
+/* --- HTML source editor: gutter · highlight layer · transparent textarea --- */
+.hed{
+  display:flex;border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;
+  background:#10182B;
+}
+.hed[data-invalid]{border-color:var(--bad-line)}
+.hed-gutter{
+  flex:none;width:46px;padding:12px 8px 12px 0;overflow:hidden;
+  text-align:right;user-select:none;
+  font-family:var(--mono);font-size:var(--t-xs);line-height:1.6;
+  color:#5A6684;background:rgba(255,255,255,.03);
+  border-right:1px solid #232F4B;
+}
+.hed-stack{position:relative;flex:1;min-width:0}
+.hed-hl,.hed-ta{
+  margin:0;padding:12px 14px;border:0;
+  font-family:var(--mono);font-size:var(--t-xs);line-height:1.6;
+  white-space:pre;overflow:auto;tab-size:2;
+}
+.hed-hl{
+  position:absolute;inset:0;pointer-events:none;color:#B9C5E4;
+  overflow:hidden;
+}
+.hed-ta{
+  position:relative;width:100%;display:block;resize:vertical;min-height:280px;
+  background:transparent;color:transparent;caret-color:#8FB7FF;outline:none;
+}
+.hed-ta::selection{background:rgba(96,150,255,.32);color:transparent}
+.hed-ta:focus-visible{box-shadow:inset 0 0 0 2px rgba(96,150,255,.45)}
+.hed .hl-tag{color:#7FB4FF}
+.hed .hl-attr{color:#9BE7C4}
+.hed .hl-str{color:#F0B37E}
+.hed .hl-punct{color:#7A88A8}
+.hed .hl-com{color:#5A6684;font-style:italic}
+.hed .hl-tok{color:#E5A7FF;background:rgba(229,167,255,.10);border-radius:3px}
+
+/* --- Rendered preview beside the source ---------------------------------- */
+.mail-render{
+  border:1px solid var(--line);border-radius:var(--r);background:#fff;color:#1B2333;
+  padding:22px 24px;max-height:520px;overflow:auto;
+}
+.mail-render h2{font-size:17px;font-weight:650;margin:0 0 14px;color:#101828}
+.mail-render p{margin:0 0 12px;font-size:14px;line-height:1.6}
+.mail-render hr{border:0;border-top:1px solid #E4E7EC;margin:18px 0}
+.mail-render .muted{color:#667085;font-size:12.5px}
+.mail-render a{color:#1D6BE0}
+.mail-render a.btn{
+  display:inline-block;background:#1D6BE0;color:#fff;text-decoration:none;
+  padding:9px 18px;border-radius:6px;font-weight:600;font-size:14px;
+}

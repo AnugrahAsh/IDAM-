@@ -12,32 +12,40 @@ import Button from './components/primitives/Button'
 import Drawer from './components/primitives/Drawer'
 import Modal from './components/primitives/Modal'
 import { SkeletonTable } from './components/primitives/Skeleton'
-import PlaceholderPage from './pages/PlaceholderPage'
+import PlaceholderPage from './pages/placeholder/PlaceholderPage'
 import { useApp } from './store/AppContext'
 import { useHotkeys } from './lib/useHotkeys'
 
 
 // Every route is its own chunk: opening the console downloads the shell and the
 // page being viewed, not all forty-seven screens.
-const MyAppsPage = lazy(() => import('./pages/MyAppsPage'))
-const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
-const UsefulLinksPage = lazy(() => import('./pages/UsefulLinksPage'))
-const DirectoryPage = lazy(() => import('./pages/DirectoryPage'))
-const OrganizationsPage = lazy(() => import('./pages/OrganizationsPage'))
-const RolesPage = lazy(() => import('./pages/RolesPage'))
-const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'))
-const HierarchyPage = lazy(() => import('./pages/HierarchyPage'))
-const OrphanedPage = lazy(() => import('./pages/OrphanedPage'))
-const RequestsPage = lazy(() => import('./pages/RequestsPage'))
-const AuthenticationPage = lazy(() => import('./pages/AuthenticationPage'))
-const ReconciliationPage = lazy(() => import('./pages/ReconciliationPage'))
-const ReportsPage = lazy(() => import('./pages/ReportsPage'))
-const PasswordPolicyPage = lazy(() => import('./pages/PasswordPolicyPage'))
-const JobsPage = lazy(() => import('./pages/JobsPage'))
-const LogsPage = lazy(() => import('./pages/LogsPage'))
-const LicensePage = lazy(() => import('./pages/LicensePage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const LdapApplicationsPage = lazy(() => import('./pages/LdapApplicationsPage'))
+const MyAppsPage = lazy(() => import('./pages/myApps/MyAppsPage'))
+const NotificationsPage = lazy(() => import('./pages/notificationCenter/NotificationsPage'))
+const UsefulLinksPage = lazy(() => import('./pages/quickLinks/UsefulLinksPage'))
+const DirectoryPage = lazy(() => import('./pages/users/DirectoryPage'))
+const OrganizationsPage = lazy(() => import('./pages/organizations/OrganizationsPage'))
+const RolesPage = lazy(() => import('./pages/roles/RolesPage'))
+const ApprovalsPage = lazy(() => import('./pages/approvals/ApprovalsPage'))
+const HierarchyPage = lazy(() => import('./pages/organizationStructure/HierarchyPage'))
+const OrphanedPage = lazy(() => import('./pages/orphanAccounts/OrphanedPage'))
+const RequestsPage = lazy(() => import('./pages/accessRequests/RequestsPage'))
+const AuthenticationPage = lazy(() => import('./pages/multiFactorAuthentication/AuthenticationPage'))
+const SodPage = lazy(() => import('./pages/segregationOfDuties/SodPage'))
+const ReconciliationPage = lazy(() => import('./pages/trustReconciliation/ReconciliationPage'))
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'))
+const PasswordPolicyPage = lazy(() => import('./pages/passwordPolicy/PasswordPolicyPage'))
+const JobsPage = lazy(() => import('./pages/backgroundJobs/JobsPage'))
+const ConfigurationsPage = lazy(() => import('./pages/configurations/ConfigurationsPage'))
+const LogsPage = lazy(() => import('./pages/securityEvents/LogsPage'))
+const LicensePage = lazy(() => import('./pages/license/LicensePage'))
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
+const LdapApplicationsPage = lazy(() => import('./pages/ldapApplications/LdapApplicationsPage'))
+const EmailManagementPage = lazy(() => import('./pages/emailManagement/EmailManagementPage'))
+const SmsManagementPage = lazy(() => import('./pages/smsManagement/SmsManagementPage'))
+const EmailConfigurationPage = lazy(() => import('./pages/emailManagement/EmailConfigurationPage'))
+const EmailTemplatesPage = lazy(() => import('./pages/emailManagement/EmailTemplatesPage'))
+const SmsTemplatesPage = lazy(() => import('./pages/smsManagement/SmsTemplatesPage'))
+const SignOnPolicyPage = lazy(() => import('./pages/signOnPolicies/SignOnPolicyPage'))
 
 const PAGES = {
   myapps: MyAppsPage,
@@ -51,14 +59,24 @@ const PAGES = {
   orphanedpolicy: OrphanedPage,
   requests: RequestsPage,
   mfa: AuthenticationPage,
+  segregationofduties: SodPage,
+  signOnPolicy: SignOnPolicyPage,
   trustReconciliation: ReconciliationPage,
   reports: ReportsPage,
   passwordPolicy: PasswordPolicyPage,
   jobs: JobsPage,
+  configurations: ConfigurationsPage,
   syslogs: LogsPage,
   licenses: LicensePage,
   settings: SettingsPage,
   ldapapplications: LdapApplicationsPage,
+  emails: EmailManagementPage,
+  emailManagement: EmailManagementPage,
+  smsManagement: SmsManagementPage,
+  emailConfigurations: EmailConfigurationPage,
+  emailTemplates: EmailTemplatesPage,
+  sms: SmsManagementPage,
+  smsTemplates: SmsTemplatesPage,
 }
 
 // Shown only while a route's chunk is in flight — long enough to notice on a

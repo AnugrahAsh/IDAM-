@@ -1,5 +1,5 @@
 import { NOW_MS, stampText } from '../../lib/clock'
-import { levelFields, stepState } from '../requests/data'
+import { levelFields, stepState } from '../accessRequests/data'
 import {
   applyOps, approverAt, commentAt, emptyDraft, requestedChanges, revisionsOf, stampAt,
 } from './data'

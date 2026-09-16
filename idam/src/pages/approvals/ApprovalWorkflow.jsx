@@ -5,7 +5,7 @@ import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
 import Avatar from '../../components/primitives/Avatar'
 import Meter from '../../components/primitives/Meter'
-import { useChain, STEP_LABEL, STEP_TONE } from '../requests/data'
+import { useChain, STEP_LABEL, STEP_TONE } from '../accessRequests/data'
 import { CHANGE_ICON, emptyDraft } from './data'
 import { durationText, workflowView } from './workflow'
 

@@ -1,0 +1,149 @@
+/* Page-owned styles for SignOnPolicyPage. Shared primitives remain in src/styles. */
+
+/* --- Condition chips -------------------------------------------------------
+   A rule's conditions, one chip each, with the join between them written out
+   rather than implied by a comma. */
+.sop-chips{display:flex;align-items:center;flex-wrap:wrap;gap:4px 5px;min-width:0}
+.sop-chip{display:inline-flex;align-items:center;gap:5px;max-width:280px;height:21px;padding:0 7px;
+  border:1px solid var(--line);border-radius:var(--r-xs);background:var(--surface-2);
+  font-size:var(--t-xs);color:var(--ink-2);white-space:nowrap}
+.sop-chip svg{color:var(--faint);flex:none}
+.sop-join-word{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--faint)}
+
+.sop-mfa{display:flex;flex-direction:column;gap:3px;min-width:0}
+.sop-mfa-methods{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.tbl td .sop-mfa .cell-sub{margin-top:0}
+
+/* --- Priority numbers ------------------------------------------------------ */
+.sop-prio{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);
+  background:var(--surface-3);border:1px solid var(--line);
+  font-size:var(--t-xs);font-weight:var(--w-bold);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.sop-prio[data-moved]{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent-a)}
+
+/* --- Rule ladder ------------------------------------------------------------
+   The handle is always drawn. A reorder affordance that only appears on hover
+   is invisible on touch and to anyone reading the table before pointing at it. */
+.sop-ladder-wrap{overflow-x:auto}
+.sop-ladder{min-width:820px}
+.sop-ladder th.sop-grip-cell,.sop-ladder td.sop-grip-cell{width:38px;padding-right:0}
+.sop-ladder th.sop-prio-col{width:92px}
+.sop-grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;
+  border-radius:var(--r-sm);color:var(--mut);cursor:grab;
+  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.sop-grip:hover{background:var(--surface-3);color:var(--ink)}
+.sop-grip:active{cursor:grabbing}
+.sop-grip[data-off]{cursor:default;opacity:.35}
+.sop-grip[data-off]:hover{background:none;color:var(--mut)}
+.sop-prio-cell{display:inline-flex;align-items:center;gap:6px}
+.sop-was{font-size:var(--t-micro);color:var(--accent-a);white-space:nowrap}
+.sop-rule-name{display:block;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.sop-ladder td.sop-conds{white-space:normal;min-width:220px}
+.sop-ladder tbody tr[data-dragging] td{opacity:.45}
+.sop-ladder tbody tr[data-moved] td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+.sop-ladder tbody tr[data-drop="before"] td{box-shadow:inset 0 2px 0 var(--accent)}
+.sop-ladder tbody tr[data-drop="after"] td{box-shadow:inset 0 -2px 0 var(--accent)}
+
+/* A drafted order: stated once, above the rows it describes, with its two exits. */
+.sop-reorder{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;padding:8px var(--sp-4);
+  background:var(--accent-bg);border-bottom:1px solid var(--accent-line);color:var(--accent-a);font-size:var(--t-sm)}
+.sop-reorder svg{flex:none}
+.sop-reorder b{font-weight:var(--w-semi)}
+
+/* --- Ordered rule list (record summary, builder side panel) ----------------- */
+.sop-order{display:flex;flex-direction:column;margin:-4px 0}
+.sop-order li{display:flex;align-items:center;gap:10px;min-width:0;padding:8px 0;border-bottom:1px solid var(--hair)}
+.sop-order li:last-child{border-bottom:none}
+.sop-order li[data-current]{margin:2px -8px;padding:8px;border-radius:var(--r);border-bottom-color:transparent;
+  background:var(--accent-bg);box-shadow:inset 2px 0 0 var(--accent)}
+.sop-order li[data-current] .sop-prio{background:var(--accent-solid);border-color:var(--accent-solid);color:#fff}
+.sop-order-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.sop-order-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sop-order-s{font-size:var(--t-xs);color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sop-order li.sop-order-more{justify-content:center;font-size:var(--t-xs);color:var(--mut)}
+
+/* --- Rule builder: action ------------------------------------------------- */
+.cfg-rules.sop-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sop-action-t{display:flex;align-items:center;gap:7px}
+.sop-action-t svg{color:var(--faint);flex:none}
+.cfg-rule.sop-action[data-on][data-tone="ok"]{border-color:var(--ok);background:var(--ok-bg)}
+.cfg-rule.sop-action[data-on][data-tone="ok"] .sop-action-t svg{color:var(--ok)}
+.cfg-rule.sop-action[data-on][data-tone="bad"]{border-color:var(--bad);background:var(--bad-bg)}
+.cfg-rule.sop-action[data-on][data-tone="bad"] .sop-action-t svg{color:var(--bad)}
+@media(max-width:640px){.cfg-rules.sop-actions{grid-template-columns:minmax(0,1fr)}}
+
+/* --- Rule builder: conditions --------------------------------------------- */
+.sop-join{display:flex;align-items:center;gap:8px;margin:-4px 0}
+.sop-join::before,.sop-join::after{content:"";flex:1;height:1px;background:var(--hair)}
+.sop-join span{padding:1px 8px;border:1px solid var(--accent-line);border-radius:var(--r-pill);background:var(--accent-bg);
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);font-weight:var(--w-bold);color:var(--accent-a)}
+
+.sop-cond{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+.sop-cond[data-bad]{border-color:var(--bad-line)}
+.sop-cond-n{flex:none;width:24px;height:24px;margin-top:24px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--line);
+  font-size:var(--t-xs);font-weight:var(--w-bold);color:var(--mut)}
+.sop-cond-grid{flex:1;min-width:0;display:grid;align-items:start;gap:var(--sp-3);
+  grid-template-columns:minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.5fr) auto}
+.sop-cond-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-2)}
+.sop-cond-x{margin-top:23px}
+.sop-cond-x:hover{color:var(--bad);background:var(--bad-bg)}
+@media(max-width:640px){
+  .sop-cond-n{display:none}
+  .sop-cond-grid{grid-template-columns:minmax(0,1fr)}
+  .sop-cond-x{margin-top:0;justify-self:end}
+}
+
+/* A card-header toggle carries its own visible label. */
+.sop-switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.sop-off{display:flex;align-items:center;gap:8px;font-size:var(--t-sm);color:var(--mut)}
+.sop-off svg{color:var(--faint)}
+
+/* --- Rule builder: MFA ---------------------------------------------------- */
+.cfg-rules.sop-methods{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.sop-method-h{display:flex;align-items:center;gap:7px;min-width:0}
+.sop-method-h > svg{color:var(--faint);flex:none}
+.cfg-rule.sop-method[data-on] .sop-method-h > svg{color:var(--accent)}
+.sop-method-h .cfg-rule-t{flex:1;min-width:0}
+.sop-method .check{pointer-events:none}
+.sop-method-off{display:inline-flex;align-items:center;gap:4px;margin-top:2px;font-size:var(--t-xs);color:var(--warn)}
+.field[data-invalid="true"] .cfg-rule.sop-method{border-color:var(--bad-line)}
+
+.sop-freq{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-3);align-items:start}
+@media(max-width:700px){.sop-freq{grid-template-columns:minmax(0,1fr)}}
+
+/* --- Rule builder: excluded users ----------------------------------------- */
+.sop-users{display:flex;flex-direction:column;gap:8px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+.sop-users-h{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;font-size:var(--t-xs);color:var(--mut)}
+.sop-users-h b{color:var(--ink);font-weight:var(--w-semi)}
+.sop-users-warn{display:inline-flex;align-items:center;gap:4px;color:var(--warn)}
+.sop-users-h .sop-users-warn b{color:inherit}
+.sop-users-chips{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.sop-user{display:inline-flex;align-items:center;height:21px;padding:0 7px;border:1px solid var(--line);
+  border-radius:var(--r-xs);background:var(--surface);font-family:var(--mono);font-size:var(--t-xs);color:var(--ink-2)}
+.sop-user[data-unknown]{border-style:dashed;border-color:var(--warn-line);background:var(--warn-bg);color:var(--warn)}
+
+/* --- Rule builder: preview ------------------------------------------------ */
+.sop-sentence{font-size:var(--t-body);line-height:1.8;color:var(--ink-2)}
+.sop-sentence b{font-weight:var(--w-semi);color:var(--ink)}
+.sop-verb[data-tone="ok"]{color:var(--ok)}
+.sop-verb[data-tone="bad"]{color:var(--bad)}
+.sop-val{padding:1px 5px;border:1px solid var(--line);border-radius:var(--r-xs);background:var(--surface-3);
+  font-family:var(--mono);font-size:var(--t-xs);color:var(--ink);white-space:nowrap}
+.sop-gap{display:inline-block;min-width:26px;text-align:center;line-height:1.2;
+  color:var(--faint);border-bottom:1px dashed var(--line-2)}
+.sop-sentence-sub{margin-top:8px;font-size:var(--t-sm);color:var(--mut)}
+.sop-sentence-sub q{color:var(--ink)}
+
+/* --- Attach applications ---------------------------------------------------- */
+.sop-modal-count{margin-right:auto;align-self:center}
+.sop-pick-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+.sop-pick-wrap .tbl tbody tr[data-attached] td{color:var(--mut)}
+
+/* Excluded users: the inline panel that adds from the directory or reads a
+   CSV, opened from the table toolbar and closed once it has done its job. */
+.sop-panel{display:flex;flex-direction:column;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}

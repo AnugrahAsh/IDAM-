@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { REQUESTS } from '../../data/seed'
-import { withAudit } from '../requests/data'
+import { withAudit } from '../accessRequests/data'
 
 /**
  * The approval queue.

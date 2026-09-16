@@ -1,5 +1,5 @@
-import '../styles/ApplicationsPage.css'
-import { Fragment, useRef, useState } from 'react'
+import './ApplicationsPage.css'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import Card from '../../components/primitives/Card'
 import Button from '../../components/primitives/Button'
 import IconButton from '../../components/primitives/IconButton'
@@ -17,18 +17,18 @@ import EmptyState from '../../components/primitives/EmptyState'
 import Banner from '../../components/primitives/Banner'
 import { useApp } from '../../store/AppContext'
 import { nextId } from '../../data/seed'
-import { IDAM_ATTRS } from '../provisioning/shared'
+import { IDAM_ATTRS, SAMPLE_IDENTITY } from '../shared/provisioning/shared'
 import {
-  DEFAULT_PARAM_SEPARATOR, ERROR_CATEGORIES, IDAM_ATTR_PARAM_OPTIONS, NONCE_TOKEN,
+  ERROR_CATEGORIES, IDAM_ATTR_PARAM_OPTIONS, NONCE_TOKEN,
   PARAM_INPUT_TYPES, PARAM_SEPARATORS, SAML_NAME_FORMATS, URL_LIMIT,
-  buildPattern, certFromText, fieldIssue,
-  fieldRequired, linkIssues, parseMetadataXml, parsePattern, patternAttrs, specFor, specGroups,
-  targetAttrsFor, uniqueTargetFor, urlConfigLabel, visibleSpec,
+  blankParam, buildPattern, certFromText, fieldIssue, fieldOptions,
+  fieldRequired, linkIssues, parseMetadataXml, parsePattern, patternAttrs, sampleLaunchUrl, sampleNonce,
+  specFor, specGroups, targetAttrsFor, uniqueTargetFor, urlConfigLabel, visibleSpec,
 } from './appModel'
 import {
   MAPPERS_FOR, attributeIssues, blankAttribute, familyOf,
   mapperIcon, mapperLabel, mapperType, releasedName, sourceSummary, tokenTargets, withMapperType,
-} from '../attributes/attributeModel'
+} from './attributeModel'
 
 export function StatStrip({ items }) {
   return (
@@ -61,6 +61,10 @@ export function ConnectionFields({
   // and Delete API sections are asked for at all.
   ctx = {},
 }) {
+  // A JSON payload is judged when the operator leaves the field, not on every
+  // keystroke — half a document is not an error, it is a document being typed.
+  // A field that is required and empty is still flagged straight away.
+  const [blurred, setBlurred] = useState({})
   if (specFor(connector).length === 0) {
     return (
       <div className="banner" data-tone="info">
@@ -79,13 +83,21 @@ export function ConnectionFields({
 
   const renderField = (f) => {
     const v = value[f.id] == null ? '' : value[f.id]
-    const error = showErrors ? fieldIssue(f, value, '', ctx) || undefined : undefined
+    const pending = f.json && !blurred[f.id] && String(v).trim() !== ''
+    const error = showErrors && !pending ? fieldIssue(f, value, '', ctx) || undefined : undefined
     const fieldId = `${idPrefix}-${f.id}`
     return (
       <Fragment key={f.id}>
         <Field label={f.label} required={fieldRequired(f, value, ctx)} span={f.span} hint={f.hint} htmlFor={fieldId} error={error}>
           {f.options ? (
-            <Select id={fieldId} value={v} options={f.options} onChange={(e) => onChange({ [f.id]: e.target.value })} />
+            <Select
+              id={fieldId}
+              className={f.mono ? 'mono' : undefined}
+              value={v}
+              placeholder={f.placeholder}
+              options={fieldOptions(f, value, ctx)}
+              onChange={(e) => onChange({ [f.id]: e.target.value })}
+            />
           ) : f.type === 'textarea' ? (
             <TextInput
               as="textarea"
@@ -96,6 +108,7 @@ export function ConnectionFields({
               value={v}
               placeholder={f.placeholder}
               onChange={(e) => onChange({ [f.id]: e.target.value })}
+              onBlur={f.json ? () => setBlurred((b) => (b[f.id] ? b : { ...b, [f.id]: true })) : undefined}
             />
           ) : (
             <TextInput
@@ -921,7 +934,7 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
      the register, the launch tile, the export — is unchanged. Building and
      parsing it live in the model, beside the separator and input-type
      definitions they have to agree with. */
-  const patternOf = (d) => buildPattern(d.base, d.separator, d.params)
+  const patternOf = (d) => buildPattern(d.base, d.params)
 
   /* An existing row is read back into its halves so editing it is the same
      control as creating it. */
@@ -958,9 +971,11 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
 
   const startDraft = (row) => setDraft(row
     ? draftFrom(row)
-    : { base: baseOptions[0] || '', separator: DEFAULT_PARAM_SEPARATOR, params: [], enabled: true })
+    : { base: baseOptions[0] || '', params: [], enabled: true })
 
-  const nextParam = () => ({ key: '', inputType: 'Manual', attr: '', value: '' })
+  /* The nonce in the preview is regenerated whenever the draft changes, which
+     is what a token generated per launch looks like from here. */
+  const previewNonce = useMemo(() => sampleNonce(), [draft])
 
   return (
     <Card
@@ -1027,31 +1042,15 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
                 onChange={(e) => setDraft((d) => ({ ...d, base: e.target.value }))}
               />
             </Field>
-            {/* One choice for the configuration, not one per parameter: the
-                launch path decides whether the query hangs off `?`, off `&`
-                because the address already carries one, or off `/?` because the
-                path ends in a slash. Everything after the first parameter joins
-                with `&`, which is not a decision anyone needs to make. */}
-            <Field
-              label="Parameter options" required
-              hint="How the query string is opened after the base URL."
-              htmlFor="urlc-sep"
-            >
-              <Select
-                id="urlc-sep"
-                className="mono"
-                value={draft.separator || DEFAULT_PARAM_SEPARATOR}
-                options={PARAM_SEPARATORS}
-                onChange={(e) => setDraft((d) => ({ ...d, separator: e.target.value }))}
-              />
-            </Field>
           </div>
 
           <div className="section-head" style={{ margin: '16px 0 8px' }}>
             <span className="section-title">Query parameters</span>
             <span className="section-sub">
-              Each parameter states what it is called and where its value comes from — a value typed here, an IDAM
-              attribute, or a single-use token generated at launch.
+              Each parameter states how it is joined to the address before it (<span className="mono">/?</span>,{' '}
+              <span className="mono">?</span> or <span className="mono">&amp;</span>), what it is called, and where
+              its value comes from — a value typed here, an IDAM attribute of the identity, or a nonce generated
+              once per launch.
             </span>
           </div>
 
@@ -1060,13 +1059,15 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
           ) : (
             <div style={{ overflowX: 'auto' }}><table className="tbl">
               <colgroup>
-                <col style={{ width: 200 }} />
-                <col style={{ width: 168 }} />
+                <col style={{ width: 88 }} />
+                <col style={{ width: 190 }} />
+                <col style={{ width: 160 }} />
                 <col />
                 <col style={{ width: 48 }} />
               </colgroup>
               <thead>
                 <tr>
+                  <th>Join</th>
                   <th>Key</th>
                   <th>Input type</th>
                   <th>Value</th>
@@ -1079,6 +1080,15 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
                      position while its halves are still being chosen. */
                   // eslint-disable-next-line react/no-array-index-key
                   <tr key={i}>
+                    <td>
+                      <Select
+                        className="mono"
+                        value={p.separator || (i === 0 ? '?' : '&')}
+                        options={PARAM_SEPARATORS}
+                        aria-label={`Join for parameter ${i + 1}`}
+                        onChange={(e) => setParam(i, { separator: e.target.value })}
+                      />
+                    </td>
                     <td>
                       <TextInput
                         className="mono"
@@ -1153,16 +1163,27 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
             <Button
               size="sm"
               icon="plus"
-              onClick={() => setDraft((d) => ({ ...d, params: [...d.params, nextParam()] }))}
+              onClick={() => setDraft((d) => ({ ...d, params: [...d.params, blankParam(d.params.length)] }))}
             >
               Add row
             </Button>
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <div className="t-micro t-mut" style={{ marginBottom: 5 }}>Resolved URL</div>
-            <div className="code mono" style={{ display: 'block', padding: '8px 10px', lineHeight: 1.7 }}>
-              {patternOf(draft) || '— select a base URL —'}
+          {/* Two readings of the same URL: the pattern that is stored, and what
+              one identity is actually launched at once the attributes are
+              filled in and the nonce is generated. */}
+          <div className="url-preview">
+            <div>
+              <div className="t-micro t-mut" style={{ marginBottom: 5 }}>URL pattern</div>
+              <div className="code mono" style={{ display: 'block', padding: '8px 10px', lineHeight: 1.7 }}>
+                {patternOf(draft) || '— select a base URL —'}
+              </div>
+            </div>
+            <div>
+              <div className="t-micro t-mut" style={{ marginBottom: 5 }}>Launch URL preview · {SAMPLE_IDENTITY}</div>
+              <div className="code mono url-preview-launch" style={{ display: 'block', padding: '8px 10px', lineHeight: 1.7 }}>
+                {patternOf(draft) ? sampleLaunchUrl(patternOf(draft), previewNonce) : '—'}
+              </div>
             </div>
           </div>
 

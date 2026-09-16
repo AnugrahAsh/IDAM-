@@ -19,11 +19,11 @@ import { num } from '../../lib/format'
 import {
   APPROVERS_L1, APPROVERS_L2, APPROVERS_L3, OPEN,
   levelColumnDefs, nameOf, requesterProfile, statusTone, userOf,
-} from '../requests/data'
+} from '../accessRequests/data'
 import { useApprovalLevels } from '../settings/settingsStore'
 import {
   EntitlementCard, PeersCard, RequesterCard, RiskPanel, auditCell,
-} from '../requests/RequestRail'
+} from '../accessRequests/RequestRail'
 import ChangesPanel from './ChangesPanel'
 import ApproverTimeline from './ApproverTimeline'
 import { draftCounts, emptyDraft, targetState } from './data'

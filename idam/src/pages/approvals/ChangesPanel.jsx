@@ -9,7 +9,7 @@ import Field from '../../components/primitives/Field'
 import TextInput from '../../components/primitives/TextInput'
 import Select from '../../components/primitives/Select'
 import { useApp } from '../../store/AppContext'
-import { OPEN } from '../requests/data'
+import { OPEN } from '../accessRequests/data'
 import {
   ADDABLE, CHANGE_ICON, CHANGE_LABEL, CHANGE_TONE, approvalView, draftCounts, nextChangeId, resolveChanges,
 } from './data'

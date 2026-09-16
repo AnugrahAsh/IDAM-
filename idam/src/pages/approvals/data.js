@@ -1,7 +1,7 @@
 import { DEPARTMENTS, GROUPS } from '../../data/seed'
 import {
   APPROVERS_L3, DURATIONS, chainSteps, factorsFor, hashOf, levelFields, shiftStamp, stepState, userOf,
-} from '../requests/data'
+} from '../accessRequests/data'
 
 const GROUP_NAMES = GROUPS.map((g) => g.name)
 const DESIGNATIONS = ['Engineer', 'Senior Engineer', 'Manager', 'Director', 'Analyst', 'Architect', 'Lead']
