@@ -180,6 +180,8 @@ textarea.inp{height:auto;min-height:76px;padding:8px 10px;line-height:1.55;resiz
   white-space:nowrap;cursor:pointer;transition:color var(--dur-1) var(--ease),border-color var(--dur-2) var(--ease)}
 .tab svg{width:14px;height:14px}
 .tab:hover{color:var(--ink)}
+.tab:disabled{opacity:.45;cursor:not-allowed}
+.tab:disabled:hover{color:inherit}
 .tab[data-on="true"]{color:var(--ink);font-weight:var(--w-semi);border-bottom-color:var(--accent)}
 .tab-n{font-size:10px;font-weight:var(--w-bold);background:var(--surface-3);color:var(--mut);
   border-radius:var(--r-pill);min-width:17px;height:16px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center}
@@ -874,6 +876,15 @@ button.legend-it:hover{border-color:var(--line-2)}
 .map-tbl tr.map-add td{background:var(--surface-2)}
 .map-tbl tr.map-add:hover td{background:var(--surface-2)}
 .map-tbl tr.map-add .row{align-items:center;flex-wrap:wrap}
+.map-tbl td.map-flag .check:disabled{cursor:default}
+/* Bounded so the sticky header pins against this box while the rows scroll. */
+.map-scroll{overflow:auto;max-height:min(62vh,640px)}
+.map-add-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px var(--sp-4);
+  background:var(--surface-2);border-top:1px solid var(--line)}
+.map-max{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.map-max-l{font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink);white-space:nowrap}
+.map-max .inp,.map-tbl td .map-max .inp{width:72px;flex:none}
+.map-max-bar{padding:10px var(--sp-4);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
 
 /* --- Record card, dense ------------------------------------------------------
    The standard card is sized for registers whose rows carry a logo, a status,

@@ -1,0 +1,60 @@
+.consent-acceptance-meter{display:flex;justify-content:flex-end;gap:8px}
+
+/* --- Consent body: one authored text per language ------------------------ */
+.cbe-langs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cbe-lang{
+  display:inline-flex;align-items:center;gap:2px;padding-right:2px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+}
+.cbe-lang>button{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 9px;
+  font-size:var(--t-sm);color:var(--ink-2);border-radius:var(--r-sm);cursor:pointer;
+}
+.cbe-lang>button:hover{color:var(--ink)}
+.cbe-lang[data-on]{border-color:var(--accent);background:var(--accent-bg)}
+.cbe-lang[data-on]>button{color:var(--ink);font-weight:var(--w-semi)}
+.cbe-add{display:inline-flex;align-items:center;gap:6px}
+.cbe-add .sel{width:170px}
+
+.cbe{border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.cbe[data-invalid]{border-color:var(--bad-line)}
+.cbe-bar{
+  display:flex;align-items:center;gap:2px;padding:5px 8px;
+  border-bottom:1px solid var(--hair);background:var(--surface-2);
+}
+.cbe-tool{
+  width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--r-sm);color:var(--ink-2);font-size:var(--t-sm);cursor:pointer;
+}
+.cbe-tool:hover{background:var(--surface-3);color:var(--ink)}
+.cbe-b{font-weight:800;font-size:13px}
+.cbe-i{font-style:italic;font-family:Georgia,serif;font-size:13px}
+.cbe-u{text-decoration:underline;font-size:13px}
+.cbe-h{font-weight:700;font-size:13px}
+.cbe-div{width:1px;height:16px;background:var(--line);flex:none;margin:0 3px}
+.cbe-body{
+  min-height:260px;max-height:520px;overflow:auto;padding:14px 16px;
+  font-size:var(--t-body);line-height:1.65;color:var(--ink);outline:none;
+}
+.cbe-body:focus-visible{box-shadow:inset 0 0 0 2px var(--accent-line)}
+.cbe-body h3{font-size:var(--t-h2);font-weight:var(--w-semi);margin:14px 0 6px}
+.cbe-body p{margin:0 0 10px}
+.cbe-body ul,.cbe-body ol{margin:0 0 10px;padding-left:22px}
+.cbe-body li{margin:3px 0}
+.cbe-body a{color:var(--accent);text-decoration:underline}
+
+/* --- Identity picker inside the issue / map-users drawers ---------------- */
+.ci-picker{
+  max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--surface);padding:4px;display:flex;flex-direction:column;gap:1px;
+}
+.ci-pick{
+  display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--r-sm);
+  font-size:var(--t-sm);color:var(--ink-2);cursor:pointer;min-width:0;
+}
+.ci-pick:hover{background:var(--surface-2);color:var(--ink)}
+
+/* --- Import Consent Initiation ------------------------------------------- */
+.ci-reqs{margin:6px 0 8px;padding-left:18px;list-style:disc}
+.ci-reqs li{margin:2px 0}
+.ci-sample{background:none;border:0;padding:0;font:inherit;font-size:var(--t-sm)}

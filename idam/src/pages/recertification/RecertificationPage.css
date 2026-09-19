@@ -1,0 +1,63 @@
+/* Page-owned styles for RecertificationPage. Shared primitives remain in src/styles. */
+
+/* Overview: decided share, the certified/revoked split, and the three counts. */
+.rc-standing{padding:14px var(--sp-4) 16px}
+.rc-standing-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.rc-standing-pct{font-size:26px;font-weight:var(--w-bold);letter-spacing:-.03em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.rc-standing-of{font-size:var(--t-sm);color:var(--mut);font-variant-numeric:tabular-nums}
+.rc-standing-of b{font-weight:var(--w-semi);color:var(--ink)}
+.rc-split{display:flex;gap:2px;height:8px;border-radius:var(--r-pill);background:var(--surface-3);overflow:hidden}
+.rc-split i{display:block;height:100%;transition:width var(--dur-4) var(--ease-out)}
+.rc-split i[data-tone="ok"]{background:var(--ok)}
+.rc-split i[data-tone="bad"]{background:var(--bad)}
+.rc-figs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--hair)}
+.rc-fig{display:flex;flex-direction:column;gap:2px;padding:12px var(--sp-4);border-right:1px solid var(--hair);min-width:0}
+.rc-fig:last-child{border-right:none}
+.rc-fig-k{display:flex;align-items:center;gap:6px;font-size:var(--t-xs);font-weight:var(--w-med);color:var(--mut)}
+.rc-key{width:8px;height:8px;border-radius:50%;flex:none;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--line-2)}
+.rc-key[data-tone="ok"]{background:var(--ok);box-shadow:none}
+.rc-key[data-tone="bad"]{background:var(--bad);box-shadow:none}
+.rc-fig-v{font-size:20px;font-weight:var(--w-bold);letter-spacing:-.02em;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.rc-fig-s{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:720px){
+  .rc-figs{grid-template-columns:minmax(0,1fr)}
+  .rc-fig{border-right:none;border-bottom:1px solid var(--hair)}
+  .rc-fig:last-child{border-bottom:none}
+}
+
+/* Items tab: one row per identity, one column per approval level. */
+.rc-level{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px}
+.rc-trail{width:100%;border-collapse:collapse}
+.rc-item-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rc-item-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:flex-end}
+
+/* Items: level cells, user link and level progress. */
+.rc-level-n{display:inline-flex;align-items:center;gap:3px}
+.rc-user-link{background:none;border:0;padding:0;text-align:left;cursor:pointer;color:inherit;font:inherit;min-width:0}
+.rc-user-name{display:block;font-weight:var(--w-semi);color:var(--accent-a)}
+.rc-user-link:hover .rc-user-name{text-decoration:underline}
+.rc-check{gap:8px;white-space:nowrap}
+.rc-level-progress{display:grid;grid-template-columns:repeat(var(--rc-cols,3),minmax(0,1fr));gap:var(--sp-4)}
+.rc-level-progress-it{display:flex;flex-direction:column;gap:6px;min-width:0}
+@media(max-width:760px){.rc-level-progress{grid-template-columns:minmax(0,1fr)}}
+
+/* User review: before/after comparison and the cross-level timeline. */
+.rc-diff-search{padding:10px var(--sp-4);border-bottom:1px solid var(--hair)}
+.rc-diff-section td{background:var(--surface-2);font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-semi);color:var(--mut)}
+.rc-diff tr[data-change="modified"] td:first-child,
+.rc-diff tr[data-change="added"] td:first-child,
+.rc-diff tr[data-change="cleared"] td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.rc-diff tr[data-change="added"] td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
+.rc-diff tr[data-change="cleared"] td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+.rc-old{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.rc-new{font-weight:var(--w-semi);color:var(--ink)}
+.rc-timeline td[data-changed]{background:var(--accent-bg)}
+.rc-th-state{display:block;margin-top:4px;text-transform:none;letter-spacing:0}
+.rc-chips{display:inline-flex;flex-wrap:wrap;gap:4px}
+
+/* User review: bulk group picker (Manage groups drawer). */
+.rc-group-pick{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:var(--r)}
+.rc-group-pick table{margin:0}
+.rc-group-pick thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+.rc-group-row{cursor:pointer}
+.rc-group-row:hover td{background:var(--surface-2)}

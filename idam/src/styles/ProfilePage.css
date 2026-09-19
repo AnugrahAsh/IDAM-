@@ -1,0 +1,4 @@
+
+/* Avatar plus its own controls, so changing a picture is where the picture is. */
+.pf-av{display:flex;flex-direction:column;align-items:center;gap:9px;flex:none}
+.pf-av-acts{display:flex;align-items:center;gap:5px}

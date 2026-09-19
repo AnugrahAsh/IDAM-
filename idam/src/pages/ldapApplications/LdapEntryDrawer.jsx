@@ -9,7 +9,7 @@ import { TYPE_META, attributesOf, isOperational } from './directoryTree'
 // The attributes of one directory entry. Operational values the server owns are
 // shown but never editable; everything else can be changed, added or removed —
 // including one value of a multi-valued attribute.
-export default function EntryDetails({ app, entry, onSaved }) {
+export default function EntryDetails({ app, entry, onSaved, readOnly = false }) {
   const [rows, setRows] = useState(() => attributesOf(app, entry))
   const [edit, setEdit] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -40,7 +40,7 @@ export default function EntryDetails({ app, entry, onSaved }) {
       <div className="ldap-entry-bar">
         <span><b className="num">{rows.length}</b> attributes · {writable.length} writable</span>
         <span className="spacer" />
-        {edit ? (
+        {readOnly ? null : edit ? (
           <>
             <Button size="sm" onClick={() => { setRows(attributesOf(app, entry)); setEdit(false); setDirty(false) }}>
               Cancel

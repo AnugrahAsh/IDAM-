@@ -224,6 +224,7 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{c
 /* A modal that hosts a side-by-side editor needs more than the large size. */
 .modal[data-size="xl"]{width:1040px}
 .modal-h{display:flex;align-items:flex-start;gap:11px;padding:var(--sp-4) var(--sp-4) 6px}
+.modal-x{margin-left:auto;flex:none}
 .modal-ic{width:34px;height:34px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;flex:none}
 .modal-b{padding:4px var(--sp-4) var(--sp-4) 61px;font-size:var(--t-sm);color:var(--mut);line-height:1.55}
 .modal-b.wide{padding-left:var(--sp-4)}

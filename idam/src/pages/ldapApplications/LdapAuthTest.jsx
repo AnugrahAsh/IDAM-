@@ -104,11 +104,4 @@ function AuthTestForm({ app }) {
   )
 }
 
-export const openAuthTest = ({ app, setDrawer }) => setDrawer({
-  title: 'Test authentication',
-  sub: `Bind an end-user credential against ${app.displayName} and read back the mapped attributes.`,
-  children: <AuthTestForm app={app} />,
-  footer: <Button onClick={() => setDrawer(null)}>Close</Button>,
-})
-
 export default AuthTestForm

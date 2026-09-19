@@ -14,14 +14,13 @@ import Select from '../../components/primitives/Select'
 import Banner from '../../components/primitives/Banner'
 import Switch from '../../components/primitives/Switch'
 import { useApp } from '../../store/AppContext'
-import { openAuthTest } from './LdapAuthTest'
+import AuthTestForm from './LdapAuthTest'
 import LdapDirectory from './LdapDirectory'
 import LdapProvisioning from './LdapProvisioning'
 import LdapUsers from './LdapUsers'
 import { duration, num, pct, statusTone } from '../../lib/format'
-import { nextId } from '../../data/seed'
 import {
-  CustomAttributeTable, HealthBar, MappingEditorPanel, MappingTable, Tiles, Timeline,
+  CustomAttributeTable, HealthBar, MappingBulkEditor, MappingTable, Tiles, Timeline,
 } from './LdapShared'
 import {
   LDAP_VERSIONS, OWNER_OPTIONS, composeUrl, connectionDefaults, customAttributes, errorBreakdown,
@@ -29,9 +28,9 @@ import {
 } from './ldapModel'
 
 export default function LdapDetail({
-  app, tab, onTab, onPatch, onDelete, maps, setMaps, directories, rules = [], setRules,
+  app, tab, onTab, onPatch, onDelete, maps, setMaps, rules = [], setRules,
 }) {
-  const { toast, confirm, navigate, setDrawer } = useApp()
+  const { toast, confirm, navigate } = useApp()
   const connInitial = useMemo(() => connectionDefaults(app), [app])
   const [conn, setConn] = useState(connInitial)
   const [attrs, setAttrs] = useState(() => customAttributes(app))
@@ -100,15 +99,16 @@ export default function LdapDetail({
     onConfirm: () => onDelete(app),
   })
 
-  const saveMapping = (d) => {
-    if (editing && editing.id) {
-      setMaps((ms) => ms.map((m) => (m.id === editing.id ? { ...m, ...d } : m)))
-      toast('ok', 'Mapping saved', `${d.idam} now reads from ${d.ldap}.`)
-    } else {
-      setMaps((ms) => [...ms, { ...d, id: nextId(ms) }])
-      toast('ok', 'Mapping created', `${d.idam} now reads from ${d.ldap}.`)
-    }
+  // The editor holds this directory's whole mapping set; new rows carry string
+  // ids until they are given numeric ones here.
+  const saveMappings = (next) => {
+    setMaps((ms) => {
+      let id = ms.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0)
+      const rows = next.map((r) => (typeof r.id === 'number' ? r : { ...r, id: (id += 1) }))
+      return [...ms.filter((m) => m.directory !== app.displayName), ...rows]
+    })
     setEditing(null)
+    toast('ok', 'Attribute mappings saved', `${next.length} ${next.length === 1 ? 'attribute is' : 'attributes are'} read from ${app.displayName}.`)
   }
 
   const deleteMapping = (m) => confirm({
@@ -187,7 +187,7 @@ export default function LdapDetail({
         actions={
           <>
             <Button icon="play" onClick={testConnection}>Test connection</Button>
-            <Button icon="user" onClick={() => openAuthTest({ app, setDrawer })}>Test authentication</Button>
+            <Button icon="user" onClick={() => onTab('authentication')}>Test authentication</Button>
             <Button icon="refresh" onClick={syncNow}>Sync now</Button>
             <Button icon="edit" onClick={() => navigate(`/iam/ldapapplications/${app.id}/edit`)}>Edit</Button>
             <Button variant="danger" icon="trash" onClick={remove}>Delete</Button>
@@ -406,6 +406,31 @@ export default function LdapDetail({
                     </div>
                   )}
                 </Card>
+
+                <Card
+                  title="Service credential"
+                  sub="The account the platform binds as to read this directory"
+                  actions={<Button size="sm" icon="play" onClick={testConnection}>Test connection</Button>}
+                >
+                  <div className="grid grid-2">
+                    <Field label="Bind DN" required span={2} hint="Distinguished name of the service account." htmlFor="auth-binddn">
+                      <TextInput id="auth-binddn" className="mono" value={conn.bindDn} onChange={(e) => setC('bindDn', e.target.value)} />
+                    </Field>
+                    <Field label="Password" span={2} hint="Leave blank to keep the stored credential." htmlFor="auth-bindpw">
+                      <TextInput id="auth-bindpw" type="password" autoComplete="off" value={conn.bindPassword} placeholder="Unchanged" onChange={(e) => setC('bindPassword', e.target.value)} />
+                    </Field>
+                    <Field label="Owner" htmlFor="auth-owner">
+                      <Select id="auth-owner" value={app.owner} options={OWNER_OPTIONS} onChange={(e) => onPatch(app.id, { owner: e.target.value })} />
+                    </Field>
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <Banner tone="info">
+                      Test authentication binds an end-user credential against this directory and reads back the mapped
+                      attributes. Test connection only exercises the service account above.
+                    </Banner>
+                  </div>
+                </Card>
               </div>
 
               <div className="stack">
@@ -440,28 +465,10 @@ export default function LdapDetail({
             <div className="detail-cols">
               <div className="stack">
                 <Card
-                  title="Service credential"
-                  sub="The account the platform binds as to read this directory"
-                  actions={<Button size="sm" icon="user" onClick={() => openAuthTest({ app, setDrawer })}>Test authentication</Button>}
+                  title="Test authentication"
+                  sub={`Bind an end-user credential against ${app.displayName} and read back the mapped attributes.`}
                 >
-                  <div className="grid grid-2">
-                    <Field label="Bind DN" required span={2} hint="Distinguished name of the service account." htmlFor="auth-binddn">
-                      <TextInput id="auth-binddn" className="mono" value={conn.bindDn} onChange={(e) => setC('bindDn', e.target.value)} />
-                    </Field>
-                    <Field label="Password" span={2} hint="Leave blank to keep the stored credential." htmlFor="auth-bindpw">
-                      <TextInput id="auth-bindpw" type="password" autoComplete="off" value={conn.bindPassword} placeholder="Unchanged" onChange={(e) => setC('bindPassword', e.target.value)} />
-                    </Field>
-                    <Field label="Owner" htmlFor="auth-owner">
-                      <Select id="auth-owner" value={app.owner} options={OWNER_OPTIONS} onChange={(e) => onPatch(app.id, { owner: e.target.value })} />
-                    </Field>
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <Banner tone="info">
-                      Test authentication binds an end-user credential against this directory and reads back the mapped
-                      attributes. Test connection only exercises the service account above.
-                    </Banner>
-                  </div>
+                  <AuthTestForm app={app} />
                 </Card>
               </div>
 
@@ -479,12 +486,6 @@ export default function LdapDetail({
                 </Card>
               </div>
             </div>
-
-            <StickyActions dirty={connDirty} message={connDirty ? 'Unsaved changes' : 'No changes'}>
-              <Button onClick={() => setConn(connInitial)} disabled={!connDirty}>Discard</Button>
-              <Button icon="user" onClick={() => openAuthTest({ app, setDrawer })}>Test authentication</Button>
-              <Button variant="pri" icon="save" disabled={!connDirty} onClick={saveConnection}>Save changes</Button>
-            </StickyActions>
           </>
         )}
 
@@ -613,39 +614,34 @@ export default function LdapDetail({
 
         {tab === 'attributes' && (
           <div className="stack">
-            {editing !== null && (
-              <MappingEditorPanel
-                mapping={editing.id ? editing : null}
-                directories={[app.displayName, ...directories.filter((d) => d !== app.displayName)]}
-                onCancel={() => setEditing(null)}
-                onSubmit={saveMapping}
-              />
-            )}
-
             <Card
               title="Attribute mapping"
-              sub={`Identity attributes read from ${app.displayName}`}
+              sub={editing
+                ? `Editing the attributes read from ${app.displayName}. Each attribute can be mapped once.`
+                : `Identity attributes read from ${app.displayName}`}
               flush
-              actions={
-<Button size="sm" variant="pri" icon="plus" onClick={() => setEditing({ directory: app.displayName })}>Add mapping</Button>
-              }
-              footer={
+              actions={!editing && (
+                <Button size="sm" variant="pri" icon="plus" onClick={() => setEditing('add')}>Add mapping</Button>
+              )}
+              footer={!editing && (
                 <>
                   <span><b className="num">{mine.length}</b> attributes mapped</span>
                   <span className="spacer" />
                   <span>Mappings apply at the next synchronization run.</span>
                 </>
-              }
+              )}
             >
-              <MappingTable
-                rows={mine}
-                onEdit={(m) => setEditing(m)}
-                onDelete={deleteMapping}
-                onDuplicate={(m) => {
-                  setMaps((ms) => [...ms, { ...m, id: nextId(ms) }])
-                  toast('ok', 'Mapping duplicated', `${m.idam} to ${m.ldap} was copied.`)
-                }}
-              />
+              {editing ? (
+                <MappingBulkEditor
+                  rows={mine}
+                  directory={app.displayName}
+                  startWithNew={editing === 'add'}
+                  onCancel={() => setEditing(null)}
+                  onSave={saveMappings}
+                />
+              ) : (
+                <MappingTable rows={mine} onEdit={() => setEditing('edit')} onDelete={deleteMapping} />
+              )}
             </Card>
 
             <Card title="Unmapped identity attributes" sub="Held on the identity record but not read from this directory">

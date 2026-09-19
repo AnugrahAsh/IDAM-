@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Card from '../../components/primitives/Card'
 import Button from '../../components/primitives/Button'
 import IconButton from '../../components/primitives/IconButton'
@@ -10,7 +10,6 @@ import Switch from '../../components/primitives/Switch'
 import Field from '../../components/primitives/Field'
 import TextInput from '../../components/primitives/TextInput'
 import Select from '../../components/primitives/Select'
-import SearchSelect from '../../components/primitives/SearchSelect'
 import EmptyState from '../../components/primitives/EmptyState'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
@@ -71,59 +70,102 @@ export function HealthBar({ value, tone, note }) {
 const LDAP_ATTRIBUTE_OPTIONS = [...BASE_ATTRIBUTES, ...CUSTOM_ATTRIBUTES]
   .map((a) => ({ value: a.name, label: a.custom ? `${a.name} · custom` : a.name }))
 
-export function MappingEditorPanel({ mapping, directories, onCancel, onSubmit }) {
-  const [d, setD] = useState({
-    idam: mapping ? mapping.idam : ATTRS[1].id,
-    ldap: mapping ? mapping.ldap : '',
-    objectClass: mapping ? mapping.objectClass : 'inetOrgPerson',
-    directory: mapping ? mapping.directory : directories[0],
-    description: mapping ? mapping.description : '',
+const IDENTITY_ATTRIBUTE_OPTIONS = ATTRS.map((a) => ({ value: a.id, label: `${a.label} · ${a.id}` }))
+const attrLabel = (id) => (ATTRS.find((a) => a.id === id) || {}).label || ''
+
+/**
+ * Every mapping of one directory edited as a table, so several rows can be
+ * added and saved in one pass. Each identity attribute and each LDAP attribute
+ * can be mapped once; options already used by another row are not offered.
+ */
+export function MappingBulkEditor({ rows, directory, startWithNew, onSave, onCancel }) {
+  const seq = useRef(0)
+  const blank = () => {
+    seq.current += 1
+    return { id: `new-${seq.current}`, idam: '', ldap: '', objectClass: 'inetOrgPerson', directory, description: '' }
+  }
+  const [draft, setDraft] = useState(() => {
+    const base = rows.map((r) => ({ ...r }))
+    return startWithNew ? [...base, blank()] : base
   })
-  const set = (k, v) => setD((x) => ({ ...x, [k]: v }))
-  const ready = d.idam && String(d.ldap).trim()
+  const set = (id, patch) => setDraft((ds) => ds.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  const incomplete = draft.some((r) => !r.idam || !String(r.ldap || '').trim())
 
   return (
-    <Card
-      title={mapping ? 'Edit attribute mapping' : 'New attribute mapping'}
-      sub={mapping ? `${mapping.idam} currently reads from ${mapping.ldap}` : 'Translate an identity attribute into a directory attribute.'}
-      actions={<IconButton icon="x" size="sm" label="Discard" onClick={onCancel} />}
-    >
-      <div className="grid grid-2">
-        <Field label="Identity attribute" required hint="The attribute held on the Tanflow identity." htmlFor="map-idam">
-          <SearchSelect
-            id="map-idam"
-            value={d.idam}
-            options={ATTRS.map((a) => ({ value: a.id, label: `${a.label} · ${a.id}` }))}
-            placeholder="Select an identity attribute"
-            searchPlaceholder="Search identity attributes…"
-            onChange={(e) => set('idam', e.target.value)}
-          />
-        </Field>
-        <Field label="LDAP attribute" required hint="The attribute it is read from on the directory." htmlFor="map-ldap">
-          <SearchSelect
-            id="map-ldap"
-            value={d.ldap}
-            options={LDAP_ATTRIBUTE_OPTIONS}
-            placeholder="Select an LDAP attribute"
-            searchPlaceholder="Search directory attributes…"
-            onChange={(e) => set('ldap', e.target.value)}
-          />
-        </Field>
+    <>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="tbl map-tbl ldap-map-tbl">
+          <colgroup>
+            <col style={{ width: 56 }} />
+            <col />
+            <col style={{ width: 36 }} />
+            <col />
+            <col style={{ width: 150 }} />
+            <col style={{ width: 56 }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>S.no</th>
+              <th>Identity attribute</th>
+              <th aria-label="reads from">←</th>
+              <th>LDAP attribute</th>
+              <th>Object class</th>
+              <th className="td-act"><span className="vis-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {draft.length === 0 && (
+              <tr><td colSpan={6} className="t-sm t-mut">No attributes mapped. Add a row for each attribute read from {directory}.</td></tr>
+            )}
+            {draft.map((r, i) => {
+              const others = draft.filter((x) => x.id !== r.id)
+              const takenIdam = new Set(others.map((x) => x.idam))
+              const takenLdap = new Set(others.map((x) => String(x.ldap || '').toLowerCase()))
+              return (
+                <tr key={r.id} className="map-edit">
+                  <td className="td-mono">{i + 1}</td>
+                  <td>
+                    <Select
+                      value={r.idam}
+                      placeholder="Select an identity attribute"
+                      options={IDENTITY_ATTRIBUTE_OPTIONS.filter((o) => o.value === r.idam || !takenIdam.has(o.value))}
+                      aria-label={`Identity attribute ${i + 1}`}
+                      onChange={(e) => set(r.id, { idam: e.target.value, description: attrLabel(e.target.value) })}
+                    />
+                  </td>
+                  <td className="t-faint"><Icon name="chevL" size={13} /></td>
+                  <td>
+                    <Select
+                      className="mono"
+                      value={r.ldap}
+                      placeholder="Select an LDAP attribute"
+                      options={LDAP_ATTRIBUTE_OPTIONS.filter((o) => o.value === r.ldap || !takenLdap.has(o.value.toLowerCase()))}
+                      aria-label={`LDAP attribute ${i + 1}`}
+                      onChange={(e) => set(r.id, { ldap: e.target.value })}
+                    />
+                  </td>
+                  <td><Tag>{r.objectClass}</Tag></td>
+                  <td className="td-act">
+                    <IconButton icon="trash" size="sm" label={`Remove row ${i + 1}`} onClick={() => setDraft((ds) => ds.filter((x) => x.id !== r.id))} />
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
-      <div className="t-xs t-mut" style={{ marginTop: 10 }}>
-        Written against <b>{d.directory}</b> on object class <span className="mono">{d.objectClass}</span>.
+      <div className="ldap-map-foot">
+        <Button size="sm" variant="pri" icon="plus" onClick={() => setDraft((ds) => [...ds, blank()])}>Add attribute</Button>
+        {incomplete && <span className="t-xs t-mut">Every row needs an identity attribute and an LDAP attribute.</span>}
+        <span className="spacer" />
+        <Button size="sm" onClick={onCancel}>Cancel</Button>
+        <Button size="sm" variant="pri" icon="save" disabled={incomplete} onClick={() => onSave(draft)}>Save mappings</Button>
       </div>
-      <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button variant="pri" icon="save" disabled={!ready} onClick={() => onSubmit(d)}>
-          {mapping ? 'Save mapping' : 'Create mapping'}
-        </Button>
-      </div>
-    </Card>
+    </>
   )
 }
 
-export function MappingTable({ rows, onEdit, onDelete, onDuplicate }) {
+export function MappingTable({ rows, onEdit, onDelete }) {
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -161,7 +203,6 @@ export function MappingTable({ rows, onEdit, onDelete, onDuplicate }) {
             <td className="trunc">{m.directory}</td>
             <td className="td-act">
               <span className="row" style={{ gap: 2, justifyContent: 'flex-end' }}>
-                <IconButton icon="copy" size="sm" label={`Duplicate ${m.idam}`} onClick={() => onDuplicate(m)} />
                 <IconButton icon="edit" size="sm" label={`Edit ${m.idam}`} onClick={() => onEdit(m)} />
                 <IconButton icon="trash" size="sm" label={`Delete ${m.idam}`} onClick={() => onDelete(m)} />
               </span>
@@ -302,21 +343,95 @@ const emptyAttr = (directory) => ({
   directory,
 })
 
-export function CustomAttributeTable({ rows, onChange, directory }) {
-  const { toast, confirm } = useApp()
-  const [draft, setDraft] = useState(null)
-  const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }))
-  const ready = draft && String(draft.name).trim() && String(draft.ldap).trim()
+// The schema editor's fields plus the two this table also tracks. It owns its
+// state so the drawer re-renders as it is edited; the latest value is handed up
+// on every change for the drawer's footer to save.
+function CustomAttributeForm({ initial, onChange }) {
+  const cur = useRef(initial)
+  const [d, setD] = useState(initial)
+  const update = (patch) => {
+    cur.current = { ...cur.current, ...patch }
+    setD(cur.current)
+    onChange(cur.current)
+  }
+  return (
+    <div className="stack">
+      <DefinitionForm
+        kind="attribute"
+        attributes={[]}
+        initial={{
+          target: initial.target,
+          name: initial.ldap,
+          description: initial.name,
+          syntax: initial.syntax,
+          equality: initial.equality,
+          single: !initial.multi,
+          oid: initial.oid,
+          substr: initial.substr,
+          usage: initial.usage,
+        }}
+        onChange={(v) => update({
+          target: v.target,
+          ldap: v.name,
+          name: v.description,
+          syntax: v.syntax,
+          equality: v.equality,
+          multi: !v.single,
+          oid: v.oid,
+          substr: v.substr,
+          usage: v.usage,
+        })}
+      />
+      <div className="grid grid-2">
+        <Field label="Source of truth" hint="Which system owns the value." htmlFor="ca-source">
+          <Select id="ca-source" value={d.source} options={['Manual', 'Workday HR', 'Contractor intake', 'Active Directory', 'Platform']} onChange={(e) => update({ source: e.target.value })} />
+        </Field>
+      </div>
+      <span className="row">
+        <Switch checked={d.indexed} onChange={(v) => update({ indexed: v })} label="Indexed on the server" />
+        <span className="t-sm">Indexed on the server</span>
+      </span>
+    </div>
+  )
+}
 
-  const save = () => {
-    if (draft.id) {
-      onChange(rows.map((r) => (r.id === draft.id ? { ...r, ...draft } : r)))
-      toast('ok', 'Attribute saved', `${draft.name} reads from ${draft.ldap}.`)
-    } else {
-      onChange([...rows, { ...draft, id: nextId(rows) }])
-      toast('ok', 'Attribute created', `${draft.name} is read from the next synchronization.`)
-    }
-    setDraft(null)
+export function CustomAttributeTable({ rows, onChange, directory }) {
+  const { toast, confirm, setDrawer } = useApp()
+
+  // Opened in the same drawer the Schema section uses to add an attribute type.
+  const openForm = (row) => {
+    let draft = row ? { ...row } : emptyAttr(directory)
+    setDrawer({
+      title: row ? 'Edit custom attribute' : 'Add custom attribute',
+      sub: `Read from ${directory} on every synchronization.`,
+      size: 'lg',
+      children: <CustomAttributeForm initial={draft} onChange={(v) => { draft = v }} />,
+      footer: (
+        <>
+          <Button onClick={() => setDrawer(null)}>Cancel</Button>
+          <Button
+            variant="pri"
+            icon={row ? 'save' : 'plus'}
+            onClick={() => {
+              if (!String(draft.ldap || '').trim() || !String(draft.name || '').trim()) {
+                toast('warn', 'Name and description required', 'Give the attribute a name and a description before saving it.')
+                return
+              }
+              if (row) {
+                onChange(rows.map((r) => (r.id === row.id ? { ...r, ...draft } : r)))
+                toast('ok', 'Attribute saved', `${draft.name} reads from ${draft.ldap}.`)
+              } else {
+                onChange([...rows, { ...draft, id: nextId(rows) }])
+                toast('ok', 'Attribute created', `${draft.name} is read from the next synchronization.`)
+              }
+              setDrawer(null)
+            }}
+          >
+            {row ? 'Save attribute' : 'Add attribute'}
+          </Button>
+        </>
+      ),
+    })
   }
 
   const remove = (row) => confirm({
@@ -337,7 +452,7 @@ export function CustomAttributeTable({ rows, onChange, directory }) {
       actions={
         <>
           <Button size="sm" icon="download" onClick={() => toast('ok', 'Export queued', `${rows.length} custom attributes queued for CSV export.`)}>Export</Button>
-          <Button size="sm" variant="pri" icon="plus" onClick={() => setDraft(emptyAttr(directory))}>Add attribute</Button>
+          <Button size="sm" variant="pri" icon="plus" onClick={() => openForm(null)}>Add attribute</Button>
         </>
       }
       footer={
@@ -349,67 +464,13 @@ export function CustomAttributeTable({ rows, onChange, directory }) {
         </>
       }
     >
-      {draft && (
-        <div className="card-b" style={{ borderBottom: '1px solid var(--hair)', background: 'var(--surface-2)' }}>
-          <div className="row-between" style={{ marginBottom: 12 }}>
-            <span className="t-h3">{draft.id ? 'Edit custom attribute' : 'New custom attribute'}</span>
-            <IconButton icon="x" size="sm" label="Discard" onClick={() => setDraft(null)} />
-          </div>
-          {/* Same editor the Schema section uses to create an attribute type, so
-              the two places an operator can define an attribute ask for it in
-              the same shape. The fields this table also tracks — where the value
-              comes from and whether the server indexes it — follow underneath. */}
-          <DefinitionForm
-            kind="attribute"
-            attributes={[]}
-            initial={{
-              target: draft.target,
-              name: draft.ldap,
-              description: draft.name,
-              syntax: draft.syntax,
-              equality: draft.equality,
-              single: !draft.multi,
-              oid: draft.oid,
-              substr: draft.substr,
-              usage: draft.usage,
-            }}
-            onChange={(v) => setDraft((cur) => ({
-              ...cur,
-              target: v.target,
-              ldap: v.name,
-              name: v.description,
-              syntax: v.syntax,
-              equality: v.equality,
-              multi: !v.single,
-              oid: v.oid,
-              substr: v.substr,
-              usage: v.usage,
-            }))}
-          />
-          <div className="grid grid-2" style={{ marginTop: 14 }}>
-            <Field label="Source of truth" hint="Which system owns the value." htmlFor="ca-source">
-              <Select id="ca-source" value={draft.source} options={['Manual', 'Workday HR', 'Contractor intake', 'Active Directory', 'Platform']} onChange={(e) => set('source', e.target.value)} />
-            </Field>
-          </div>
-          <div className="row" style={{ marginTop: 14, gap: 18, flexWrap: 'wrap' }}>
-            <span className="row">
-              <Switch checked={draft.indexed} onChange={(v) => set('indexed', v)} label="Indexed on the server" />
-              <span className="t-sm">Indexed on the server</span>
-            </span>
-            <span className="spacer" />
-            <Button onClick={() => setDraft(null)}>Cancel</Button>
-            <Button variant="pri" icon="save" disabled={!ready} onClick={save}>{draft.id ? 'Save attribute' : 'Add attribute'}</Button>
-          </div>
-        </div>
-      )}
-
       {rows.length === 0 ? (
         <EmptyState
           icon="tag"
           size="sm"
           title="No custom attributes"
           body="Only the standard schema is read from this directory."
-          actions={<Button size="sm" variant="pri" icon="plus" onClick={() => setDraft(emptyAttr(directory))}>Add attribute</Button>}
+          actions={<Button size="sm" variant="pri" icon="plus" onClick={() => openForm(null)}>Add attribute</Button>}
         />
       ) : (
         <div style={{ overflowX: 'auto' }}><table className="tbl">
@@ -444,7 +505,7 @@ export function CustomAttributeTable({ rows, onChange, directory }) {
                 </td>
                 <td className="td-act">
                   <span className="row" style={{ gap: 2, justifyContent: 'flex-end' }}>
-                    <IconButton icon="edit" size="sm" label={`Edit ${r.name}`} onClick={() => setDraft({ ...r })} />
+                    <IconButton icon="edit" size="sm" label={`Edit ${r.name}`} onClick={() => openForm(r)} />
                     <IconButton icon="trash" size="sm" label={`Delete ${r.name}`} onClick={() => remove(r)} />
                   </span>
                 </td>

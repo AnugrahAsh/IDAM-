@@ -1,0 +1,22 @@
+/* The resolved expression, in the console's code-block style: one line per
+   condition so a long rule can be scanned rather than parsed. */
+.xc{
+  background:var(--surface-3);border:1px solid var(--line);border-radius:var(--r-xs);
+  font-family:var(--mono);font-size:var(--t-xs);line-height:1.8;color:var(--ink-2);
+  overflow:hidden;
+}
+.xc-empty{padding:8px 10px;color:var(--faint)}
+.xc-lines{list-style:none;margin:0;padding:6px 0}
+.xc-line{display:flex;align-items:flex-start;min-width:0}
+.xc-ln{flex:none;width:30px;padding-right:10px;text-align:right;color:var(--faint);user-select:none;font-variant-numeric:tabular-nums}
+.xc-lines:not([data-numbered]) .xc-line{padding-left:10px}
+.xc-code{flex:1;min-width:0;padding-right:10px;white-space:pre-wrap;word-break:break-word;
+  font-family:inherit;font-size:inherit;background:none;border:0;color:inherit}
+.xc-attr{color:var(--ink)}
+.xc-attr-unknown{color:var(--bad)}
+.xc-op{color:var(--mut)}
+.xc-str,.xc-num{color:var(--ok)}
+.xc-str-empty{color:var(--warn)}
+.xc-kw{color:var(--ink);font-weight:var(--w-semi)}
+.xc-paren{color:var(--mut)}
+.xc-raw{color:var(--ink-2)}

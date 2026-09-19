@@ -216,3 +216,8 @@
 .ldap-opt-m b{display:flex;align-items:center;gap:6px;font-size:var(--t-sm);color:var(--ink)}
 .ldap-opt-m > span{font-size:var(--t-xs);color:var(--mut)}
 .ldap-opts > button > svg:last-child{flex:none;color:var(--faint)}
+
+/* Attribute mapping, edited as a table of rows saved together. */
+.map-tbl.ldap-map-tbl{min-width:640px}
+.ldap-map-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px var(--sp-4);
+  background:var(--surface-2);border-top:1px solid var(--line)}

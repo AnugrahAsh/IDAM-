@@ -1,0 +1,23 @@
+/* Page-owned styles for NetworkPolicyPage. Shared primitives remain in src/styles. */
+
+/* --- Multi-address entry on the binding form ------------------------------ */
+/* The Add button sits on the input's baseline, not under its hint text, so the
+   pair reads as one control. */
+.ip-add-row{display:flex;align-items:flex-start;gap:8px}
+.ip-add-row .field{flex:1;min-width:0}
+.ip-add-row > .btn{margin-top:23px;flex:none}
+
+/* The accumulated list sits below the entry row with a rule between them, the
+   way a register sits under its toolbar. */
+.ip-list{margin-top:14px;border-top:1px solid var(--hair);padding-top:12px}
+
+/* Fixed layout: the rows are computed from the address, so the columns must not
+   renegotiate their widths every time one is added. */
+.ip-tbl{table-layout:fixed;min-width:700px}
+.ip-tbl td,.ip-tbl th{white-space:normal}
+.ip-tbl tbody tr{cursor:pointer}
+.ip-tbl th.td-act,.ip-tbl td.td-act{width:48px}
+
+/* One conflict block per address; the rule keeps the groups apart when several
+   addresses on the list overlap something. */
+.ip-conflict + .ip-conflict{margin-top:12px;border-top:1px solid var(--hair);padding-top:12px}

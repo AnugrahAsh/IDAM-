@@ -15,7 +15,7 @@ import Icon from './Icon'
  * is left alone — the call site knows better than this does.
  */
 export default function Field({
-  label, hint, error, required, children, span, htmlFor,
+  label, hint, error, required, children, span, htmlFor, keepHint = false,
 }) {
   const auto = useId()
   const only = Children.count(children) === 1 ? Children.only(children) : null
@@ -33,11 +33,10 @@ export default function Field({
         </label>
       )}
       {body}
-      {error ? (
-        <span className="field-err" role="alert"><Icon name="warn" size={11} />{error}</span>
-      ) : hint ? (
-        <span className="field-hint">{hint}</span>
-      ) : null}
+      {/* With keepHint the description stays under the control and the error
+          follows it, so fixing a field doesn't hide what the field is for. */}
+      {hint && (keepHint || !error) && <span className="field-hint">{hint}</span>}
+      {error && <span className="field-err" role="alert"><Icon name="warn" size={11} />{error}</span>}
     </div>
   )
 }

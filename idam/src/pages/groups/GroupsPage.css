@@ -1,0 +1,50 @@
+/* Page-owned styles for GroupsPage (unified Groups register). Shared primitives remain in src/styles. */
+
+/* KPI strip */
+.gp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.gp-kpi{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);padding:10px 13px;cursor:pointer;font:inherit;
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.gp-kpi:hover{border-color:var(--accent-line);box-shadow:var(--sh)}
+.gp-kpi[data-on="true"]{border-color:var(--accent-line);background:var(--accent-bg);box-shadow:var(--sh)}
+.gp-kpi[data-static]{cursor:default}
+.gp-kpi[data-static]:hover{border-color:var(--line);box-shadow:none}
+.gp-kpi-label{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);
+  text-transform:uppercase;font-weight:var(--w-semi);color:var(--mut)}
+.gp-kpi-label svg{color:var(--faint)}
+.gp-kpi[data-on="true"] .gp-kpi-label,.gp-kpi[data-on="true"] .gp-kpi-label svg{color:var(--accent-a)}
+.gp-kpi-value{font-size:var(--t-h2);line-height:var(--t-h2-lh);font-weight:var(--w-bold);color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.gp-kpi-sub{font-size:var(--t-xs);color:var(--mut)}
+
+/* CSV upload drop zone (Import Groups) */
+.gp-drop{display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 18px;text-align:center;
+  border:1.5px dashed var(--line-2);border-radius:var(--r);background:var(--surface-2);cursor:pointer;
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.gp-drop:hover,.gp-drop:focus-visible{border-color:var(--accent-line);background:var(--accent-bg)}
+.gp-drop:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+.gp-drop[data-drag]{border-color:var(--accent);background:var(--accent-bg)}
+.gp-drop-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.gp-drop-link{color:var(--accent-a);text-decoration:underline}
+.gp-drop-s{font-size:var(--t-xs);color:var(--mut)}
+
+/* Selected file row */
+.gp-file{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--surface)}
+.gp-file-m{flex:1;min-width:0}
+.gp-file-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+
+/* Parsed preview list */
+.gp-preview{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.gp-preview-row{display:flex;align-items:center;gap:9px;padding:7px 11px;border-bottom:1px solid var(--hair);
+  font-size:var(--t-sm)}
+.gp-preview-row:last-child{border-bottom:none}
+.gp-preview-row[data-bad]{background:var(--warn-bg)}
+.gp-preview-ic{flex:none;color:var(--ok)}
+.gp-preview-row[data-bad] .gp-preview-ic{color:var(--warn-core)}
+.gp-preview-name{font-family:var(--mono);font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--ink);flex:none}
+.gp-preview-more{padding:6px 11px;font-size:var(--t-xs);color:var(--mut);background:var(--surface-2)}
+
+/* Import result */
+.gp-import-done{display:flex;align-items:center;gap:14px;margin-bottom:18px}

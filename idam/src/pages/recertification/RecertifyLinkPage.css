@@ -1,0 +1,57 @@
+/* Recertification via email link — a stand-alone page outside the console shell. */
+
+/* The console locks body scrolling for its own canvas; this page scrolls itself. */
+.rl-page{height:100%;overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
+.rl-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:12px 24px;
+  background:var(--surface);border-bottom:1px solid var(--hair)}
+.rl-logo{height:22px;width:auto;display:block}
+/* Drawers are sized for the console's status bar, which this page doesn't have. */
+:root:has(.rl-page) .drawer,:root:has(.rl-page) .drawer-scrim{bottom:0}
+.rl-top-sep{width:1px;height:18px;background:var(--line)}
+.rl-main{width:100%;max-width:1120px;margin:0 auto;padding:24px 24px 48px}
+
+.rl-intro{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.rl-intro-facts{display:flex;gap:24px;flex-wrap:wrap}
+.rl-intro-facts > span{display:flex;flex-direction:column;gap:2px}
+
+/* Personal information: one tile per attribute. */
+.rl-attr-section{margin:4px 0 8px}
+.rl-attrs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rl-attr{display:flex;flex-direction:column;gap:4px;min-width:0;padding:9px 11px;border:1px solid var(--hair);border-radius:var(--r)}
+.rl-attr[data-change="modified"],.rl-attr[data-change="added"],.rl-attr[data-change="cleared"]{background:var(--accent-bg);border-color:var(--accent-line)}
+.rl-attr-v{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:var(--t-sm);color:var(--ink);overflow-wrap:anywhere}
+.rl-attr-v svg{color:var(--mut);flex:none}
+
+/* Groups: added rows green, removed rows red — each also labelled. */
+.rl-group + .rl-group{border-top:1px solid var(--hair);padding-top:var(--sp-4)}
+.rl-group-h{gap:12px;margin-bottom:10px}
+.rl-group-tbl{border:1px solid var(--hair);border-radius:var(--r);table-layout:fixed;width:100%}
+.rl-group-tbl tr[data-change="added"] td{background:var(--ok-bg)}
+.rl-group-tbl tr[data-change="removed"] td{background:var(--bad-bg)}
+.rl-submit{margin-top:14px;gap:8px;flex-wrap:wrap}
+
+/* Edit user details: collapsible sections. */
+.rl-section{border:1px solid var(--hair);border-radius:var(--r)}
+.rl-section-h{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;background:var(--surface-2);
+  border:0;border-radius:var(--r);font:inherit;font-weight:var(--w-semi);color:var(--ink);cursor:pointer;text-align:left}
+.rl-section-h[aria-expanded="true"]{border-bottom:1px solid var(--hair);border-radius:var(--r) var(--r) 0 0}
+.rl-section-err{margin-left:auto;color:var(--bad)}
+.rl-section-b{padding:14px 12px}
+
+/* Outcomes: success, already done, expired, invalid. */
+.rl-outcome{max-width:520px;margin:48px auto 0}
+.rl-outcome-b{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:16px 8px}
+.rl-outcome-body p{margin:0 0 8px}
+.rl-outcome-icon{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;
+  color:var(--mut);background:var(--surface-3)}
+.rl-outcome-icon[data-tone="ok"]{color:var(--ok);background:var(--ok-bg)}
+.rl-outcome-icon[data-tone="warn"]{color:var(--warn);background:var(--warn-bg)}
+.rl-outcome-icon[data-tone="bad"]{color:var(--bad);background:var(--bad-bg)}
+
+@media (max-width:860px){.rl-attrs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){
+  .rl-attrs{grid-template-columns:minmax(0,1fr)}
+  .rl-main{padding:16px 16px 40px}
+  .rl-top{padding:10px 16px}
+  .rl-section-b.grid-2{grid-template-columns:minmax(0,1fr)}
+}

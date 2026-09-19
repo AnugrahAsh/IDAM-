@@ -80,12 +80,8 @@ export const capabilityLabel = (id) => {
 // Connector-specific connection settings (client item 14)
 // ---------------------------------------------------------------------------
 
-export const AUTH_METHODS = ['API token', 'Basic authentication', 'Bearer token', 'OAuth2 client credentials']
-export const AUTH_BEARER = 'Bearer token'
-export const AUTH_OAUTH2 = 'OAuth2 client credentials'
-
 /**
- * How a custom API connector authenticates.
+ * How the two HTTP connectors authenticate.
  *
  * Two decisions, not one. `authType` says what kind of credential the target
  * accepts; for a bearer target `authMethod` says where the token comes from —
@@ -93,7 +89,9 @@ export const AUTH_OAUTH2 = 'OAuth2 client credentials'
  * upstream already holds it. They used to be one four-option dropdown, which
  * could express "bearer" but not which of those two it meant, so the token API
  * fields were shown to connectors that had no use for them and the header a
- * dynamic connector needs had nowhere to live at all.
+ * dynamic connector needs had nowhere to live at all. REST API and Custom API
+ * share this model rather than each keeping its own, so moving between them is
+ * not also a lesson in a second way of authenticating.
  */
 export const AUTH_TYPES = ['Basic Auth', 'Bearer Token']
 export const AUTH_BASIC = AUTH_TYPES[0]
@@ -108,27 +106,32 @@ export const BEARER_DYNAMIC = BEARER_METHODS[1]
  *
  * REST API and Custom API used to be one connector with an `apiType` sub-type.
  * They are two entries in the catalogue now (`CONNECTOR_TYPES` in the seed):
- * the REST connector drives one base URL and keeps the fields it always had,
- * and the Custom API connector carries its own configuration — authentication,
- * token API, response keys, and one API plus one attribute mapping per
- * lifecycle operation. Records written under the old sub-type are read through
- * `migrateProvisioningFacet` so nothing already registered stops working.
+ * the REST connector drives one base URL and one resource path and
+ * authenticates exactly as Custom API does, and the Custom API connector
+ * carries its own configuration beyond that — token API, response keys, and
+ * one API plus one attribute mapping per lifecycle operation. Records written
+ * under the old sub-type are read through `migrateProvisioningFacet` so
+ * nothing already registered stops working.
  */
 export const REST_API_CONNECTOR = 'api'
 export const CUSTOM_API_CONNECTOR = 'custom'
 export const isCustomApiConnector = (connector) => connector === CUSTOM_API_CONNECTOR
 
+/* The two directory connectors. Both are kind `Directory`, but their
+   connection fields diverge (Active Directory reads an application OU and a
+   group OU; LDAP reads only an application OU and allows an anonymous bind),
+   so each carries its own spec rather than a shared 'Directory' one. */
+export const AD_CONNECTOR = 'ad'
+export const LDAP_CONNECTOR = 'ldap'
+
 /** The one list every HTTP method dropdown reads from. */
 export const apiMethodOptions = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
-export const HTTP_METHODS = apiMethodOptions
 
 // Categories the platform knows how to act on: a validation error is a bad
 // record and is not retried, an auth error stops the run, a server error and a
 // rate limit are both retried but on different backoffs. The list is closed
 // because the behaviour behind each entry is closed.
-export const ERROR_CATEGORIES = [
-  'Validation error', 'Authentication error', 'Server error', 'Rate limited', 'Unknown',
-]
+export const ERROR_CATEGORIES = ['Success', 'Duplicate', 'NotFound', 'InvalidInput', 'Unauthorized', 'ServerError']
 
 const isBearer = (c) => c.authType === AUTH_BEARER_TYPE
 const isBasic = (c) => c.authType === AUTH_BASIC
@@ -159,6 +162,21 @@ const TIMEOUT_FIELD = {
   hint: 'How long an outgoing call may wait for a response before the run gives up on it.',
 }
 
+/* A JSON body field, in the shape every payload field on the two HTTP
+   connectors shares — declared once so a Get Token, Create, Update or Delete
+   payload is the same control with a different label. */
+const payloadField = (group, id, label, extra = {}) => ({
+  group,
+  id,
+  label,
+  type: 'textarea',
+  mono: true,
+  rows: 5,
+  span: 2,
+  json: true,
+  ...extra,
+})
+
 /**
  * Connection field specs.
  *
@@ -176,46 +194,19 @@ export const CONNECTION_SPECS = {
     { id: 'password', label: 'Password', required: true, secret: true },
     { id: 'accountTable', label: 'Account table', mono: true, span: 2, hint: 'Table the connector reads and writes accounts against. Discovered automatically when left blank.' },
   ],
-  Directory: [
-    { id: 'host', label: 'Host', required: true, mono: true, placeholder: 'dc01.tanflow.internal' },
-    { id: 'port', label: 'Port', required: true, mono: true, numeric: true },
-    { id: 'baseDn', label: 'Base DN', required: true, mono: true, span: 2, placeholder: 'dc=tanflow,dc=com' },
-    { id: 'bindDn', label: 'Bind DN', required: true, mono: true, span: 2, placeholder: 'cn=idam,ou=svc,dc=tanflow,dc=com' },
-    { id: 'bindPassword', label: 'Bind credential', required: true, secret: true },
-    { id: 'objectClass', label: 'Object class', mono: true, hint: 'Defaults to the standard class for this directory type.' },
-  ],
-  /**
-   * The custom API connector.
-   *
-   * Grouped, because it is not one form: it is authentication, response
-   * handling, and one configuration per lifecycle operation the application is
-   * actually allowed to perform. A flat list of twenty-six fields asked an
-   * operator to work out for themselves which six of them belonged to Create.
-   *
-   * The lifecycle groups are gated on the operations ticked for the
-   * application — a connector that may not delete is not asked for a delete
-   * endpoint.
-   */
+  /* The REST API connector: one base URL and the resource path accounts are
+     listed from. Authentication is the same decision as the Custom API
+     connector's — Basic Auth, or Bearer Token minted from a Get Token API or
+     supplied here directly — so the two fields sets share their ids and their
+     `when` predicates rather than each connector inventing its own shape.
+     Everything per-operation still belongs to the Custom API connector's own
+     spec alone. */
   Custom: [
-    { group: 'Connection', id: 'baseUrl', label: 'Base URL', required: true, mono: true, span: 2, placeholder: 'https://api.example.com/v1' },
-    {
-      group: 'Connection',
-      id: 'timeoutSeconds',
-      label: 'API request timeout (seconds)',
-      required: true,
-      numeric: true,
-      default: '30',
-      min: 1,
-      max: 600,
-      placeholder: '30',
-      hint: 'How long an outgoing call may wait for a response before the run gives up on it. Applies to every API configured below.',
-    },
-
-    // -- Authentication. Applied to every API in this configuration. ---------
-    { group: 'Authentication', id: 'authType', label: 'Auth type', required: true, options: AUTH_TYPES, default: AUTH_BEARER_TYPE, hint: 'The credential this target accepts. It is applied to every API configured below.' },
+    { id: 'baseUrl', label: 'Base URL', required: true, mono: true, span: 2, placeholder: 'https://api.example.com/v1' },
+    { group: 'Authentication', id: 'authType', label: 'Auth type', required: true, options: AUTH_TYPES, default: AUTH_BEARER_TYPE, hint: 'The authentication mechanism used by every request to this target.' },
     { group: 'Authentication', id: 'username', label: 'Username', mono: true, when: isBasic, required: isBasic },
     { group: 'Authentication', id: 'password', label: 'Password', secret: true, when: isBasic },
-    { group: 'Authentication', id: 'authMethod', label: 'Auth method', options: BEARER_METHODS, default: BEARER_DEFAULT, when: isBearer, required: isBearer, hint: 'Default mints a token from the token API below. Dynamic sends an authorization value supplied here.' },
+    { group: 'Authentication', id: 'authMethod', label: 'Auth method', options: BEARER_METHODS, default: BEARER_DEFAULT, when: isBearer, required: isBearer, hint: 'Default obtains a token from the Get Token API below. Dynamic sends the authorization value supplied here.' },
     {
       group: 'Authentication',
       id: 'authorization',
@@ -224,90 +215,20 @@ export const CONNECTION_SPECS = {
       span: 2,
       when: isDynamicBearer,
       required: isDynamicBearer,
-      hint: 'Sent as the authorization value on every request. Include the scheme if the target expects one.',
+      hint: 'The authorization value sent on every API request. Extra key/value pairs can be added beneath it.',
     },
-
-    // -- Token API. Only a default bearer connector mints its own token. -----
-    { group: 'Token API', id: 'getTokenApiUrl', label: 'Get token API URL', mono: true, span: 2, when: isDefaultBearer, required: isDefaultBearer, placeholder: 'https://api.example.com/oauth/token' },
-    { group: 'Token API', id: 'getTokenApiMethod', label: 'Get token API method', options: HTTP_METHODS, default: 'POST', when: isDefaultBearer, required: isDefaultBearer },
-    { group: 'Token API', id: 'clientId', label: 'Client ID', mono: true, when: isDefaultBearer, required: isDefaultBearer },
-    { group: 'Token API', id: 'clientSecret', label: 'Client secret', secret: true, when: isDefaultBearer, required: isDefaultBearer },
-    {
-      group: 'Token API',
-      id: 'getTokenApiPayload',
-      label: 'Get token API payload',
-      type: 'textarea',
-      mono: true,
-      rows: 4,
-      span: 2,
-      json: true,
+    { group: 'Get Token API', id: 'getTokenAPIUrl', label: 'Get Token API URL', mono: true, span: 2, when: isDefaultBearer, required: isDefaultBearer, placeholder: 'https://example.com/oauth/token' },
+    { group: 'Get Token API', id: 'getTokenAPIMethod', label: 'Get Token API method', options: apiMethodOptions, default: 'POST', when: isDefaultBearer, required: isDefaultBearer },
+    { group: 'Get Token API', id: 'clientId', label: 'Client ID', mono: true, when: isDefaultBearer, required: isDefaultBearer },
+    { group: 'Get Token API', id: 'clientSecret', label: 'Client secret', secret: true, when: isDefaultBearer, required: isDefaultBearer },
+    payloadField('Get Token API', 'getTokenAPIPayload', 'Get Token API payload', {
       when: isDefaultBearer,
       required: isDefaultBearer,
       placeholder: '{\n  "grant_type": "client_credentials"\n}',
       hint: 'Body sent to the token endpoint. Validated as JSON when the field loses focus.',
-    },
-
-    // -- How a response is read. --------------------------------------------
-    { group: 'Response handling', id: 'successKey', label: 'Success key', mono: true, placeholder: 'status', hint: 'Key in the response body the platform reads to decide a call succeeded. Defaults to the HTTP status when left blank.' },
-    { group: 'Response handling', id: 'successValue', label: 'Success value', mono: true, placeholder: 'success', hint: 'The value that key must carry for the call to count as successful.' },
-    { group: 'Response handling', id: 'messageKey', label: 'Message key', mono: true, placeholder: 'message', hint: 'Key carrying the human-readable outcome, written to the run log.' },
-    { group: 'Response handling', id: 'errorKey', label: 'Error key', mono: true, placeholder: 'error.code', hint: 'Key that carries the failure reason when a call did not succeed.' },
-
-    // -- Get User. Always configured: nothing else can run without it. -------
-    { group: 'Get User API', id: 'getUserApiUrl', label: 'Get API URL', mono: true, span: 2, placeholder: 'https://api.example.com/v1/users', hint: 'Endpoint the connector reads accounts from.' },
-    { group: 'Get User API', id: 'getUserApiMethod', label: 'Get API method', options: HTTP_METHODS, default: 'GET' },
-    {
-      group: 'Get User API',
-      id: 'getUserApiPayload',
-      label: 'Get API payload',
-      type: 'textarea',
-      mono: true,
-      rows: 4,
-      span: 2,
-      json: true,
-      placeholder: '{}',
-      hint: 'Body sent on the read. Validated as JSON when the field loses focus.',
-    },
-
-    // -- Create. Shown only when the application may create accounts. --------
-    { group: 'Create User API', id: 'createPath', label: 'Create API URL', mono: true, span: 2, url: true, when: canCreate, required: canCreate, placeholder: 'https://api.example.com/v1/users' },
-    { group: 'Create User API', id: 'createMethod', label: 'Create API method', options: HTTP_METHODS, default: 'POST', when: canCreate, required: canCreate },
-    {
-      group: 'Create User API',
-      id: 'createPayload',
-      label: 'Create API payload',
-      type: 'textarea',
-      mono: true,
-      rows: 6,
-      span: 2,
-      json: true,
-      when: canCreate,
-      required: canCreate,
-      placeholder: '{\n  "userName": "{username}",\n  "email": "{email}"\n}',
-      hint: 'A {token} is replaced with the value the attribute mapping writes for it. Left blank, the connector sends the mapped attributes as a flat JSON object.',
-    },
-
-    // -- Update. Identical to Create, against the update endpoint. ----------
-    { group: 'Update User API', id: 'updatePath', label: 'Update API URL', mono: true, span: 2, url: true, when: canUpdate, required: canUpdate, placeholder: 'https://api.example.com/v1/users/{id}' },
-    { group: 'Update User API', id: 'updateMethod', label: 'Update API method', options: HTTP_METHODS, default: 'PUT', when: canUpdate, required: canUpdate },
-    {
-      group: 'Update User API',
-      id: 'updatePayload',
-      label: 'Update API payload',
-      type: 'textarea',
-      mono: true,
-      rows: 6,
-      span: 2,
-      json: true,
-      when: canUpdate,
-      required: canUpdate,
-      placeholder: '{\n  "email": "{email}"\n}',
-      hint: 'Sent when an account this connector owns is updated.',
-    },
-
-    // -- Delete. An endpoint and a verb; there is no body to send. -----------
-    { group: 'Delete User API', id: 'deletePath', label: 'Delete API URL', mono: true, span: 2, url: true, when: canDelete, required: canDelete, placeholder: 'https://api.example.com/v1/users/{id}' },
-    { group: 'Delete User API', id: 'deleteMethod', label: 'Delete API method', options: HTTP_METHODS, default: 'DELETE', when: canDelete, required: canDelete },
+    }),
+    { id: 'resourcePath', label: 'Resource path', mono: true, span: 2, placeholder: '/users', hint: 'Endpoint below the base URL that lists accounts.' },
+    TIMEOUT_FIELD,
   ],
   Cloud: [
     { id: 'tenantId', label: 'Tenant ID', required: true, mono: true, placeholder: 'tanflow.onmicrosoft.com' },
@@ -344,6 +265,7 @@ const customApiAppAttributes = (conn = {}) => [
   ...(conn.getUserMappings || []).map((r) => r.applicationAttribute),
   ...(conn.createMappings || []).map((r) => r.applicationAttribute),
   ...(conn.updateMappings || []).map((r) => r.applicationAttribute),
+  ...(conn.deleteMappings || []).map((r) => r.applicationAttribute),
   conn.uniqueAppAttribute,
 ].map((v) => String(v || '').trim()).filter(Boolean)
 
@@ -379,18 +301,6 @@ const uniquePairFields = (group, when) => [
     hint: 'The identity attribute matched against it during provisioning and reconciliation.',
   },
 ]
-
-const payloadField = (group, id, label, extra = {}) => ({
-  group,
-  id,
-  label,
-  type: 'textarea',
-  mono: true,
-  rows: 5,
-  span: 2,
-  json: true,
-  ...extra,
-})
 
 export const CUSTOM_API_SPEC = [
   // -- Authentication. Applied to every API in this configuration. ---------
@@ -440,10 +350,10 @@ export const CUSTOM_API_SPEC = [
   }),
 
   // -- How a response is read. Every key is optional. ---------------------
-  { group: 'Get Response Error Keys', id: 'successKey', label: 'Success key', mono: true, placeholder: 'status', hint: 'Key in the response body that says whether a call succeeded.' },
-  { group: 'Get Response Error Keys', id: 'successValue', label: 'Success value', mono: true, placeholder: 'success', hint: 'The value that key carries on a successful call.' },
-  { group: 'Get Response Error Keys', id: 'messageKey', label: 'Message key', mono: true, placeholder: 'message', hint: 'Key carrying the human-readable outcome.' },
-  { group: 'Get Response Error Keys', id: 'errorKey', label: 'Error key', mono: true, placeholder: 'error', hint: 'Key that carries the failure reason. The error classification keywords beneath are matched against it.' },
+  { group: 'Get Response Error Keys', id: 'successKey', label: 'Success key', mono: true, placeholder: 'e.g., status, success, code', hint: 'Key in the response body that says whether a call succeeded.' },
+  { group: 'Get Response Error Keys', id: 'successValue', label: 'Success value', mono: true, placeholder: 'e.g., true, success, 000', hint: 'The value that key carries on a successful call.' },
+  { group: 'Get Response Error Keys', id: 'messageKey', label: 'Message key', mono: true, placeholder: 'e.g., message, msg, ResMsg, detail', hint: 'Key carrying the human-readable outcome.' },
+  { group: 'Get Response Error Keys', id: 'errorKey', label: 'Error key', mono: true, placeholder: 'e.g., message, msg, ResMsg, detail', hint: 'Key that carries the failure reason. The error classification keywords beneath are matched against it.' },
 
   // -- Get User. Always configured. ---------------------------------------
   { group: 'Get User API Configurations', id: 'getUserAPIUrl', label: 'Get API URL', mono: true, span: 2, placeholder: 'https://example.com/api/users', hint: 'Endpoint the connector retrieves users from.' },
@@ -451,8 +361,8 @@ export const CUSTOM_API_SPEC = [
   payloadField('Get User API Configurations', 'getUserAPIPayload', 'Get API payload', {
     required: true,
     default: '{}',
-    placeholder: '{}',
-    hint: 'Body sent on the read. Validated as JSON when the field loses focus.',
+    placeholder: '{\n  "id": "",\n  "profile": {\n    "email": ""\n  }\n}',
+    hint: 'Body sent on the read, validated as JSON when the field loses focus. Nested keys are offered to the Get User attribute mapping as dot paths, such as profile.email.',
   }),
 
   // -- Create. Shown only when the application may create accounts. --------
@@ -477,14 +387,61 @@ export const CUSTOM_API_SPEC = [
   }),
   ...uniquePairFields('Update User API Configurations', (c, ctx) => !canCreate(c, ctx) && canUpdate(c, ctx)),
 
-  // -- Delete. An endpoint and a verb; there is no body to send. -----------
+  // -- Delete. An endpoint and a verb; a body is optional. -----------------
   { group: 'Delete User API Configurations', id: 'deleteUserAPIUrl', label: 'Delete API URL', mono: true, span: 2, url: true, when: canDelete, required: canDelete, placeholder: 'https://example.com/api/users/{id}' },
   { group: 'Delete User API Configurations', id: 'deleteUserAPIMethod', label: 'Delete API method', options: apiMethodOptions, default: 'DELETE', when: canDelete, required: canDelete },
+  payloadField('Delete User API Configurations', 'deleteUserAPIPayload', 'Delete API payload', {
+    when: canDelete,
+    placeholder: '{\n  "reason": "offboarded"\n}',
+    hint: 'Body sent with the delete request, if the target expects one. Optional — most targets accept a bodyless delete.',
+  }),
+]
+
+// ---------------------------------------------------------------------------
+// Active Directory / LDAP connection settings.
+//
+// A single Connection URL (the LDAP URI, scheme and port included) in place
+// of a separate host and port, and no explicit Base DN or object class — the
+// connector reads it from the bind DN instead of asking for it twice.
+// ---------------------------------------------------------------------------
+
+const DIRECTORY_URL_FIELD = {
+  id: 'connectionUrl',
+  label: 'Connection URL',
+  required: true,
+  mono: true,
+  span: 2,
+  placeholder: 'ldap://10.0.0.00:389 or ldaps://abc.def.com:636',
+}
+const DIRECTORY_BIND_DN_FIELD = {
+  id: 'bindDn',
+  label: 'Bind DN',
+  required: true,
+  mono: true,
+  span: 2,
+  placeholder: 'cn=idam,ou=svc,dc=tanflow,dc=com',
+}
+
+export const AD_SPEC = [
+  DIRECTORY_URL_FIELD,
+  DIRECTORY_BIND_DN_FIELD,
+  { id: 'bindPassword', label: 'Password', required: true, secret: true },
+]
+
+export const LDAP_SPEC = [
+  DIRECTORY_URL_FIELD,
+  DIRECTORY_BIND_DN_FIELD,
+  { id: 'bindPassword', label: 'Password', secret: true, hint: 'Left blank for an anonymous bind.' },
 ]
 
 /* A connector with a spec of its own is looked up by id before its kind, so
-   the two HTTP connectors share a family without sharing a form. */
-const CONNECTOR_SPECS = { [CUSTOM_API_CONNECTOR]: CUSTOM_API_SPEC }
+   the two HTTP connectors share a family without sharing a form, and Active
+   Directory and LDAP share a kind without sharing a form either. */
+const CONNECTOR_SPECS = {
+  [CUSTOM_API_CONNECTOR]: CUSTOM_API_SPEC,
+  [AD_CONNECTOR]: AD_SPEC,
+  [LDAP_CONNECTOR]: LDAP_SPEC,
+}
 
 export const specFor = (connector) =>
   CONNECTOR_SPECS[connector] || CONNECTION_SPECS[kindOf(connector)] || CONNECTION_SPECS.Custom
@@ -588,11 +545,21 @@ export const authExtraIssues = (conn = {}) => {
   return [...new Set(out)]
 }
 
-export const blankErrorClasses = () => [
-  { id: 1, match: '400', category: 'Validation error' },
-  { id: 2, match: '401', category: 'Authentication error' },
-  { id: 3, match: '500', category: 'Server error' },
-]
+// Default keywords are part of every connector and cannot be removed.
+export const DEFAULT_ERROR_CLASSES = Object.entries({
+  Success: ['created successfully', 'updated successfully', 'operation completed', 'request accepted', 'success'],
+  Duplicate: ['already exists', 'duplicate', 'exist'],
+  NotFound: ['not found', 'no record', 'missing'],
+  InvalidInput: ['invalid', 'bad request', 'validation failed', 'unprocessable'],
+  Unauthorized: ['unauthorized', 'token', 'permission denied', 'access denied'],
+  ServerError: ['internal server', 'unexpected', 'failed', 'exception', 'crash', 'error occurred'],
+}).flatMap(([category, matches]) => matches.map((match) => ({ match, category })))
+
+export const isDefaultErrorClass = (r) => DEFAULT_ERROR_CLASSES.some(
+  (d) => d.category === r.category && d.match.toLowerCase() === String(r.match || '').trim().toLowerCase(),
+)
+
+export const blankErrorClasses = () => DEFAULT_ERROR_CLASSES.map((d, i) => ({ id: i + 1, ...d }))
 
 export const errorClassIssues = (conn = {}) => {
   const rows = conn.errorClasses || []
@@ -628,6 +595,7 @@ export const blankConnection = (connector) => {
     out.getUserMappings = []
     out.createMappings = []
     out.updateMappings = []
+    out.deleteMappings = []
   }
   return out
 }
@@ -642,6 +610,40 @@ export const blankConnection = (connector) => {
 // key must be present at all, how the value is formatted, and whether the
 // application attribute name was typed by hand.
 // ---------------------------------------------------------------------------
+
+/**
+ * Every value-bearing key of a JSON payload, nested keys as dot paths
+ * (profile.email) and arrays of objects through their first element
+ * (emails[0].value). A payload that does not parse offers nothing.
+ */
+export const payloadPaths = (text) => {
+  let doc
+  try {
+    doc = JSON.parse(String(text || '').trim() || '{}')
+  } catch {
+    return []
+  }
+  const out = []
+  const walk = (node, path) => {
+    if (Array.isArray(node)) {
+      if (node.length && node[0] && typeof node[0] === 'object') walk(node[0], `${path}[0]`)
+      else if (path) out.push(path)
+      return
+    }
+    if (node && typeof node === 'object') {
+      const keys = Object.keys(node)
+      if (!keys.length) {
+        if (path) out.push(path)
+        return
+      }
+      keys.forEach((k) => walk(node[k], path ? `${path}.${k}` : k))
+      return
+    }
+    if (path) out.push(path)
+  }
+  walk(doc, '')
+  return [...new Set(out)]
+}
 
 export const blankGetUserMapping = (rows = []) => ({
   id: rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1,
@@ -679,6 +681,7 @@ export const customApiMappingIssues = (conn = {}, ctx = {}) => {
   const out = [...mappingRowIssues(conn.getUserMappings || [], 'Get User')]
   if (canCreate(conn, ctx)) out.push(...mappingRowIssues(conn.createMappings || [], 'Create'))
   if (canUpdate(conn, ctx)) out.push(...mappingRowIssues(conn.updateMappings || [], 'Update'))
+  if (canDelete(conn, ctx)) out.push(...mappingRowIssues(conn.deleteMappings || [], 'Delete'))
   return [...new Set(out)]
 }
 
@@ -748,7 +751,7 @@ export const connectionEndpoint = (connector, conn = {}) => {
   if (conn.host) return conn.port ? `${conn.host}:${conn.port}` : conn.host
   // A Custom API connector has no base URL: the user read is the address it is
   // reachable at, and the token endpoint stands in until one is configured.
-  return conn.baseUrl || conn.endpoint || conn.tenantId || conn.getUserAPIUrl || conn.getTokenAPIUrl || '—'
+  return conn.connectionUrl || conn.baseUrl || conn.endpoint || conn.tenantId || conn.getUserAPIUrl || conn.getTokenAPIUrl || '—'
 }
 
 /* The illustrative configuration from the connector's specification, for a
@@ -811,36 +814,22 @@ const connectionSeed = (a) => {
   switch (kindOf(a.connector)) {
     case 'Database':
       return { host: a.host, port: a.port, database: s.container, username: s.principal, password: 'stored', accountTable: s.object }
-    case 'Directory':
-      return { host: a.host, port: a.port, baseDn: s.container, bindDn: s.principal, bindPassword: 'stored', objectClass: s.object }
+    case 'Directory': {
+      const url = `${s.tls ? 'ldaps' : 'ldap'}://${a.host}:${a.port}`
+      return { connectionUrl: url, bindDn: s.principal, bindPassword: 'stored' }
+    }
     case 'Custom':
       return {
         baseUrl: s.container,
-        timeoutSeconds: String(s.timeout),
         authType: AUTH_BEARER_TYPE,
         authMethod: BEARER_DEFAULT,
-        getTokenApiUrl: `${s.container}/oauth/token`,
-        getTokenApiMethod: 'POST',
-        clientId: 'idam-provisioning',
+        getTokenAPIUrl: `${s.container}/oauth/token`,
+        getTokenAPIMethod: 'POST',
+        clientId: s.principal,
         clientSecret: 'stored',
-        getTokenApiPayload: '{ "grant_type": "client_credentials" }',
-        authExtras: blankAuthExtras(),
-        successKey: 'status',
-        successValue: 'success',
-        messageKey: 'message',
-        errorKey: 'error.code',
-        getUserApiUrl: `${s.container}${s.object}`,
-        getUserApiMethod: 'GET',
-        getUserApiPayload: '{}',
-        createPath: `${s.container}${s.object}`,
-        createMethod: 'POST',
-        createPayload: '{\n  "userName": "{username}",\n  "email": "{email}"\n}',
-        updatePath: `${s.container}${s.object}/{id}`,
-        updateMethod: 'PUT',
-        updatePayload: '{\n  "email": "{email}"\n}',
-        deletePath: `${s.container}${s.object}/{id}`,
-        deleteMethod: 'DELETE',
-        errorClasses: blankErrorClasses(),
+        getTokenAPIPayload: '{ "grant_type": "client_credentials" }',
+        resourcePath: s.object,
+        timeoutSeconds: String(s.timeout),
       }
     case 'Cloud':
       return { tenantId: 'tanflow.onmicrosoft.com', clientId: s.principal, clientSecret: 'stored', timeoutSeconds: String(s.timeout) }
@@ -856,7 +845,9 @@ export const probeConnection = (connector, conn = {}) => {
   const endpoint = connectionEndpoint(connector, conn)
   const missing = connectionIssues(connector, conn)
   const secretField = visibleSpec(connector, conn).find((f) => f.secret)
-  const secretOk = !secretField || !!String(conn[secretField.id] || '').trim()
+  // A secret that is not required — LDAP's bind password, left blank for an
+  // anonymous bind — is not a failed authentication, it is a choice.
+  const secretOk = !secretField || !fieldRequired(secretField, conn) || !!String(conn[secretField.id] || '').trim()
   const seed = [...String(endpoint)].reduce((a, c) => a + c.charCodeAt(0), 7)
 
   const steps = []
@@ -1021,8 +1012,6 @@ export const JWT_KEY_SOURCES = [
    form used to ask for was removed with the field. */
 export const blankLink = () => ({
   targetUrl: '',
-  passIdentity: false,
-  identityParam: 'user',
 })
 
 export const jwtIssues = (j = {}) => {
@@ -1038,7 +1027,6 @@ export const linkIssues = (l = {}) => {
   const url = String(l.targetUrl || '').trim()
   if (!url) out.push('A target URL is required — a link application does nothing without one.')
   else if (!/^https?:\/\//i.test(url)) out.push('Use an absolute http:// or https:// URL.')
-  if (l.passIdentity && !String(l.identityParam || '').trim()) out.push('Name the query parameter the username is passed in.')
   return out
 }
 
@@ -1507,7 +1495,9 @@ export const patternAttrs = (pattern) =>
  * always join with `&`, but a launch path that nests a second query is not
  * unheard of, so each parameter states its own join.
  */
-export const PARAM_SEPARATORS = ['/?', '?', '&']
+/* How the query string is opened. Chosen once per URL: every parameter after
+   the first is joined with `&`. */
+export const QUERY_JOINS = ['?', '/?']
 
 export const DEFAULT_PARAM_SEPARATOR = '?'
 
@@ -1535,10 +1525,8 @@ export const IDAM_ATTR_PARAM_OPTIONS = IDAM_ATTRS.map((a) => ({
   label: `${String(a.label).split(' · ')[0]} ( value = ${a.value})`,
 }))
 
-/** A blank parameter. The first parameter of a configuration opens the query
- *  string; every later one joins with `&`. */
-export const blankParam = (index = 0) => ({
-  separator: index === 0 ? DEFAULT_PARAM_SEPARATOR : '&',
+/** A blank parameter. How it is joined is decided by the URL, not the row. */
+export const blankParam = () => ({
   key: '',
   inputType: 'Manual',
   attr: '',
@@ -1558,13 +1546,13 @@ export const paramReady = (p) => Boolean(p && p.key && (
   || (p.inputType === 'IDAM Attribute' ? p.attr : String(p.value || '').trim())
 ))
 
-/** Build the stored pattern from a base address and its parameters, each
- *  joined with the separator it chose. */
-export const buildPattern = (base, params = []) => {
+/** Build the stored pattern from a base address and its parameters: the
+ *  first parameter opens the query string with `join`, the rest follow `&`. */
+export const buildPattern = (base, params = [], join = DEFAULT_PARAM_SEPARATOR) => {
   const head = String(base || '').trim()
   if (!head) return ''
   return params.filter(paramReady).reduce(
-    (acc, p) => `${acc}${p.separator || DEFAULT_PARAM_SEPARATOR}${p.key}=${paramValueText(p)}`,
+    (acc, p, i) => `${acc}${i === 0 ? join : '&'}${p.key}=${paramValueText(p)}`,
     head,
   )
 }
@@ -1579,26 +1567,29 @@ export const buildPattern = (base, params = []) => {
 export const parsePattern = (raw) => {
   const s = String(raw || '')
   const at = s.search(/\/\?|\?|&/)
-  if (at === -1) return { base: s, params: [] }
+  if (at === -1) return { base: s, params: [], join: DEFAULT_PARAM_SEPARATOR }
   const base = s.slice(0, at)
   const rest = s.slice(at)
   const params = []
   const re = /(\/\?|\?|&)([^?&]*)/g
   let m = re.exec(rest)
   while (m) {
-    const [, separator, chunk] = m
+    const [, , chunk] = m
     const eq = chunk.indexOf('=')
     const key = eq === -1 ? chunk : chunk.slice(0, eq)
     const value = eq === -1 ? '' : chunk.slice(eq + 1)
     const token = /^\{([^}]+)\}$/.exec(value)
     if (key) {
-      if (token && token[1] === NONCE_TOKEN) params.push({ separator, key, inputType: NONCE_TOKEN, attr: '', value: NONCE_TOKEN })
-      else if (token) params.push({ separator, key, inputType: 'IDAM Attribute', attr: token[1], value: '' })
-      else params.push({ separator, key, inputType: 'Manual', attr: '', value })
+      if (token && token[1] === NONCE_TOKEN) params.push({ key, inputType: NONCE_TOKEN, attr: '', value: NONCE_TOKEN })
+      else if (token) params.push({ key, inputType: 'IDAM Attribute', attr: token[1], value: '' })
+      else params.push({ key, inputType: 'Manual', attr: '', value })
     }
     m = re.exec(rest)
   }
-  return { base, params }
+  // The URL has one opening join; a stored pattern that began with `&` reads
+  // back as the default rather than an invalid query string.
+  const opening = /^(\/\?|\?)/.exec(rest)
+  return { base, params, join: opening ? opening[1] : DEFAULT_PARAM_SEPARATOR }
 }
 
 /* The values a launch preview substitutes: one real identity from the seed for
@@ -1662,8 +1653,7 @@ export const provMappingsFor = (connector) =>
        rejects a blank one are both real, and one flag cannot express both. */
     mandatory: !!r.required,
     // Update decides whether a run overwrites this attribute on an account that
-    // already exists (client item 9). Manual hands the target value to an
-    // operator, so a manual row is never written by a run whatever Update says.
+    // already exists (client item 9). Manual is independent of it.
     update: true,
     manual: false,
   }))
@@ -1695,6 +1685,11 @@ export const uniqueTargetFor = (rows = [], unique) => {
   const row = rows.find((r) => r.idam === unique)
   return row ? row.target || '' : ''
 }
+
+export const connectorMappingIssues = (rows = []) =>
+  (rows.some((r) => !String(r.target || '').trim() || !String(r.idam || '').trim())
+    ? ['Every attribute mapping row needs both an application attribute and an IDAM attribute.']
+    : [])
 
 /** Both sides of the pair as a record should carry them. */
 export const defaultUniquePair = (rows = []) => {
@@ -1745,10 +1740,14 @@ const TARGET_ATTR_CATALOG = {
     'userPrincipalName', 'mailNickname', 'mail', 'givenName', 'surname', 'displayName',
     'department', 'jobTitle', 'mobilePhone', 'employeeId', 'employeeType', 'officeLocation',
     'usageLocation', 'accountEnabled',
+    'passwordProfile.forceChangePasswordNextSignIn', 'passwordProfile.password',
+    'onPremisesExtensionAttributes.extensionAttribute1',
   ],
   Custom: [
     'Username', 'Email', 'FirstName', 'LastName', 'Department', 'Title', 'MobilePhone',
     'UserType', 'EmployeeNumber', 'ManagerEmail', 'IsActive',
+    'Profile.FirstName', 'Profile.LastName', 'Profile.Email',
+    'Profile.Contact.PrimaryPhone', 'Profile.Contact.SecondaryPhone',
   ],
   Manual: [
     'Username', 'Email', 'FirstName', 'LastName', 'Department', 'Title', 'MobilePhone',
@@ -1765,6 +1764,50 @@ export const targetAttrsFor = (connector, rows = []) => {
 }
 
 // ---------------------------------------------------------------------------
+// Manual payload (MS-Entra, SCIM, REST API)
+//
+// These three connectors have no JSON body of their own — their attributes
+// come from the static catalogue above, not from a payload an operator
+// authors. A manual payload lets an operator hand-write the body sent to the
+// target anyway, pre-filled from that same catalogue so it starts as
+// something real rather than an empty object.
+// ---------------------------------------------------------------------------
+
+export const manualPayloadSupported = (connector) =>
+  connector === REST_API_CONNECTOR || ['Cloud', 'Standard'].includes(kindOf(connector))
+
+/* A flat dot/bracket path, such as emails[0].value, written into the nested
+   object it describes — the inverse of payloadPaths' walk. */
+const setPath = (obj, path, value) => {
+  const parts = path.split('.')
+  let cur = obj
+  parts.forEach((part, i) => {
+    const last = i === parts.length - 1
+    const m = /^([^[]+)\[(\d+)\]$/.exec(part)
+    if (m) {
+      const [, key, idx] = m
+      if (!Array.isArray(cur[key])) cur[key] = []
+      if (last) { cur[key][idx] = value; return }
+      if (!cur[key][idx] || typeof cur[key][idx] !== 'object') cur[key][idx] = {}
+      cur = cur[key][idx]
+    } else if (last) {
+      cur[part] = value
+    } else {
+      if (!cur[part] || typeof cur[part] !== 'object') cur[part] = {}
+      cur = cur[part]
+    }
+  })
+}
+
+/** A starting body for the manual payload field, built from the same
+ *  catalogue the target attribute picker offers for this connector. */
+export const manualPayloadTemplate = (connector) => {
+  const obj = {}
+  targetAttrsFor(connector, []).forEach((path) => setPath(obj, path, ''))
+  return JSON.stringify(obj, null, 2)
+}
+
+// ---------------------------------------------------------------------------
 // Operation configuration (client item 11)
 // ---------------------------------------------------------------------------
 
@@ -1778,6 +1821,14 @@ export const blankOperations = () => ({
   deactivate: true,
   password: false,
 })
+
+// Delete and Deactivate on leaver are alternative leaver behaviours, so turning
+// one on turns the other off instead of leaving a conflict to resolve.
+export const withLeaverChoice = (prev = {}, next = {}) => {
+  if (next.remove && !prev.remove) return { ...next, deactivate: false }
+  if (next.deactivate && !prev.deactivate) return { ...next, remove: false }
+  return next
+}
 
 export const operationIssues = (ops = {}) => {
   const out = []

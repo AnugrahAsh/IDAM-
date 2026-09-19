@@ -1,0 +1,48 @@
+/* Condition builder. Groups are ordinary cards; only the row grid and the
+   conjunction label are specific to this component. */
+.cb{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0}
+
+.cb-group{min-width:0;container-type:inline-size;container-name:cbgroup}
+
+.cb-rows{display:flex;flex-direction:column;padding:6px 0}
+.cb-row{
+  display:grid;align-items:center;column-gap:8px;row-gap:6px;
+  grid-template-columns:48px minmax(0,1.3fr) minmax(104px,.62fr) minmax(0,1fr) 26px;
+  grid-template-areas:"conj attr op val x";
+  padding:4px var(--sp-4);
+}
+.cb-row[data-raw]{grid-template-areas:"conj expr expr expr x"}
+.cb-row-head{padding-top:6px;padding-bottom:0}
+.cb-row-head span{
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut);
+}
+.cb-conj,.cb-conj-h{grid-area:conj}
+.cb-attr{grid-area:attr;min-width:0}
+.cb-op{grid-area:op;min-width:0}
+.cb-val{grid-area:val;min-width:0}
+.cb-x{grid-area:x}
+.cb-expr{grid-area:expr;display:flex;align-items:center;gap:8px;min-width:0}
+.cb-expr .inp{flex:1;min-width:0}
+
+.cb-conj{
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut);
+}
+
+.cb-row[data-incomplete] .cb-val{border-color:var(--warn-core)}
+
+.cb-empty{padding:8px var(--sp-4)}
+.cb-group-f{padding:6px var(--sp-4) var(--sp-3)}
+
+@container cbgroup (max-width: 560px){
+  .cb-row{
+    grid-template-columns:44px minmax(96px,.55fr) minmax(0,1fr) 26px;
+    grid-template-areas:"conj attr attr x" ". op val .";
+    padding-top:8px;padding-bottom:8px;
+  }
+  .cb-row[data-raw]{grid-template-areas:"conj expr expr x"}
+  .cb-row + .cb-row:not(.cb-row-head){border-top:1px solid var(--hair)}
+  .cb-row-head{display:none}
+  .cb-row-head + .cb-row{border-top:0}
+}

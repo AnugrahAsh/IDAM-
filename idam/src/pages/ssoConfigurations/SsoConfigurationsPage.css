@@ -1,0 +1,4 @@
+/* Page-owned styles for SsoConfigurationsPage. Shared primitives remain in src/styles. */
+
+/* Header facts are information, not controls. */
+.sso-fact{display:inline-flex;align-items:center;gap:5px}

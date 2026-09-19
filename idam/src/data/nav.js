@@ -1,5 +1,10 @@
 export const BASE = '/iam'
 
+/* Reached from a recertification email by someone who may not hold a console
+   session, so it sits outside the sign-in gate and the console shell. */
+export const RECERTIFY_LINK_BASE = `${BASE}/recertify`
+export const isRecertifyLinkPath = (pathname) => String(pathname || '').startsWith(`${RECERTIFY_LINK_BASE}/`)
+
 export const ROUTES = [
   { id: 'login', path: '/iam/login', label: 'Sign in', icon: 'lock' },
   { id: 'myapps', path: '/iam/myapps', label: 'My Apps', icon: 'apps', module: 'My Apps' },
@@ -44,6 +49,13 @@ export const ROUTES = [
   { id: 'licenses', path: '/iam/licenses', label: 'License', icon: 'license', module: 'License' },
   { id: 'profile', path: '/iam/profile', label: 'My Profile', icon: 'user', module: 'My profile' },
   { id: 'settings', path: '/iam/settings', label: 'Settings', icon: 'config', module: 'Settings' },
+  { id: 'addLoginPassword', path: '/iam/additional/login', label: 'Login & Password', icon: 'lock', detail: true },
+  { id: 'addOtpLogin', path: '/iam/additional/otpLogin', label: 'Email & Mobile Login', icon: 'phone', detail: true },
+  { id: 'addLoginMfa', path: '/iam/additional/loginMfa', label: 'Login MFA', icon: 'key', detail: true },
+  { id: 'addMfa', path: '/iam/additional/mfa', label: 'MFA Enrolment & Challenge', icon: 'shield', detail: true },
+  { id: 'addErrors', path: '/iam/additional/errors', label: 'Error Pages', icon: 'warn', detail: true },
+  { id: 'addEmailTemplates', path: '/iam/additional/emailTemplates', label: 'Email Templates', icon: 'mail', detail: true },
+  { id: 'addDesktop', path: '/iam/additional/desktop', label: 'Desktop Client', icon: 'monitor', detail: true },
 ]
 
 export const BY_ID = Object.fromEntries(ROUTES.map((r) => [r.id, r]))
@@ -165,7 +177,7 @@ export const LEGACY = {
   '/iam/emails/emails': '/iam/emails/messages',
   '/iam/emailTemplates': '/iam/emails/templates',
   '/iam/smsTemplates': '/iam/sms/providers',
-  '/iam/consentPolicies': '/iam/consent/policies',
+  '/iam/consentPolicies': '/iam/consent/rules',
   '/iam/consentTemplates': '/iam/consent/templates',
   '/iam/consentRecords': '/iam/consent/records',
   // The two management screens are now the Manage view of the page they feed.

@@ -1,0 +1,80 @@
+/* Page-owned styles for the Scheduler module. Shared primitives remain in src/styles. */
+
+/* --- Collapsible panel ------------------------------------------------------
+   The execution policy is nine controls that are almost always left alone, so
+   it opens closed with a summary of what it currently holds. The header is the
+   whole control rather than a chevron beside a title — a strip this wide with a
+   14px hit target reads as decoration. */
+.acc > .acc-h{
+  display:flex;align-items:center;gap:var(--sp-3);width:100%;
+  padding:11px var(--sp-4);background:none;border:0;cursor:pointer;text-align:left;
+  border-radius:var(--r-lg);color:var(--ink);
+}
+.acc > .acc-h:hover{background:var(--row-hover)}
+.acc[data-open] > .acc-h{border-bottom:1px solid var(--hair);border-radius:var(--r-lg) var(--r-lg) 0 0}
+.acc-chev{flex:none;color:var(--mut);transition:transform var(--dur-2) var(--ease)}
+.acc[data-open] .acc-chev{transform:rotate(90deg)}
+.acc-meta{min-width:0;flex:1}
+.acc-t{display:block;font-size:var(--t-h3);font-weight:var(--w-semi);letter-spacing:var(--t-h3-ls)}
+.acc-s{display:block;font-size:var(--t-xs);color:var(--mut);margin-top:1px}
+
+/* --- Schema-driven configuration -------------------------------------------
+   A group is a heading and a two-column field grid. Groups are the schema's own
+   grouping, so a service that declares five of them gets five here without this
+   sheet knowing any service names. */
+.cfg-group + .cfg-group{margin-top:var(--sp-5);padding-top:var(--sp-4);border-top:1px solid var(--hair)}
+.cfg-group-h{
+  display:flex;align-items:center;gap:6px;margin-bottom:var(--sp-3);
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-semi);color:var(--mut);
+}
+.cfg-group-n{
+  font-size:var(--t-xs);color:var(--mut);background:var(--surface-2);
+  border-radius:var(--r-pill);padding:0 6px;letter-spacing:0;text-transform:none;
+}
+
+/* A boolean occupies a grid cell like any other field, so it aligns with the
+   text inputs beside it rather than sitting in its own full-width row. */
+.cfg-switch{
+  display:flex;align-items:flex-start;gap:var(--sp-3);
+  padding:9px 11px;border:1px solid var(--hair);border-radius:var(--r);
+  background:var(--surface-2);
+}
+.cfg-switch + .cfg-switch{margin-top:8px}
+.cfg-switch-m{min-width:0;flex:1}
+.cfg-switch-t{display:block;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.cfg-switch-s{font-size:var(--t-xs);color:var(--mut);margin-top:1px}
+.cfg-switch .switch{flex:none;margin-top:2px}
+
+/* What a comma-separated list actually parsed to. Typing "a,,b, " into a free
+   text field and being told it holds three entries is the sort of thing only
+   the parser knows. */
+.cfg-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+
+.issue-list{margin:6px 0 0;padding-left:18px;display:grid;gap:3px}
+.issue-list li{font-size:var(--t-xs)}
+
+/* --- Register --------------------------------------------------------------- */
+.sch-svc{display:flex;flex-direction:column;gap:2px;min-width:0}
+.sch-svc .link{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.sch-result{display:flex;align-items:center;gap:8px;min-width:0}
+.sch-prog{display:flex;align-items:center;gap:6px;min-width:72px}
+.sch-prog .meter{width:34px}
+
+/* Schedulers sharing one service, on the service-wide history screen. */
+.sch-bound{display:grid}
+.sch-bound-it{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto;
+  align-items:center;gap:var(--sp-3);
+  padding:10px var(--sp-4);border:0;border-bottom:1px solid var(--hair);
+  background:none;cursor:pointer;text-align:left;width:100%;color:var(--ink);
+}
+.sch-bound-it:last-child{border-bottom:0}
+.sch-bound-it:hover{background:var(--row-hover)}
+.sch-bound-t{font-size:var(--t-sm);font-weight:var(--w-semi);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sch-bound-s{font-size:var(--t-xs);color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+@media (max-width: 720px){
+  .sch-bound-it{grid-template-columns:minmax(0,1fr) auto}
+  .sch-bound-s{grid-column:1 / -1}
+}

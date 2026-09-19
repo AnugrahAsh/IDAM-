@@ -300,19 +300,15 @@
 /* Error classification: a category, and the responses that fall into it. */
 .ec-cats{display:flex;flex-direction:column;gap:10px}
 .ec-cat{display:flex;flex-direction:column;gap:5px}
-.ec-cat-k{
-  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
-  font-weight:var(--w-semi);color:var(--faint);
-}
+.ec-cat-k{font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--ink-2)}
 .ec-cat-list{display:flex;flex-wrap:wrap;gap:5px}
-.ec-add{
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
-  align-items:end;gap:var(--sp-3);
-  padding-top:var(--sp-3);border-top:1px solid var(--hair);
-}
-@media (max-width: 640px){
-  .ec-add{grid-template-columns:1fr}
-}
+.ec-cat-list .chip[title] svg{width:9px;height:9px}
+
+.ec-add-wrap{display:flex;flex-direction:column;gap:6px;padding-top:var(--sp-3);border-top:1px solid var(--hair)}
+.ec-add{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ec-add .sel{width:170px}
+.ec-add .inp{width:240px;max-width:100%}
+.ec-add-err{font-size:var(--t-xs);color:var(--bad)}
 
 /* --- Custom API connector: operation-specific attribute mapping -------------
    Each lifecycle section carries its own table, opened from a "Configure
@@ -329,6 +325,7 @@
 .capi-tbl th.td-act,.capi-tbl td.td-act{width:48px}
 .capi-tbl td.capi-arrow,.capi-tbl th.capi-arrow{width:36px;text-align:center;color:var(--faint)}
 .capi-lc{min-width:900px}
+.capi-cm{min-width:760px}
 .capi-foot{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;padding:var(--sp-3) 0 0}
 .capi-summary{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--mut)}
 .capi-summary b{color:var(--ink)}

@@ -1,0 +1,37 @@
+/* Page-owned styles for ProfilePage. Shared primitives remain in src/styles. */
+
+.profile-cols{display:flex;align-items:flex-start;flex-wrap:wrap;gap:var(--sp-3)}
+.profile-side{flex:1 1 320px;min-width:0}
+.profile-main{flex:2.4 1 560px;min-width:0}
+.profile-hero{display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding-bottom:16px;border-bottom:1px solid var(--hair)}
+.pw-strength{display:flex;align-items:center;gap:10px;margin-top:10px;max-width:420px}
+.pref-toggle{padding:11px 0;border-top:1px solid var(--hair);gap:16px}
+.pref-toggle:first-of-type{border-top:none}
+
+/* --- Identity card: avatar, name row, fact strip, actions ---------------- */
+.pf-id{margin-top:2px}
+.pf-hero{display:flex;align-items:flex-start;gap:var(--sp-4);flex-wrap:wrap}
+.pf-hero-meta{flex:1;min-width:260px;display:flex;flex-direction:column;gap:10px}
+.pf-hero-name{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+.pf-name{font-size:20px;font-weight:650;letter-spacing:-.02em;color:var(--ink)}
+.pf-handle{font-size:13px;color:var(--mut)}
+.pf-facts{display:flex;align-items:flex-start;gap:var(--sp-6);flex-wrap:wrap}
+.pf-hero-actions{display:flex;flex-direction:column;gap:7px;flex:none;align-items:stretch}
+.pf-body{margin-top:var(--sp-4)}
+/* KPI tiles double as tab shortcuts here */
+.kpi-row .kpi{text-align:left;cursor:pointer;font:inherit}
+@media(max-width:900px){
+  .pf-hero-actions{flex-direction:row;width:100%}
+  .pf-facts{gap:var(--sp-4)}
+}
+
+/* --- Security / access summary rail -------------------------------------- */
+.pf-sec{display:flex;flex-direction:column}
+.pf-sec-row{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);
+  padding:8px 0;border-bottom:1px solid var(--hair);font-size:12.75px;
+}
+.pf-sec-row:last-child{border-bottom:none}
+.pf-sec-row > span{color:var(--mut)}
+.pf-sec-row > b{color:var(--ink);font-weight:var(--w-semi);text-align:right}

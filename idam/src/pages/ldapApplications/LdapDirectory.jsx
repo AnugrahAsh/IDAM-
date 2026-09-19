@@ -3,12 +3,9 @@ import Avatar from '../../components/primitives/Avatar'
 import Button from '../../components/primitives/Button'
 import Card from '../../components/primitives/Card'
 import Check from '../../components/primitives/Check'
-import Field from '../../components/primitives/Field'
 import Icon from '../../components/primitives/Icon'
 import IconButton from '../../components/primitives/IconButton'
 import Pill from '../../components/primitives/Pill'
-import Select from '../../components/primitives/Select'
-import TextInput from '../../components/primitives/TextInput'
 import StatCards from '../../components/workbench/StatCards'
 import { useApp } from '../../store/AppContext'
 import { num, statusTone } from '../../lib/format'
@@ -20,30 +17,6 @@ import LdapSchema from './LdapSchema'
 import { initialSchema, schemaLdif } from './schemaData'
 
 const INDENT = 18
-
-function EntryForm({ initial, allowType, onChange }) {
-  const [draft, setDraft] = useState(initial)
-  const set = (k, v) => { const next = { ...draft, [k]: v }; setDraft(next); onChange(next) }
-  return (
-    <div className="grid grid-2">
-      {allowType && (
-        <Field label="Entry type" span={2} hint="Organizational units hold further entries; a user is a leaf.">
-          <Select
-            value={draft.type}
-            options={[{ value: 'ou', label: 'Organizational unit (ou)' }, { value: 'user', label: 'User (uid)' }]}
-            onChange={(e) => set('type', e.target.value)}
-          />
-        </Field>
-      )}
-      <Field label="Name" required span={2} hint={`Becomes the RDN: ${draft.type === 'user' ? 'uid' : 'ou'}=${draft.name || '…'}`}>
-        <TextInput className="mono" value={draft.name} onChange={(e) => set('name', e.target.value)} />
-      </Field>
-      <Field label={draft.type === 'user' ? 'Email' : 'Description'} span={2}>
-        <TextInput value={draft.detail} onChange={(e) => set('detail', e.target.value)} />
-      </Field>
-    </div>
-  )
-}
 
 const download = (name, text) => {
   const blob = new Blob([text], { type: 'text/plain' })
@@ -86,7 +59,7 @@ const COLS = [
 // reads one level, so a large base DN is never pulled in one go. Siblings can
 // be sorted on any column without losing their place in the hierarchy.
 export default function LdapDirectory({ app }) {
-  const { toast, confirm, setDrawer } = useApp()
+  const { toast, setDrawer } = useApp()
   const [open, setOpen] = useState([])
   const [rootOpen, setRootOpen] = useState(true)
   const [loaded, setLoaded] = useState({})
@@ -99,7 +72,6 @@ export default function LdapDirectory({ app }) {
   const [selected, setSelected] = useState([])
   const [focus, setFocus] = useState(null)
   const [schema, setSchema] = useState(initialSchema)
-  const draftRef = useState(() => ({ current: null }))[0]
   const tableRef = useRef(null)
   const kbRef = useRef(false)
   const searchRef = useRef(null)
@@ -124,11 +96,7 @@ export default function LdapDirectory({ app }) {
       sub: row.dn,
       size: 'lg',
       children: (
-        <EntryDetails
-          app={app}
-          entry={row}
-          onSaved={() => toast('ok', 'Entry saved', `${row.dn} written to the directory.`)}
-        />
+        <EntryDetails app={app} entry={row} readOnly />
       ),
       footer: <Button onClick={() => setDrawer(null)}>Close</Button>,
     })
@@ -297,96 +265,6 @@ export default function LdapDirectory({ app }) {
   const expandAll = () => { setRootOpen(true); setOpen(expandable.map((r) => r.dn)) }
   const collapseAll = () => setOpen([])
 
-  const addUnder = (parent) => {
-    draftRef.current = { type: 'ou', name: '', detail: '' }
-    setDrawer({
-      title: 'Add entry',
-      sub: `Created directly below ${parent.dn}.`,
-      children: <EntryForm initial={draftRef.current} allowType onChange={(v) => { draftRef.current = v }} />,
-      footer: (
-        <>
-          <Button onClick={() => setDrawer(null)}>Cancel</Button>
-          <Button
-            variant="pri"
-            icon="plus"
-            onClick={() => {
-              const d = draftRef.current
-              if (!d.name.trim()) { toast('warn', 'Name required', 'Give the entry a name to form its RDN.'); return }
-              const prefix = d.type === 'user' ? 'uid' : 'ou'
-              const entry = {
-                id: `${prefix}=${d.name},${parent.dn}`,
-                dn: `${prefix}=${d.name},${parent.dn}`,
-                name: d.name.trim(),
-                type: d.type,
-                detail: d.detail,
-                parent: parent.dn,
-                expandable: d.type !== 'user',
-                system: false,
-              }
-              setLoaded((l) => ({ ...l, [parent.dn]: [...(l[parent.dn] || []), entry] }))
-              if (parent.dn !== app.baseDn) setOpen((o) => (o.includes(parent.dn) ? o : [...o, parent.dn]))
-              setDrawer(null)
-              toast('ok', 'Entry created', entry.dn)
-            }}
-          >
-            Create entry
-          </Button>
-        </>
-      ),
-    })
-  }
-
-  const editEntry = (row) => {
-    draftRef.current = { type: row.type, name: row.name, detail: row.detail }
-    setDrawer({
-      title: `Edit ${row.name}`,
-      sub: row.dn,
-      children: <EntryForm initial={draftRef.current} onChange={(v) => { draftRef.current = v }} />,
-      footer: (
-        <>
-          <Button onClick={() => setDrawer(null)}>Cancel</Button>
-          <Button
-            variant="pri"
-            icon="save"
-            onClick={() => {
-              const d = draftRef.current
-              const name = d.name.trim() || row.name
-              const nextDn = `ou=${name},${row.parent}`
-              setLoaded((l) => {
-                const next = { ...l }
-                next[row.parent] = (l[row.parent] || []).map((x) => (x.dn === row.dn
-                  ? { ...x, name, detail: d.detail, dn: nextDn, id: nextDn }
-                  : x))
-                // A renamed unit keeps what was read below it.
-                if (nextDn !== row.dn && l[row.dn]) {
-                  next[nextDn] = l[row.dn].map((c) => ({ ...c, parent: nextDn, dn: c.dn.replace(row.dn, nextDn), id: c.dn.replace(row.dn, nextDn) }))
-                  delete next[row.dn]
-                }
-                return next
-              })
-              if (nextDn !== row.dn) setOpen((o) => o.map((dn) => (dn === row.dn ? nextDn : dn)))
-              setDrawer(null)
-              toast('ok', 'Entry saved', `${nextDn} updated.`)
-            }}
-          >
-            Save changes
-          </Button>
-        </>
-      ),
-    })
-  }
-
-  const removeEntry = (row) => confirm({
-    title: `Delete ${row.name}?`,
-    body: `${row.dn} and everything below it stops being read on the next synchronization. Identities sourced from it become unmanaged.`,
-    confirmLabel: 'Delete entry',
-    onConfirm: () => {
-      setLoaded((l) => ({ ...l, [row.parent]: (l[row.parent] || []).filter((x) => x.dn !== row.dn) }))
-      setSelected((s) => s.filter((d) => d !== row.dn))
-      toast('ok', 'Entry deleted', row.dn)
-    },
-  })
-
   const rdnOf = (dn) => dn.split(',')[0]
   const restOf = (dn) => dn.slice(rdnOf(dn).length)
 
@@ -430,7 +308,6 @@ export default function LdapDirectory({ app }) {
           </Button>
           <Button size="sm" icon="layers" onClick={openSchema}>Schema</Button>
           <Button size="sm" icon="download" onClick={exportLdif}>Export LDIF</Button>
-          <Button size="sm" variant="pri" icon="plus" onClick={() => addUnder({ dn: app.baseDn, name: app.baseDn })}>New root OU</Button>
         </div>
       )}
       flush
@@ -631,7 +508,7 @@ export default function LdapDirectory({ app }) {
                               type="button"
                               className={`dt-label ${isRoot ? 'mono' : ''}`}
                               tabIndex={-1}
-                              title={isRoot ? 'Collapse or expand the whole tree' : 'View / edit details'}
+                              title={isRoot ? 'Collapse or expand the whole tree' : 'View details'}
                               onClick={(e) => { e.stopPropagation(); if (isRoot) toggle(r); else openEntry(r) }}
                             >
                               {highlight(r.name, needle)}
@@ -665,16 +542,6 @@ export default function LdapDirectory({ app }) {
                       <td className="td-act">
                         <span className="dt-acts row-act">
                           {!isRoot && <IconButton icon="eye" size="sm" label={`View ${r.name}`} tabIndex={-1} onClick={(e) => { e.stopPropagation(); openEntry(r) }} />}
-                          {r.type !== 'user' && (
-                            <IconButton icon="plus" size="sm" label={`Add an entry under ${r.name}`} tabIndex={-1} onClick={(e) => { e.stopPropagation(); addUnder(r) }} />
-                          )}
-                          {/* Containers are platform-owned; only an OU is editable. */}
-                          {r.type === 'ou' && (
-                            <>
-                              <IconButton icon="edit" size="sm" label={`Edit ${r.name}`} tabIndex={-1} onClick={(e) => { e.stopPropagation(); editEntry(r) }} />
-                              <IconButton icon="trash" size="sm" className="dt-del" label={`Delete ${r.name}`} tabIndex={-1} onClick={(e) => { e.stopPropagation(); removeEntry(r) }} />
-                            </>
-                          )}
                         </span>
                       </td>
                     </tr>

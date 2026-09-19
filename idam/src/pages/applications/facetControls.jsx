@@ -4,7 +4,6 @@ import Card from '../../components/primitives/Card'
 import Button from '../../components/primitives/Button'
 import IconButton from '../../components/primitives/IconButton'
 import Icon from '../../components/primitives/Icon'
-import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
 import Meter from '../../components/primitives/Meter'
 import Switch from '../../components/primitives/Switch'
@@ -20,14 +19,13 @@ import { nextId } from '../../data/seed'
 import { IDAM_ATTRS, SAMPLE_IDENTITY } from '../shared/provisioning/shared'
 import {
   ERROR_CATEGORIES, IDAM_ATTR_PARAM_OPTIONS, NONCE_TOKEN,
-  PARAM_INPUT_TYPES, PARAM_SEPARATORS, SAML_NAME_FORMATS, URL_LIMIT,
-  blankParam, buildPattern, certFromText, fieldIssue, fieldOptions,
-  fieldRequired, linkIssues, parseMetadataXml, parsePattern, patternAttrs, sampleLaunchUrl, sampleNonce,
+  PARAM_INPUT_TYPES, QUERY_JOINS, SAML_NAME_FORMATS, URL_LIMIT,
+  blankParam, buildPattern, certFromText, fieldIssue, fieldOptions, isDefaultErrorClass,
+  fieldRequired, linkIssues, manualPayloadTemplate, parseMetadataXml, parsePattern, patternAttrs, sampleLaunchUrl, sampleNonce,
   specFor, specGroups, targetAttrsFor, uniqueTargetFor, urlConfigLabel, visibleSpec,
 } from './appModel'
 import {
-  MAPPERS_FOR, attributeIssues, blankAttribute, familyOf,
-  mapperIcon, mapperLabel, mapperType, releasedName, sourceSummary, tokenTargets, withMapperType,
+  MAPPERS_FOR, attributeIssues, familyOf, mapperType, releasedName, withMapperType,
 } from './attributeModel'
 
 export function StatStrip({ items }) {
@@ -146,8 +144,12 @@ export function ConnectionFields({
 
   return (
     <div className="stack">
-      {groups.map((g) => (
-        <div className="conn-group" key={g.group || 'ungrouped'}>
+      {groups.map((g, i) => (
+        // A spec can carry more than one ungrouped run of fields (REST API
+        // opens on a bare base URL and closes on a bare resource path either
+        // side of its named groups), so the index disambiguates rather than
+        // two unrelated buckets colliding on the same 'ungrouped' key.
+        <div className="conn-group" key={g.group ? g.group : `ungrouped-${i}`}>
           {g.group && <div className="conn-group-h">{g.group}</div>}
           <div className="grid grid-2">{g.fields.map(renderField)}</div>
         </div>
@@ -237,6 +239,69 @@ export function AuthExtraFields({ rows = [], onChange, idPrefix = 'ax' }) {
         </div>
       )}
     </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Manual payload (MS-Entra, SCIM, REST API)
+//
+// These three connectors have no JSON body of their own — their target
+// attributes come from a static catalogue, not from a payload an operator
+// authors. Ticking this hands the operator a body anyway, pre-filled from
+// that same catalogue, ahead of the attribute mapping it stands in for.
+// ---------------------------------------------------------------------------
+
+export function ManualPayloadField({ connector, value = {}, onChange, idPrefix = 'mp' }) {
+  const [blurred, setBlurred] = useState(false)
+  const enabled = !!value.manualPayload
+  const raw = value.manualPayloadValue || ''
+  let error
+  if (blurred && raw.trim()) {
+    try {
+      JSON.parse(raw)
+    } catch (e) {
+      error = `Manual payload is not valid JSON: ${e.message}`
+    }
+  }
+
+  const toggle = (on) => {
+    const patch = { manualPayload: on }
+    if (on && !raw.trim()) patch.manualPayloadValue = manualPayloadTemplate(connector)
+    onChange(patch)
+  }
+
+  return (
+    <div className="capi-block">
+      <div className="sso-toggle">
+        <div className="sso-toggle-m">
+          <div className="sso-toggle-t">Manual payload</div>
+          <div className="sso-toggle-s">Author the request body sent to the target by hand, instead of leaving it to the attribute mapping below.</div>
+        </div>
+        <Switch checked={enabled} onChange={toggle} label="Manual payload" />
+      </div>
+      {enabled && (
+        <div style={{ marginTop: 12 }}>
+          <Field
+            label="Manual payload"
+            htmlFor={`${idPrefix}-payload`}
+            hint="Pre-filled from this connector's attribute catalogue. Edit freely — it is sent exactly as written."
+            error={error}
+            span={2}
+          >
+            <TextInput
+              as="textarea"
+              id={`${idPrefix}-payload`}
+              className="mono"
+              rows={8}
+              spellCheck="false"
+              value={raw}
+              onChange={(e) => onChange({ manualPayloadValue: e.target.value })}
+              onBlur={() => setBlurred(true)}
+            />
+          </Field>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -333,8 +398,11 @@ export function ErrorClassification({ rows = [], onChange }) {
   }))
 
   const trimmed = keyword.trim()
+  // A keyword classifies a response once; the same keyword under a second
+  // category would be dead configuration.
   const duplicate = trimmed
-    && rows.some((r) => r.category === category && String(r.match).trim().toLowerCase() === trimmed.toLowerCase())
+    ? rows.find((r) => String(r.match).trim().toLowerCase() === trimmed.toLowerCase())
+    : null
 
   const add = () => {
     if (!trimmed || duplicate) return
@@ -355,7 +423,13 @@ export function ErrorClassification({ rows = [], onChange }) {
             <div className="ec-cat" key={g.cat}>
               <div className="ec-cat-k">{g.cat}</div>
               <div className="ec-cat-list">
-                {g.rows.map((r) => (
+                {g.rows.map((r) => (isDefaultErrorClass(r) ? (
+                  <span className="chip mono" key={r.id} title="Default keyword · cannot be removed">
+                    {r.match}
+                    <Icon name="lock" size={9} />
+                    <span className="vis-hidden">default, cannot be removed</span>
+                  </span>
+                ) : (
                   <span className="chip mono" key={r.id}>
                     {r.match}
                     <button
@@ -367,34 +441,28 @@ export function ErrorClassification({ rows = [], onChange }) {
                       <Icon name="x" size={9} />
                     </button>
                   </span>
-                ))}
+                )))}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="ec-add">
-        <Field label="Category" htmlFor="ec-cat">
-          <Select id="ec-cat" value={category} options={ERROR_CATEGORIES} onChange={(e) => setCategory(e.target.value)} />
-        </Field>
-        <Field
-          label="New keyword"
-          htmlFor="ec-kw"
-          hint="A status code, or a fragment of the error the target returns."
-          error={duplicate ? `${trimmed} is already classified as ${category}.` : undefined}
-        >
+      <div className="ec-add-wrap">
+        <div className="ec-add">
+          <Select id="ec-cat" aria-label="Category" value={category} options={ERROR_CATEGORIES} onChange={(e) => setCategory(e.target.value)} />
           <TextInput
             id="ec-kw"
-            className="mono"
+            aria-label="New keyword"
             value={keyword}
-            placeholder="422"
+            placeholder="Enter new keyword"
             spellCheck="false"
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
           />
-        </Field>
-        <Button size="sm" icon="plus" disabled={!trimmed || !!duplicate} onClick={add}>Add</Button>
+          <Button variant="pri" icon="plus" disabled={!trimmed || !!duplicate} onClick={add}>Add</Button>
+        </div>
+        {duplicate && <span className="ec-add-err">“{trimmed}” is already a {duplicate.category} keyword.</span>}
       </div>
     </div>
   )
@@ -751,153 +819,35 @@ export function AttributeEditor({
   )
 }
 
-export function AttributeConfigTable({
-  protocol = 'SAML', rows, onChange, title = 'Attribute configuration', sub, scopeNote,
-}) {
-  const { toast, confirm } = useApp()
-  const [draft, setDraft] = useState(null)
-  const family = familyOf(protocol)
-  const saml = family === 'SAML'
-
-  const save = () => {
-    if (draft.id) {
-      onChange(rows.map((r) => (r.id === draft.id ? { ...r, ...draft } : r)))
-      toast('ok', 'Mapper saved', `${draft.name} is a ${mapperLabel(draft.mapperType).toLowerCase()} mapper.`)
-    } else {
-      onChange([...rows, { ...draft, id: nextId(rows) }])
-      toast('ok', 'Mapper added', saml
-        ? `${draft.name} is released in the next assertion.`
-        : `${draft.name} is written into the next token.`)
-    }
-    setDraft(null)
-  }
-
-  const remove = (row) => confirm({
-    title: `Remove the ${row.name} mapper?`,
-    body: saml
-      ? 'The value stops being released from the next sign-in. Sessions already established keep the value they were issued with.'
-      : 'The claim stops being written from the next token. Tokens already issued keep the claim they were minted with.',
-    confirmLabel: 'Remove mapper',
-    onConfirm: () => {
-      onChange(rows.filter((r) => r.id !== row.id))
-      toast('ok', 'Mapper removed', row.name)
-    },
-  })
-
-  const startAdd = () => setDraft(blankAttribute(''))
-
-  return (
-    <Card
-      title={title}
-      sub={sub || (saml
-        ? 'SAML mapper types. Pick the mapper first — it decides which fields configure the attribute released in the assertion.'
-        : 'OIDC / OAuth mapper types. Pick the mapper first — it decides which fields configure the claim written into the token.')}
-      flush
-      actions={<Button size="sm" variant="pri" icon="plus" onClick={startAdd}>Add mapper</Button>}
-      footer={(
-        <>
-          <span><b className="num">{rows.length}</b> configured</span>
-          <span><b className="num">{rows.filter((r) => r.required).length}</b> required</span>
-          <span className="spacer" />
-          <span>{scopeNote || (saml
-            ? 'Values are resolved from the configured source at every sign-in.'
-            : 'Values are resolved from the configured source every time a token is minted.')}</span>
-        </>
-      )}
-    >
-      {draft && (
-        <AttributeEditor
-          protocol={protocol}
-          draft={draft}
-          onDraft={setDraft}
-          onCancel={() => setDraft(null)}
-          onSave={save}
-          idPrefix="sattr"
-        />
-      )}
-
-      {rows.length === 0 ? (
-        <EmptyState
-          icon="swap"
-          size="sm"
-          title="No mappers configured"
-          body={saml
-            ? 'Without at least a subject mapper the service provider cannot resolve who signed in.'
-            : 'Without at least one mapper the token carries authentication only, with no identity claims.'}
-          actions={<Button size="sm" variant="pri" icon="plus" onClick={startAdd}>Add mapper</Button>}
-        />
-      ) : (
-        <div style={{ overflowX: 'auto' }}><table className="tbl">
-          <thead>
-            <tr>
-              <th style={{ width: 180 }}>Mapper</th>
-              <th style={{ width: 170 }}>Mapper type</th>
-              <th>Source</th>
-              <th style={{ width: 200 }}>{saml ? 'SAML attribute' : 'Token claim'}</th>
-              <th style={{ width: 190 }}>{saml ? 'NameFormat' : 'Written into'}</th>
-              <th style={{ width: 96 }}>Required</th>
-              <th className="td-act" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className="td-main trunc" style={{ maxWidth: 180 }}>
-                  <span className="cell-id">
-                    <span className="trunc">
-                      <span style={{ display: 'block' }}>{r.name}</span>
-                    </span>
-                  </span>
-                </td>
-                <td>
-                  <span className="cell-id">
-                    <Icon name={mapperIcon(r.mapperType)} size={13} style={{ color: 'var(--mut)' }} />
-                    <span className="trunc">{mapperLabel(r.mapperType)}</span>
-                  </span>
-                </td>
-                <td className="td-mono trunc" style={{ maxWidth: 240 }}>{sourceSummary(r)}</td>
-                <td className="td-mono trunc" style={{ maxWidth: 200 }} title={releasedName(r)}>{releasedName(r)}</td>
-                <td className="trunc" style={{ maxWidth: 190 }}>
-                  {saml
-                    ? <span className="mono t-xs">{r.nameFormat || '—'}</span>
-                    : <span className="t-xs">{tokenTargets(r)}</span>}
-                </td>
-                <td>{r.required ? <Pill tone="acc" dot>Required</Pill> : <span className="t-mut">Optional</span>}</td>
-                <td className="td-act">
-                  <span className="row" style={{ gap: 2, justifyContent: 'flex-end' }}>
-                    <IconButton icon="edit" size="sm" label={`Edit ${r.name}`} onClick={() => { setPicking(false); setDraft({ ...r }) }} />
-                    <IconButton icon="trash" size="sm" label={`Delete ${r.name}`} onClick={() => remove(r)} />
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      )}
-    </Card>
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Operation configuration (client item 11)
 // ---------------------------------------------------------------------------
 
-export function OperationChecks({ value = {}, onChange, specs, idPrefix = 'ops' }) {
+export function OperationChecks({
+  value = {}, onChange, specs, idPrefix = 'ops', disabledIds = [],
+}) {
   return (
     <div className="op-grid">
-      {specs.map((o) => (
-        <label className="op-row" key={o.id} htmlFor={`${idPrefix}-${o.id}`}>
-          <Check
-            checked={!!value[o.id]}
-            onChange={(v) => onChange({ ...value, [o.id]: v })}
-            label={o.label}
-          />
-          <span className="op-m">
-            <span className="op-t" id={`${idPrefix}-${o.id}`}>{o.label}</span>
-            <span className="op-s">{o.hint}</span>
-          </span>
-        </label>
-      ))}
+      {specs.map((o) => {
+        // A locked operation (Create, on a new application) is always on and
+        // cannot be argued with from this control — the checkbox says so
+        // rather than merely refusing the click.
+        const locked = disabledIds.includes(o.id)
+        return (
+          <label className="op-row" key={o.id} htmlFor={`${idPrefix}-${o.id}`}>
+            <Check
+              checked={locked || !!value[o.id]}
+              disabled={locked}
+              onChange={(v) => onChange({ ...value, [o.id]: v })}
+              label={o.label}
+            />
+            <span className="op-m">
+              <span className="op-t" id={`${idPrefix}-${o.id}`}>{o.label}</span>
+              <span className="op-s">{locked ? `${o.hint} Always enabled for a new application.` : o.hint}</span>
+            </span>
+          </label>
+        )
+      })}
     </div>
   )
 }
@@ -927,14 +877,14 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
   /* Whatever a saved configuration already launches at stays selectable, even
      when it is a deeper path than any address published on the record —
      editing a URL never silently moves it to the application root. */
-  const savedBases = rows.map((r) => String(r.pattern || '').split('?')[0]).filter(Boolean)
+  const savedBases = rows.map((r) => parsePattern(r.pattern).base).filter(Boolean)
   const baseOptions = [...new Set([...baseUrls, ...savedBases].filter(Boolean))]
 
   /* The stored value is still one pattern string, so everything downstream —
      the register, the launch tile, the export — is unchanged. Building and
      parsing it live in the model, beside the separator and input-type
      definitions they have to agree with. */
-  const patternOf = (d) => buildPattern(d.base, d.params)
+  const patternOf = (d) => buildPattern(d.base, d.params, d.join)
 
   /* An existing row is read back into its halves so editing it is the same
      control as creating it. */
@@ -971,7 +921,7 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
 
   const startDraft = (row) => setDraft(row
     ? draftFrom(row)
-    : { base: baseOptions[0] || '', params: [], enabled: true })
+    : { base: baseOptions[0] || '', join: '?', params: [], enabled: true })
 
   /* The nonce in the preview is regenerated whenever the draft changes, which
      is what a token generated per launch looks like from here. */
@@ -1042,15 +992,27 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
                 onChange={(e) => setDraft((d) => ({ ...d, base: e.target.value }))}
               />
             </Field>
+            <Field
+              label="Join"
+              required
+              hint="How the query string opens after the base URL. Every parameter after the first is joined with &."
+              htmlFor="urlc-join"
+            >
+              <Select
+                id="urlc-join"
+                className="mono"
+                value={draft.join || '?'}
+                options={QUERY_JOINS}
+                onChange={(e) => setDraft((d) => ({ ...d, join: e.target.value }))}
+              />
+            </Field>
           </div>
 
           <div className="section-head" style={{ margin: '16px 0 8px' }}>
             <span className="section-title">Query parameters</span>
             <span className="section-sub">
-              Each parameter states how it is joined to the address before it (<span className="mono">/?</span>,{' '}
-              <span className="mono">?</span> or <span className="mono">&amp;</span>), what it is called, and where
-              its value comes from — a value typed here, an IDAM attribute of the identity, or a nonce generated
-              once per launch.
+              Each parameter states what it is called and where its value comes from — a value typed here, an IDAM
+              attribute of the identity, or a nonce generated once per launch.
             </span>
           </div>
 
@@ -1059,15 +1021,13 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
           ) : (
             <div style={{ overflowX: 'auto' }}><table className="tbl">
               <colgroup>
-                <col style={{ width: 88 }} />
-                <col style={{ width: 190 }} />
+                <col style={{ width: 210 }} />
                 <col style={{ width: 160 }} />
                 <col />
                 <col style={{ width: 48 }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th>Join</th>
                   <th>Key</th>
                   <th>Input type</th>
                   <th>Value</th>
@@ -1080,15 +1040,6 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
                      position while its halves are still being chosen. */
                   // eslint-disable-next-line react/no-array-index-key
                   <tr key={i}>
-                    <td>
-                      <Select
-                        className="mono"
-                        value={p.separator || (i === 0 ? '?' : '&')}
-                        options={PARAM_SEPARATORS}
-                        aria-label={`Join for parameter ${i + 1}`}
-                        onChange={(e) => setParam(i, { separator: e.target.value })}
-                      />
-                    </td>
                     <td>
                       <TextInput
                         className="mono"
@@ -1163,7 +1114,7 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
             <Button
               size="sm"
               icon="plus"
-              onClick={() => setDraft((d) => ({ ...d, params: [...d.params, blankParam(d.params.length)] }))}
+              onClick={() => setDraft((d) => ({ ...d, params: [...d.params, blankParam()] }))}
             >
               Add row
             </Button>
@@ -1188,8 +1139,6 @@ export function UrlConfigCard({ rows, onChange, baseUrls = [], attributes = [] }
           </div>
 
           <div className="row" style={{ marginTop: 14 }}>
-            <Switch checked={draft.enabled} onChange={(v) => setDraft((d) => ({ ...d, enabled: v }))} label="Enabled" />
-            <span className="t-sm">Available to assigned identities</span>
             <span className="spacer" />
             <Button onClick={() => setDraft(null)}>Cancel</Button>
             <Button variant="pri" icon="save" disabled={!ready} onClick={save}>{draft.id ? 'Save URL' : 'Add URL'}</Button>
@@ -1271,24 +1220,11 @@ export function FieldGroup({ title, sub, children }) {
   )
 }
 
-function SwitchRow({ checked, onChange, label, hint }) {
-  return (
-    <div className="row" style={{ alignItems: 'flex-start', gap: 10 }}>
-      <Switch checked={!!checked} onChange={onChange} label={label} />
-      <span style={{ minWidth: 0 }}>
-        <span className="t-sm" style={{ display: 'block' }}>{label}</span>
-        {hint && <span className="t-xs t-mut">{hint}</span>}
-      </span>
-    </div>
-  )
-}
-
 /**
  * Link application.
  *
  * It asserts nothing and provisions nothing — it puts a tile in the catalog
- * that opens a URL. The only real decisions are where it goes and whether the
- * signed-in username travels with it.
+ * that opens a URL. The only real decision is where it goes.
  */
 export function LinkFields({ value, onChange, attempted = false, idPrefix = 'lk' }) {
   const set = (patch) => onChange(patch)
@@ -1306,28 +1242,7 @@ export function LinkFields({ value, onChange, attempted = false, idPrefix = 'lk'
           >
             <TextInput id={id('url')} className="mono" value={value.targetUrl} placeholder="https://intranet.example.com/handbook" onChange={(e) => set({ targetUrl: e.target.value })} />
           </Field>
-          {value.passIdentity && (
-            <Field label="Identity parameter" required htmlFor={id('param')} hint="The query parameter the username is appended as.">
-              <TextInput id={id('param')} className="mono" value={value.identityParam} placeholder="user" onChange={(e) => set({ identityParam: e.target.value })} />
-            </Field>
-          )}
         </div>
-        <div className="stack" style={{ gap: 12, marginTop: 14 }}>
-          <SwitchRow
-            checked={value.passIdentity}
-            onChange={(v) => set({ passIdentity: v })}
-            label="Pass the username in the query string"
-            hint="Convenient, and unauthenticated — the destination has no way to prove the name was not typed by hand."
-          />
-        </div>
-        {value.passIdentity && (
-          <div style={{ marginTop: 14 }}>
-            <Banner tone="warn">
-              A username in a query string is not authentication. It is written to browser history and to every proxy
-              log on the path. Use an SSO protocol wherever the destination can accept one.
-            </Banner>
-          </div>
-        )}
         {String(value.targetUrl || '').startsWith('http://') && (
           <div style={{ marginTop: 14 }}>
             <Banner tone="warn">This destination is plain HTTP. Anything sent to it travels in clear text.</Banner>
@@ -1337,9 +1252,7 @@ export function LinkFields({ value, onChange, attempted = false, idPrefix = 'lk'
 
       <FieldGroup title="Preview" sub="What the catalog tile opens.">
         <div className="code mono" style={{ display: 'block', padding: '9px 11px', lineHeight: 1.7 }}>
-          {value.targetUrl
-            ? `${value.targetUrl}${value.passIdentity ? `${value.targetUrl.includes('?') ? '&' : '?'}${value.identityParam || 'user'}=SHUBHAM_JAIN` : ''}`
-            : '— set a target URL —'}
+          {value.targetUrl || '— set a target URL —'}
         </div>
       </FieldGroup>
     </div>

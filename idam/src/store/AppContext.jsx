@@ -1,7 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { BASE, BY_PATH, DETAIL_ROUTES, LEGACY, pathFor } from '../data/nav'
+import { BASE, BY_PATH, DETAIL_ROUTES, LEGACY, isRecertifyLinkPath, pathFor } from '../data/nav'
 import { useLocalState } from '../lib/useLocalState'
 import { can as canWith, grantsFor, roleFor } from '../lib/access'
+
+const LEGACY_PREFIXES = Object.keys(LEGACY)
+  .filter((k) => k.length > BASE.length + 1)
+  .sort((a, b) => b.length - a.length)
 
 const AppContext = createContext(null)
 export const useApp = () => useContext(AppContext)
@@ -13,7 +17,10 @@ function resolve(loc) {
     if (BY_PATH[legacyHash] || LEGACY[legacyHash]) path = legacyHash
   }
   if (!path.startsWith(BASE)) path = BASE
-  const mapped = LEGACY[path] || path
+  // A legacy address keeps whatever follows it, so an old deep link such as
+  // /iam/consentRecords/12 lands on the same record at its new address.
+  const legacyBase = LEGACY[path] ? path : LEGACY_PREFIXES.find((k) => path.startsWith(`${k}/`))
+  const mapped = legacyBase ? LEGACY[legacyBase] + path.slice(legacyBase.length) : path
 
   const exact = BY_PATH[mapped]
   if (exact) return { id: exact.id, path: mapped, segments: [] }
@@ -73,6 +80,7 @@ export function AppProvider({ children }) {
      /iam/login whatever they typed, and the route they asked for is held in
      `intended` until they do. */
   useEffect(() => {
+    if (isRecertifyLinkPath(window.location.pathname)) return
     const path = signedIn ? initial.path : `${BASE}/login`
     if (window.location.pathname !== path) {
       window.history.replaceState(null, '', path + (signedIn ? window.location.search : ''))

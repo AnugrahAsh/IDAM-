@@ -1,5 +1,6 @@
 import Icon from './Icon'
 import Button from './Button'
+import IconButton from './IconButton'
 import { useDialogFocus } from '../../lib/useDialogFocus'
 
 const TONE = {
@@ -15,7 +16,7 @@ export default function Modal({
   // which dismisses a draft that failed validation. Passing `footer` replaces
   // the default pair; `scroll` gives the body its own scroller so the footer
   // stays put on a long form.
-  footer, scroll,
+  footer, scroll, closable = false,
 }) {
   const ref = useDialogFocus(onClose)
 
@@ -28,6 +29,7 @@ export default function Modal({
             <Icon name={icon || defIcon} size={17} />
           </span>
           <div className="t-h2" style={{ paddingTop: 6 }}>{title}</div>
+          {closable && <IconButton icon="x" label="Close" className="modal-x" onClick={onClose} />}
         </header>
         <div className={`modal-b ${children ? 'wide' : ''}`} data-scroll={scroll || undefined}>{children || body}</div>
         {footer ? <footer className="modal-f">{footer}</footer> : (cancelLabel || confirmLabel) ? (

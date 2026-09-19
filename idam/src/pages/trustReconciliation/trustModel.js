@@ -288,7 +288,7 @@ export const SEED_SOURCES = [
       baseUrl: 'https://hr.tanflow.com/api/v1',
       authMethod: 'Bearer token',
       tokenApi: 'https://hr.tanflow.com/oauth/token',
-      tokenValue: 'stored',
+      token: 'stored',
       resourcePath: '/workers',
       payload: '',
       responseKey: 'data.status',
