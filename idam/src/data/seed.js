@@ -159,7 +159,7 @@ export const ORGANIZATIONS = ORGS.map((name, i) => ({
   createdOn: stamp(200 - i * 12),
 }))
 
-// The permission register lives in its own module: 43 modules, 413 named
+// The permission register lives in its own module: 45 modules, 447 named
 // permissions, one per reachable control. Re-exported here because the role
 // screens have always sourced the catalogue from the seed.
 export { PERMISSION_CATALOG as PERM_CATALOG, PERMISSION_TOTAL, migrateGrants } from './permissionCatalog'
@@ -190,6 +190,9 @@ export const ROLE_PERMS = {
   ]),
   3: Object.fromEntries([
     only('Security Events', 'View System Logs'),
+    only('Identity Threat Detection', 'View Detection Rules', 'View Alerts', 'View Blocked IPs'),
+    only('Dashboard', 'View Dashboard'),
+    only('External User Federation', 'View Federated Application Details', 'View Federated Applications List'),
     only('Reports', 'View Reports List', 'View Admin Audit Trail Report', 'View User Access Report',
       'View Application Access Report', 'View Role Mapping Report', 'View User-Group Report',
       'View Login Activity Report', 'View Recertification Report', 'View Orphan Accounts Report'),

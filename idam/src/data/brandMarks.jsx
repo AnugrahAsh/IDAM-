@@ -297,6 +297,104 @@ export const BRAND_MARKS = {
       <path fill="#fff" d="M10.5 27.4 20.6 37.5A14 14 0 0 1 10.5 27.4Zm-.4-4.6 15 15c1-.2 2-.5 2.9-.9L11 20A13 13 0 0 0 10.1 22.8Zm2 -5.6 18.7 18.7c.8-.5 1.5-1 2.2-1.6L13.7 15c-.6.7-1.2 1.4-1.6 2.2Zm3.6-4L37.6 32.3a14 14 0 1 0-22.3-19.7Z" />
     </svg>
   ),
+
+  // --- Connector marks ------------------------------------------------------
+  // The catalogue of provisioning and trust-reconciliation connectors shows
+  // each connector by its own mark, as the connector hub always has. Keyed by
+  // the brand names in shared/provisioning (BRAND_BY_CONNECTOR).
+  postgresql: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <ellipse cx="35" cy="21.5" rx="7.5" ry="10" fill="#27557F" />
+      <ellipse cx="25" cy="19" rx="12.5" ry="11.5" fill="#336791" />
+      <path fill="#336791" d="M17.5 23.5c-1.6 4.4-1.9 9.3-1 13.2.6 2.6 2.3 4.3 4.5 4.3 1.6 0 2.7-1 2.7-2.4 0-1.2-.9-2-2.1-2.1-.9-2.7-.6-6.3.8-9.4z" />
+      <path fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" d="M22 27.5c.9 1.8 2.3 2.9 4 3.1" />
+      <path fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" opacity=".85" d="M30.5 12.5c3.3 1.6 5.4 5.2 5.3 9.3" />
+      <circle cx="21.2" cy="16" r="1.6" fill="#fff" />
+    </svg>
+  ),
+  mysql: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#00758F" d="M6.5 33.5C11 20.2 22.4 11.8 35 12.4c3.1.2 5.6 1.3 7 3-2.2-.6-4.5-.5-6.6.1-8.7 2.3-15.6 9.1-19.3 18.8z" />
+      <path fill="#F29111" d="M24.8 14.6l2.3-6 3.7 4.6z" />
+      <path fill="#00758F" d="M6.5 33.5l-2.8-4.4 5.4 1.8 1.2-4.6 1.9 5.4" />
+      <path fill="#00758F" d="M41.9 15.3l3.1-1.3-2.3 3" />
+      <circle cx="36.2" cy="15.2" r="1" fill="#fff" />
+      <path fill="none" stroke="#F29111" strokeWidth="1.6" strokeLinecap="round" d="M16.5 30.5c3.7-6.9 9.6-11.9 16.6-13.8" />
+    </svg>
+  ),
+  oracledb: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="5.5" y="15" width="37" height="18" rx="9" fill="none" stroke="#C74634" strokeWidth="4.6" />
+    </svg>
+  ),
+  ibmdb2: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <g fill="#0F62FE">
+        <rect x="4" y="17" width="6.5" height="14" />
+        <path d="M12.5 17h9.3c2.4 0 4.2 1.6 4.2 3.6 0 1.2-.6 2.2-1.6 2.8 1.2.6 2 1.8 2 3.1 0 2.2-1.9 4.5-4.4 4.5h-9.5z" />
+        <path d="M28 17h5.2l2.9 7.4L39 17h5.2v14h-5v-7.2L36.6 31h-1.1l-2.6-7.2V31H28z" />
+      </g>
+      <g fill="#fff">
+        <rect x="3" y="19" width="42" height="1.05" />
+        <rect x="3" y="21.8" width="42" height="1.05" />
+        <rect x="3" y="24.6" width="42" height="1.05" />
+        <rect x="3" y="27.4" width="42" height="1.05" />
+        <rect x="3" y="30.2" width="42" height="1.05" />
+      </g>
+    </svg>
+  ),
+  activedirectory: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="none" stroke="#0078D4" strokeWidth="2.4" strokeLinejoin="round" d="M24 16v6.5M13.5 29v-6.5h21V29" />
+      <rect x="17" y="6" width="14" height="10.5" rx="2.2" fill="#0078D4" />
+      <rect x="6.5" y="29" width="14" height="10.5" rx="2.2" fill="#0078D4" />
+      <rect x="27.5" y="29" width="14" height="10.5" rx="2.2" fill="#50A9E8" />
+      <circle cx="24" cy="9.9" r="1.9" fill="#fff" />
+      <path fill="#fff" d="M20.6 14.6c.5-1.6 1.9-2.6 3.4-2.6s2.9 1 3.4 2.6" />
+    </svg>
+  ),
+  ldap: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#C21E2E" d="M4.5 35.5L16 13.5l8 12.3 7.2-10.8L43.5 35.5z" />
+      <path fill="none" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" opacity=".9" d="M12.8 35.5L16 29.2l3.4 6.3M24 25.8l7.2 9.7" />
+    </svg>
+  ),
+  restapi: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#1E88E5" d="M14 36h21.5a8 8 0 0 0 1.3-15.9A11.5 11.5 0 0 0 15 17.6 9.3 9.3 0 0 0 14 36z" />
+      <path fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M20.5 22.8l-3.6 3.7 3.6 3.7M28 22.8l3.6 3.7-3.6 3.7M26 21.6l-3.6 9.8" />
+    </svg>
+  ),
+  customapi: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#DC6803" d="M24 5.5l16 9.25v18.5L24 42.5 8 33.25v-18.5z" />
+      <path fill="none" stroke="#fff" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" d="M20.5 16.5c-2.2 0-3 1-3 3v2.2c0 1.4-.7 2.1-2 2.3 1.3.2 2 .9 2 2.3v2.2c0 2 .8 3 3 3M27.5 16.5c2.2 0 3 1 3 3v2.2c0 1.4.7 2.1 2 2.3-1.3.2-2 .9-2 2.3v2.2c0 2-.8 3-3 3" />
+    </svg>
+  ),
+  entraid: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#50C8F4" d="M24 5L6 31l18-5.2z" />
+      <path fill="#1490DF" d="M24 5l18 26-18-5.2z" />
+      <path fill="#0F6CBD" d="M6 31l18-5.2V43z" />
+      <path fill="#0A4A94" d="M42 31l-18-5.2V43z" />
+    </svg>
+  ),
+  scim: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="none" stroke="#0E7D74" strokeWidth="3.4" strokeLinecap="round" d="M10.4 20.5A14.5 14.5 0 0 1 36.8 15" />
+      <path fill="none" stroke="#12A594" strokeWidth="3.4" strokeLinecap="round" d="M37.6 27.5A14.5 14.5 0 0 1 11.2 33" />
+      <path fill="#0E7D74" d="M39.9 9.9l-.7 8.3-8-2.4z" />
+      <path fill="#12A594" d="M8.1 38.1l.7-8.3 8 2.4z" />
+      <circle cx="24" cy="20.3" r="3.6" fill="#0E7D74" />
+      <path fill="#0E7D74" d="M17.2 31c.6-3.6 3.3-5.9 6.8-5.9s6.2 2.3 6.8 5.9z" />
+    </svg>
+  ),
+  noprovisioning: (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="14.5" fill="none" stroke="#5D6776" strokeWidth="3.4" />
+      <path stroke="#5D6776" strokeWidth="3.4" strokeLinecap="round" d="M13.8 13.8l20.4 20.4" />
+    </svg>
+  ),
 }
 
 export const BRAND_KEYS = Object.keys(BRAND_MARKS)

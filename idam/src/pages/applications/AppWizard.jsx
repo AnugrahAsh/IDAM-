@@ -22,6 +22,7 @@ import {
   AuthExtraFields, ConnectionFields, LinkFields, ManualPayloadField, OperationChecks, UniqueAttributeFields,
 } from './facetControls'
 import CustomApiFields, { ConnectorMappingEditor } from './customApiFields'
+import { brandForConnector } from '../shared/provisioning/shared'
 import {
   AUTH_BEARER_TYPE, BASE, BEARER_DYNAMIC, CAPABILITIES, EXTRA_OPERATION_SPECS, ORG_OPTIONS, OPERATION_SPECS, PROTOCOLS,
   REST_API_CONNECTOR, blankConnection, blankLink, blankOidc, blankOperations, blankSaml, capabilityLabel,
@@ -506,8 +507,8 @@ export default function AppWizard({ onCancel, onCreate }) {
                       onKeyDown={(e) => e.key === 'Enter' && pickConnector(c)}
                     >
                       <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
-                        <span className="feed-ic" data-tone={d.connector === c.id ? 'acc' : 'mut'} style={{ width: 30, height: 30 }}>
-                          <Icon name={c.icon} size={15} />
+                        <span className="tile-logo" data-on={d.connector === c.id || undefined}>
+                          <AppLogo brand={brandForConnector(c.id)} name={c.name} size={38} />
                         </span>
                         <span style={{ minWidth: 0, flex: 1 }}>
                           <span className="t-sm trunc" style={{ fontWeight: 600, display: 'block' }}>{c.name}</span>

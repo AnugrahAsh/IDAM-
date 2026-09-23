@@ -27,10 +27,10 @@
   border-radius:var(--r-sm);color:var(--ink-2);font-size:var(--t-sm);cursor:pointer;
 }
 .cbe-tool:hover{background:var(--surface-3);color:var(--ink)}
-.cbe-b{font-weight:800;font-size:13px}
-.cbe-i{font-style:italic;font-family:Georgia,serif;font-size:13px}
-.cbe-u{text-decoration:underline;font-size:13px}
-.cbe-h{font-weight:700;font-size:13px}
+.cbe-b{font-weight:800;font-size:.8125rem}
+.cbe-i{font-style:italic;font-family:Georgia,serif;font-size:.8125rem}
+.cbe-u{text-decoration:underline;font-size:.8125rem}
+.cbe-h{font-weight:700;font-size:.8125rem}
 .cbe-div{width:1px;height:16px;background:var(--line);flex:none;margin:0 3px}
 .cbe-body{
   min-height:260px;max-height:520px;overflow:auto;padding:14px 16px;

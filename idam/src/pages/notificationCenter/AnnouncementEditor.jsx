@@ -241,8 +241,8 @@ export default function AnnouncementEditor({ record, onSave, onCancel, onDelete,
                   <span className="stat-k">{reachIsExact(audience) ? 'Identities in scope' : 'Estimated reach'}</span>
                   <span className="stat-v">{num(estimated)}</span>
                 </div>
-                <div className="stat-cell"><span className="stat-k">Channel</span><span className="stat-v" style={{ fontSize: 15 }}>{form.channel}</span></div>
-                {isPopup && <div className="stat-cell"><span className="stat-k">Shown</span><span className="stat-v" style={{ fontSize: 15 }}>{form.popupFrequency}</span></div>}
+                <div className="stat-cell"><span className="stat-k">Channel</span><span className="stat-v" style={{ fontSize: '.9375rem' }}>{form.channel}</span></div>
+                {isPopup && <div className="stat-cell"><span className="stat-k">Shown</span><span className="stat-v" style={{ fontSize: '.9375rem' }}>{form.popupFrequency}</span></div>}
               </div>
               {form.channel.includes('Email') && (
                 <Banner tone="warn" style={{ marginTop: 14 }}>
@@ -296,7 +296,7 @@ export default function AnnouncementEditor({ record, onSave, onCancel, onDelete,
               ) : (
                 <div className="stat-strip">
                   <div className="stat-cell"><span className="stat-k">Reached</span><span className="stat-v">{num(record.reach)}</span></div>
-                  <div className="stat-cell"><span className="stat-k">Published</span><span className="stat-v" style={{ fontSize: 13 }}>{record.scheduleOn}</span></div>
+                  <div className="stat-cell"><span className="stat-k">Published</span><span className="stat-v" style={{ fontSize: '.8125rem' }}>{record.scheduleOn}</span></div>
                 </div>
               )}
             </Card>

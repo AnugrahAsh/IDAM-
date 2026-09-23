@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { BASE, BY_PATH, DETAIL_ROUTES, LEGACY, isRecertifyLinkPath, pathFor } from '../data/nav'
+import { BASE, BY_PATH, DETAIL_ROUTES, LEGACY, isPublicRoute, isRecertifyLinkPath, pathFor } from '../data/nav'
 import { useLocalState } from '../lib/useLocalState'
 import { can as canWith, grantsFor, roleFor } from '../lib/access'
 
@@ -53,13 +53,19 @@ export function AppProvider({ children }) {
   /* Where the identity was heading before the gate stopped them. A deep link
      into the console survives the sign-in rather than dropping everyone on My
      Apps. */
-  const [intended, setIntended] = useState(() => (initial.id === 'login' ? null : initial))
+  // A public page is somewhere to go without a session, not somewhere to be
+  // sent after one — so it is never remembered as the destination.
+  const [intended, setIntended] = useState(() => (initial.id === 'login' || isPublicRoute(initial.id) ? null : initial))
   /* Set for exactly one render pass after a sign-in, so the shell can raise the
      notification popup once rather than on every visit to a route. */
   const [greeted, setGreeted] = useState(false)
-  const [route, setRoute] = useState(() => (readSession() ? initial.id : 'login'))
-  const [segments, setSegments] = useState(() => (readSession() ? (initial.segments || []) : []))
+  const [route, setRoute] = useState(() => (readSession() || isPublicRoute(initial.id) ? initial.id : 'login'))
+  const [segments, setSegments] = useState(() => (readSession() || isPublicRoute(initial.id) ? (initial.segments || []) : []))
   const [density, setDensity] = useLocalState('tf-idam-density', 'comfortable')
+  /* The reader's text size: sm / md / lg / xl. It scales the root font size,
+     which every rem in the console follows (base.css), and index.html applies
+     it before the first paint so a reload does not flash the default size. */
+  const [textSize, setTextSize] = useLocalState('tf-idam-text-size', 'md')
   /* Which role the console is being viewed as. Screens that fold an admin
      surface into a user-facing page read this to decide whether to offer it. */
   const [roleId, setRoleId] = useLocalState('tf-idam-roleid', 1)
@@ -81,6 +87,7 @@ export function AppProvider({ children }) {
      `intended` until they do. */
   useEffect(() => {
     if (isRecertifyLinkPath(window.location.pathname)) return
+    if (!signedIn && isPublicRoute(initial.id)) return
     const path = signedIn ? initial.path : `${BASE}/login`
     if (window.location.pathname !== path) {
       window.history.replaceState(null, '', path + (signedIn ? window.location.search : ''))
@@ -99,6 +106,11 @@ export function AppProvider({ children }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-density', density)
   }, [density])
+
+  useEffect(() => {
+    if (textSize === 'md') document.documentElement.removeAttribute('data-text-size')
+    else document.documentElement.setAttribute('data-text-size', textSize)
+  }, [textSize])
 
   const navigate = useCallback((id, opts = {}) => {
     const path = typeof id === 'string' && id.startsWith('/') ? id : pathFor(id)
@@ -123,6 +135,11 @@ export function AppProvider({ children }) {
     const onPop = () => {
       const next = resolve(window.location)
       if (!signedIn) {
+        if (isPublicRoute(next.id)) {
+          setRoute(next.id)
+          setSegments(next.segments || [])
+          return
+        }
         setIntended(next.id === 'login' ? null : next)
         setRoute('login')
         setSegments([])
@@ -197,6 +214,7 @@ export function AppProvider({ children }) {
     signedIn, signIn, signOut, greeted, clearGreeting,
     notifOpen, setNotifOpen,
     density, setDensity,
+    textSize, setTextSize,
     roleId, setRoleId, role, grants, can,
     navMin, setNavMin, navOpen, setNavOpen,
     paletteOpen, setPaletteOpen,
@@ -205,7 +223,7 @@ export function AppProvider({ children }) {
     drawer, setDrawer, modal, setModal, confirm,
     closeOverlays,
   }), [route, segments, navigate, signedIn, signIn, signOut, greeted, clearGreeting, notifOpen,
-    density, setDensity, roleId, setRoleId, role, grants, can, navMin, setNavMin,
+    density, setDensity, textSize, setTextSize, roleId, setRoleId, role, grants, can, navMin, setNavMin,
     navOpen, paletteOpen, theme, toggleTheme,
     toasts, toast, dismissToast, drawer, modal, confirm, closeOverlays])
 

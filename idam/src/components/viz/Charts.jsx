@@ -5,7 +5,11 @@ import { SEQ } from '../../lib/series'
 const fmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-US') : n)
 
 /* --- Sparkline — KPI-tile inline trend ----------------------------------- */
-export function Sparkline({ data, w = 92, h = 30, color = 'var(--s1)', fill = true }) {
+/* `stretch` gives up the fixed aspect ratio so the line can span whatever box
+   it is given — a band along the foot of a tile, rather than a fixed rectangle
+   laid over the tile's own figure. The stroke keeps its width through that
+   scaling, and the end marker is dropped because a circle would not survive it. */
+export function Sparkline({ data, w = 92, h = 30, color = 'var(--s1)', fill = true, stretch = false }) {
   if (!data || data.length < 2) return null
   const min = Math.min(...data)
   const max = Math.max(...data)
@@ -15,10 +19,24 @@ export function Sparkline({ data, w = 92, h = 30, color = 'var(--s1)', fill = tr
   const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')
   const last = pts[pts.length - 1]
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+    <svg
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio={stretch ? 'none' : undefined}
+      aria-hidden="true"
+    >
       {fill && <path d={`${d} L${w} ${h} L0 ${h} Z`} fill={color} opacity=".09" />}
-      <path d={d} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={last[0]} cy={last[1]} r="4" fill={color} stroke="var(--surface)" strokeWidth="2" />
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect={stretch ? 'non-scaling-stroke' : undefined}
+      />
+      {!stretch && <circle cx={last[0]} cy={last[1]} r="4" fill={color} stroke="var(--surface)" strokeWidth="2" />}
     </svg>
   )
 }
@@ -180,10 +198,10 @@ export function RingGauge({ pct = 0, size = 110, color = 'var(--accent)', track 
         />
       </svg>
       <div className="rg-val" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <span className="rg-num num" style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-.03em', color: 'var(--ink)' }}>
+        <span className="rg-num num" style={{ fontSize: '1.625rem', fontWeight: 700, letterSpacing: '-.03em', color: 'var(--ink)' }}>
           {label != null ? label : `${Math.round(v)}%`}
         </span>
-        {cap && <span className="rg-cap" style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--mut)' }}>{cap}</span>}
+        {cap && <span className="rg-cap" style={{ fontSize: '.625rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--mut)' }}>{cap}</span>}
       </div>
     </div>
   )

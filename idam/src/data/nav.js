@@ -7,6 +7,12 @@ export const isRecertifyLinkPath = (pathname) => String(pathname || '').startsWi
 
 export const ROUTES = [
   { id: 'login', path: '/iam/login', label: 'Sign in', icon: 'lock' },
+  // Reached from the sign-in screen by someone the directory does not know yet,
+  // so it is public: it renders without a session and without the shell.
+  { id: 'selfEnrollment', path: '/iam/selfEnrollment', label: 'Self-Enrollment', icon: 'user' },
+  // The administrator's analytics overview. My Apps stays the landing page:
+  // it is the one screen every identity may open.
+  { id: 'dashboard', path: '/iam/dashboard', label: 'Dashboard', icon: 'dashboard', module: 'Dashboard' },
   { id: 'myapps', path: '/iam/myapps', label: 'My Apps', icon: 'apps', module: 'My Apps' },
   // Notification Center and Quick Links each own their management surface as a
   // full-page `/manage` view, so both are detail routes rather than leaves.
@@ -27,6 +33,9 @@ export const ROUTES = [
   { id: 'applications', path: '/iam/applications', label: 'Applications', icon: 'provision', detail: true, module: 'Provision Applications' },
   { id: 'attributeConfigurations', path: '/iam/attributeConfigurations', label: 'Attribute Configuration', icon: 'swap', detail: true, module: 'Configurations' },
   { id: 'trustReconciliation', path: '/iam/trustReconciliation', label: 'Trust Reconciliation', icon: 'recon', detail: true, module: 'Trust Reconciliation' },
+  // Directories, databases and identity services whose users federate into an
+  // LDAP application. The Connector Hub (/new) and each setup form are routed.
+  { id: 'externalUserFederation', path: '/iam/externalUserFederation', label: 'External User Federation', icon: 'plug', detail: true, module: 'External User Federation' },
   { id: 'ldapapplications', path: '/iam/ldapapplications', label: 'LDAP Applications', icon: 'directory', detail: true, module: 'LDAP Applications' },
   { id: 'ipRestrictionPolicy', path: '/iam/ip/restriction/policy', label: 'Network Access Policies', icon: 'noentry', detail: true, module: 'Network Access Policies' },
   { id: 'schedulers', path: '/iam/schedulers', label: 'Schedulers', icon: 'clock', detail: true, module: 'Schedulers' },
@@ -46,6 +55,9 @@ export const ROUTES = [
   { id: 'consentTemplates', path: '/iam/consentTemplates', label: 'Consent Templates', icon: 'file', module: 'Consent Template' },
   { id: 'consentRecords', path: '/iam/consentRecords', label: 'Consent Records', icon: 'file', detail: true, module: 'Consent Management' },
   { id: 'syslogs', path: '/iam/syslogs', label: 'Security Events', icon: 'logs', detail: true, module: 'Security Events' },
+  // Detection rules, their alerts and the addresses they block. Tabs are routed
+  // (/iam/itdr/alerts), so it is a detail route.
+  { id: 'itdr', path: '/iam/itdr', label: 'Identity Threat Detection', icon: 'shieldAlert', detail: true, module: 'Identity Threat Detection' },
   { id: 'licenses', path: '/iam/licenses', label: 'License', icon: 'license', module: 'License' },
   { id: 'profile', path: '/iam/profile', label: 'My Profile', icon: 'user', module: 'My profile' },
   { id: 'settings', path: '/iam/settings', label: 'Settings', icon: 'config', module: 'Settings' },
@@ -57,6 +69,11 @@ export const ROUTES = [
   { id: 'addEmailTemplates', path: '/iam/additional/emailTemplates', label: 'Email Templates', icon: 'mail', detail: true },
   { id: 'addDesktop', path: '/iam/additional/desktop', label: 'Desktop Client', icon: 'monitor', detail: true },
 ]
+
+/* Routes a visitor without a session may open. Everything else waits behind
+   the sign-in gate. */
+export const PUBLIC_ROUTES = ['selfEnrollment']
+export const isPublicRoute = (id) => PUBLIC_ROUTES.includes(id)
 
 export const BY_ID = Object.fromEntries(ROUTES.map((r) => [r.id, r]))
 export const BY_PATH = Object.fromEntries(ROUTES.map((r) => [r.path, r]))
@@ -77,7 +94,7 @@ export const NAV = [
     label: 'Core',
     icon: 'apps',
     items: [
-      'myapps', 'notifications', 'usefullinks', 'users', 'organizations', 'roles',
+      'dashboard', 'myapps', 'notifications', 'usefullinks', 'users', 'organizations', 'roles',
       'approvals', 'organizationHierarchy', 'orphanedpolicy', 'requests', 'mfa',
     ],
   },
@@ -95,7 +112,7 @@ export const NAV = [
       // Attribute Configuration is reached from the Applications toolbar: the
       // definitions exist to serve that register, and a section of their own
       // put them a level above the thing they configure.
-      'applications', 'trustReconciliation',
+      'applications', 'trustReconciliation', 'externalUserFederation',
       'ldapapplications', 'ipRestrictionPolicy',
     ],
   },
@@ -118,7 +135,7 @@ export const NAV = [
     icon: 'mail',
     items: ['emails', 'sms', 'consent'],
   },
-  { id: 'logging', label: 'Logging', icon: 'logs', items: ['syslogs', 'licenses'] },
+  { id: 'logging', label: 'Logging', icon: 'logs', items: ['syslogs', 'itdr', 'licenses'] },
   { id: 'system', label: 'System', icon: 'config', items: ['settings'] },
 ]
 
@@ -128,9 +145,11 @@ export const NAV_BADGES = {
   orphanedpolicy: 'orphan',
   segregationofduties: 'sod',
   applications: 'provisioning',
+  externalUserFederation: 'federation',
   recertification: 'recert',
   jobs: 'jobs',
   syslogs: 'logs',
+  itdr: 'itdr',
 }
 
 export const LEGACY = {
@@ -148,6 +167,9 @@ export const LEGACY = {
   '/iam/provisioning': '/iam/applications',
   '/iam/provisionapplications': '/iam/applications',
   '/iam/reconciliation': '/iam/trustReconciliation',
+  '/iam/externaluserfederation': '/iam/externalUserFederation',
+  '/iam/userFederation': '/iam/externalUserFederation',
+  '/iam/connectorHub': '/iam/externalUserFederation/new',
   '/iam/directories': '/iam/ldapapplications',
   '/iam/ldapConfigurations': '/iam/ldapapplications',
   '/iam/sso': '/iam/applications',
@@ -166,6 +188,9 @@ export const LEGACY = {
   '/iam/license': '/iam/licenses',
   '/iam/usefulLinks': '/iam/usefullinks',
   '/iam/myprofile': '/iam/profile',
+  '/iam/selfenrollment': '/iam/selfEnrollment',
+  '/iam/register': '/iam/selfEnrollment',
+  '/iam/signup': '/iam/selfEnrollment',
   '/iam/communications': '/iam/emails',
   // The relay settings are one provider record among several now, and the
   // outbound queue is the Messages tab. The three addresses the old Email

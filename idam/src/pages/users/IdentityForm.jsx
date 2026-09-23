@@ -89,7 +89,14 @@ function AccordionCard({ id, title, sub, open, onToggle, summary, status, childr
   )
 }
 
-export default function IdentityForm({ user, existing, onCreate, onSave, onCancel }) {
+/**
+ * `enroll` is the self-enrollment mode: the same schema-driven sections, rail
+ * and validation, filled in by the person themselves before they have an
+ * account. It asks only who someone is — a policy exception and entitlements
+ * are an administrator's to decide once the enrollment is approved — and a
+ * person cannot enroll as a service account.
+ */
+export default function IdentityForm({ user, existing, onCreate, onSave, onCancel, enroll = false }) {
   const { toast, confirm } = useApp()
   // The form is generated from the identity schema, so an attribute defined in
   // Configurations appears here without this file changing.
@@ -220,7 +227,7 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
       if (next.exceptionReason) opened.exception = true
       setOpen(opened)
       if (next.employeeType) setGateOpen(true)
-      toast('warn', 'Cannot save yet', `${keys.length} ${keys.length === 1 ? 'field needs' : 'fields need'} attention before this identity can be written.`)
+      toast('warn', enroll ? 'Cannot submit yet' : 'Cannot save yet', `${keys.length} ${keys.length === 1 ? 'field needs' : 'fields need'} attention before ${enroll ? 'your enrollment can be submitted' : 'this identity can be written'}.`)
       return
     }
     const payload = {
@@ -228,6 +235,16 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
       entitlements: [...granted],
       documents: Object.keys(docs).length,
       exception: exception.on,
+    }
+    if (enroll) {
+      confirm({
+        tone: 'ok',
+        title: 'Submit your enrollment?',
+        body: `Your details and documents go to the identity team for review. Nothing is created until an administrator approves it, and you hear back at ${values.email || 'the email address you gave'}.`,
+        confirmLabel: 'Submit enrollment',
+        onConfirm: () => onCreate(payload),
+      })
+      return
     }
     if (isAdd) {
       confirm({
@@ -312,8 +329,10 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
       state: sectionErrors(s.id) ? 'error' : filled(s.id) === attrsFor(s.id).length ? 'done' : 'active',
     })),
     { id: 'documents', label: 'Documents', sub: `${Object.keys(docs).length} attached`, state: Object.keys(docs).length ? 'done' : 'active' },
-    { id: 'exception', label: 'Policy exception', sub: exception.on ? 'Requested' : 'Not requested', state: exception.on ? 'done' : 'active' },
-    { id: 'entitlements', label: 'Entitlements', sub: `${granted.size} selected`, state: granted.size ? 'done' : 'active' },
+    ...(enroll ? [] : [
+      { id: 'exception', label: 'Policy exception', sub: exception.on ? 'Requested' : 'Not requested', state: exception.on ? 'done' : 'active' },
+      { id: 'entitlements', label: 'Entitlements', sub: `${granted.size} selected`, state: granted.size ? 'done' : 'active' },
+    ]),
   ]
 
   const errorCount = Object.keys(errors).filter((k) => errors[k]).length
@@ -321,11 +340,15 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
   return (
     <>
       <DetailHeader
-        backTo={isAdd ? '/iam/users' : `/iam/users/${user.id}`}
-        backLabel={isAdd ? 'Users' : user.username}
-        eyebrow={isAdd ? 'New identity' : 'Edit identity'}
-        title={isAdd ? (values.username || 'Untitled identity') : user.username}
-        sub={isAdd
+        backTo={enroll ? 'login' : isAdd ? '/iam/users' : `/iam/users/${user.id}`}
+        backLabel={enroll ? 'Sign in' : isAdd ? 'Users' : user.username}
+        eyebrow={enroll ? 'Self-enrollment' : isAdd ? 'New identity' : 'Edit identity'}
+        title={enroll
+          ? ([values.firstName, values.lastName].filter(Boolean).join(' ') || 'Your enrollment')
+          : isAdd ? (values.username || 'Untitled identity') : user.username}
+        sub={enroll
+          ? 'Tell us who you are. An administrator reviews every enrollment before an account is created, and your activation link arrives by email once it is approved.'
+          : isAdd
           ? 'Attributes, documents and entitlements are captured in one pass. Nothing is written to the directory until every required attribute validates.'
           : `Editing ${user.firstName} ${user.lastName}. Changes are versioned on the audit trail and pushed to every connected target on the next provisioning run.`}
         media={isAdd
@@ -381,7 +404,7 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
                   {gateOpen ? (
                     <>
                       <div className="grid grid-2">
-                        {LOOKUPS.employee_type.map((t) => (
+                        {LOOKUPS.employee_type.filter((t) => !enroll || t !== 'Service Account').map((t) => (
                           <button
                             key={t}
                             className="tile"
@@ -502,6 +525,8 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
                   </div>
                 </AccordionCard>
 
+                {!enroll && (
+                  <>
                 <AccordionCard
                   id="sec-exception"
                   title="Policy exception"
@@ -687,14 +712,24 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
                     </div>
                   </div>
                 </AccordionCard>
+                  </>
+                )}
 
                 {isAdd && (
                   <Card title="Credentials" sub="Delivered by email — no manual handover">
+                    {enroll ? (
+                      <Banner tone="info">
+                        Once an administrator approves this enrollment, a single-use activation link is emailed to{' '}
+                        {values.email ? <b>{values.email}</b> : 'the address you give above'}. It expires after 24 hours; opening it
+                        is where you set your password and enroll a second factor.
+                      </Banner>
+                    ) : (
                     <Banner tone="info">
                       A single-use enrollment link is emailed to {values.email ? <b>{values.email}</b> : 'the registered address'} when
                       the identity is created. The link expires after 24 hours and a password change is forced at first sign-in.
                       No credential is ever typed or handled by an operator.
                     </Banner>
+                    )}
                   </Card>
                 )}
               </>
@@ -706,7 +741,7 @@ export default function IdentityForm({ user, existing, onCreate, onSave, onCance
       <StickyActions dirty={dirty} message={dirty ? 'Unsaved changes' : 'No changes'}>
         <Button onClick={onCancel}>Cancel</Button>
         <Button variant="pri" icon="save" onClick={submit}>
-          {isAdd ? 'Create identity' : 'Save changes'}
+          {enroll ? 'Submit enrollment' : isAdd ? 'Create identity' : 'Save changes'}
         </Button>
       </StickyActions>
     </>

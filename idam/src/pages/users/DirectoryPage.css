@@ -20,7 +20,7 @@
 .idu-kpi:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .idu-kpi-k{display:flex;align-items:center;gap:5px;font-size:var(--t-xs);color:var(--mut)}
 .idu-kpi-k svg{color:var(--faint)}
-.idu-kpi-v{font-size:18px;font-weight:var(--w-bold);letter-spacing:-.02em;color:var(--ink);
+.idu-kpi-v{font-size:1.125rem;font-weight:var(--w-bold);letter-spacing:-.02em;color:var(--ink);
   font-variant-numeric:tabular-nums;line-height:1.2}
 .idu-kpi-s{font-size:var(--t-xs);color:var(--faint);max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}

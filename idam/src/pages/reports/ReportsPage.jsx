@@ -1,5 +1,5 @@
 import './ReportsPage.css'
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import Card from '../../components/primitives/Card'
@@ -22,9 +22,10 @@ import {
 } from './reportFilters'
 import { exportRows } from './exportCsv'
 import StatCards from '../../components/workbench/StatCards'
+import { Sparkline } from '../../components/viz/Charts'
 import { useLocalState } from '../../lib/useLocalState'
 import {
-  CATALOG_OLDEST, PIN_KEY, exportsFor, freshness, monthLabel, recordExport, totalExports,
+  CATALOG_OLDEST, PIN_KEY, activity, exportsFor, freshness, monthLabel, recordExport, totalExports,
 } from './catalogMeta'
 
 const PRESETS = [
@@ -48,6 +49,35 @@ const CATALOG_VIEWS = [
   { id: 'list', icon: 'menu', label: 'List view' },
 ]
 
+/* Each category keeps one tint wherever it appears — its rail entry, its
+   section head — so a category is recognised by colour before it is read. */
+const CATEGORY_TONE = {
+  'Access & Authentication': 'acc',
+  'Identity & Entitlements': 'viol',
+  'Credentials & Notifications': 'warn',
+  'Audit & Compliance': 'ok',
+}
+const TONE_SERIES = { acc: 'var(--s1)', ok: 'var(--s2)', warn: 'var(--s3)', bad: 'var(--s6)', viol: 'var(--s5)' }
+
+const RAIL = [
+  { id: 'all', label: 'All reports', icon: 'report' },
+  { id: 'pinned', label: 'Pinned', icon: 'star' },
+  ...CATEGORIES.map((c) => ({ id: c.id, label: c.id, icon: c.icon, blurb: c.blurb })),
+]
+
+/* "2 hrs ago" reads as "Updated 2 hrs ago"; a report with no stamps says so. */
+const updatedLabel = (label) => (label === 'No timestamps' ? label : `Updated ${label.charAt(0).toLowerCase()}${label.slice(1)}`)
+
+/**
+ * The report library.
+ *
+ * A catalog is read by what it evidences before it is read by name, so the
+ * categories hold the left of the page and the reports under the one chosen
+ * hold the right — the same hub the connector catalogue uses. "All reports"
+ * keeps every category as its own section rather than one undifferentiated
+ * grid, and each card carries the report's last fourteen days of activity, so
+ * a report that has gone quiet is visible without opening it.
+ */
 function ReportCatalog({ onOpen }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
@@ -57,7 +87,7 @@ function ReportCatalog({ onOpen }) {
   // Every catalog figure is read from the reports themselves on render.
   const meta = useMemo(() => REPORTS.map((r) => {
     const rows = r.rows()
-    return { report: r, count: rows.length, ...freshness(rows), exports: exportsFor(r.id) }
+    return { report: r, count: rows.length, ...freshness(rows), exports: exportsFor(r.id), trend: activity(rows) }
   }), [])
 
   const totals = useMemo(() => {
@@ -68,15 +98,30 @@ function ReportCatalog({ onOpen }) {
     return { records, audit, newest, exports: totalExports() }
   }, [meta])
 
-  const shown = useMemo(() => {
-    const needle = q.trim().toLowerCase()
-    return meta.filter((m) => (cat === 'all' || m.report.category === cat)
-      && (!needle || `${m.report.name} ${m.report.description} ${m.report.category}`.toLowerCase().includes(needle)))
-  }, [meta, q, cat])
+  const needle = q.trim().toLowerCase()
+  const inScope = (m, scope) => scope === 'all'
+    || (scope === 'pinned' ? pins.includes(m.report.id) : m.report.category === scope)
+  const matches = (m) => !needle
+    || `${m.report.name} ${m.report.description} ${m.report.category}`.toLowerCase().includes(needle)
+  const shown = meta.filter((m) => inScope(m, cat) && matches(m))
+  const countOf = (scope) => meta.filter((m) => inScope(m, scope)).length
 
-  const pinned = shown.filter((m) => pins.includes(m.report.id))
-  const rest = shown.filter((m) => !pins.includes(m.report.id))
   const togglePin = (id) => setPins((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
+
+  const scope = cat === 'all'
+    ? { title: 'All reports', blurb: 'Every report in the catalog, grouped by what it evidences.' }
+    : cat === 'pinned'
+      ? { title: 'Pinned', blurb: 'The reports you keep close. Pin any report with the star on its card.' }
+      : { title: cat, blurb: (CATEGORIES.find((c) => c.id === cat) || {}).blurb }
+
+  // "All" is read category by category; a single category or the pinned shelf
+  // is already one group.
+  const groups = cat === 'all'
+    ? CATEGORIES.map((c) => ({ ...c, items: shown.filter((m) => m.report.category === c.id) })).filter((g) => g.items.length)
+    : [{ id: cat, items: shown }]
+  // The shelf repeats pinned reports above the sections so they are one click
+  // away — only while the whole catalog is on screen and not being searched.
+  const shelf = cat === 'all' && !needle ? meta.filter((m) => pins.includes(m.report.id)) : []
 
   const cards = [
     {
@@ -103,6 +148,21 @@ function ReportCatalog({ onOpen }) {
     },
   ]
 
+  const pinButton = (r, isPinned, size = 14) => (
+    <button
+      type="button"
+      className="rep-pin"
+      data-on={isPinned || undefined}
+      aria-pressed={isPinned}
+      aria-label={isPinned ? `Unpin ${r.name}` : `Pin ${r.name}`}
+      title={isPinned ? 'Unpin' : 'Pin to the top of the catalog'}
+      onClick={(e) => { e.stopPropagation(); togglePin(r.id) }}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <Icon name="star" size={size} />
+    </button>
+  )
+
   const reportCard = (m) => {
     const r = m.report
     const isPinned = pins.includes(r.id)
@@ -112,37 +172,39 @@ function ReportCatalog({ onOpen }) {
         className="rep-card"
         role="button"
         tabIndex={0}
+        aria-label={`Open ${r.name}`}
         onClick={() => onOpen(r.id)}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(r.id))}
       >
         <header className="rep-card-top">
           <span className="feed-ic" data-tone={r.tone}><Icon name={r.icon} size={15} /></span>
           <span className="rep-card-id">
-            <span className="rep-card-name trunc">{r.name}</span>
+            <span className="rep-card-name">{r.name}</span>
             <span className="rep-card-cat">{r.category}</span>
           </span>
-          <button
-            type="button"
-            className="rep-pin"
-            data-on={isPinned || undefined}
-            aria-pressed={isPinned}
-            aria-label={isPinned ? `Unpin ${r.name}` : `Pin ${r.name}`}
-            onClick={(e) => { e.stopPropagation(); togglePin(r.id) }}
-          >
-            <Icon name="star" size={14} />
-          </button>
+          {pinButton(r, isPinned)}
         </header>
 
         <p className="rep-card-desc">{r.description}</p>
 
-        <div className="rep-card-facts">
-          <span><Icon name="report" size={12} /><b className="num">{num(m.count)}</b> records</span>
-          <span><Icon name="clock" size={12} />{m.label}</span>
-          {m.exports > 0 && <span><Icon name="download" size={12} />{m.exports} export{m.exports === 1 ? '' : 's'} (30d)</span>}
+        <div className="rep-card-stats">
+          <span className="rep-card-count">
+            <b className="num">{num(m.count)}</b>
+            <span>records</span>
+          </span>
+          <span className="rep-card-spark" title="Records per day, last 14 days">
+            <Sparkline data={m.trend} w={104} h={28} color={TONE_SERIES[r.tone] || 'var(--s1)'} />
+          </span>
         </div>
 
         <footer className="rep-card-foot">
-          <span className="link">View report<Icon name="chevR" size={12} /></span>
+          <span className="rep-card-when"><Icon name="clock" size={12} />{updatedLabel(m.label)}</span>
+          {m.exports > 0 && (
+            <span className="rep-card-when" title="CSV exports in the last 30 days">
+              <Icon name="download" size={12} />{m.exports}
+            </span>
+          )}
+          <span className="rep-card-go">Open report<Icon name="chevR" size={12} /></span>
         </footer>
       </article>
     )
@@ -152,28 +214,29 @@ function ReportCatalog({ onOpen }) {
     const r = m.report
     const isPinned = pins.includes(r.id)
     return (
-      <button type="button" className="rep-row" key={r.id} onClick={() => onOpen(r.id)}>
+      <div
+        key={r.id}
+        className="rep-row"
+        role="button"
+        tabIndex={0}
+        aria-label={`Open ${r.name}`}
+        onClick={() => onOpen(r.id)}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(r.id))}
+      >
         <span className="feed-ic" data-tone={r.tone}><Icon name={r.icon} size={14} /></span>
         <span className="rep-row-m">
           <span className="rep-row-name trunc">{r.name}</span>
           <span className="rep-row-desc trunc">{r.description}</span>
         </span>
-        <span className="rep-row-cat">{r.category}</span>
+        {cat !== 'all' && <span className="rep-row-cat">{r.category}</span>}
+        <span className="rep-row-spark" aria-hidden="true">
+          <Sparkline data={m.trend} w={76} h={22} color={TONE_SERIES[r.tone] || 'var(--s1)'} fill={false} />
+        </span>
         <span className="rep-row-n num">{num(m.count)}</span>
         <span className="rep-row-when">{m.label}</span>
-        <span
-          role="button"
-          tabIndex={0}
-          className="rep-pin"
-          data-on={isPinned || undefined}
-          aria-label={isPinned ? `Unpin ${r.name}` : `Pin ${r.name}`}
-          onClick={(e) => { e.stopPropagation(); togglePin(r.id) }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); togglePin(r.id) } }}
-        >
-          <Icon name="star" size={13} />
-        </span>
+        {pinButton(r, isPinned, 13)}
         <Icon name="chevR" size={13} className="rep-row-go" />
-      </button>
+      </div>
     )
   }
 
@@ -187,91 +250,122 @@ function ReportCatalog({ onOpen }) {
 
       <StatCards items={cards} label="Report catalog summary" />
 
-      <div className="wb rep-catalog">
-        <div className="wb-bar">
-          <div className="wb-search">
-            <Icon name="search" size={14} />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search reports…"
-              aria-label="Search reports"
-            />
+      <div className="rep-shell">
+        <nav className="rep-rail" aria-label="Report categories">
+          <div className="rep-rail-h">
+            <span className="rep-rail-mark"><Icon name="report" size={16} /></span>
+            <span className="rep-rail-hm">
+              <span className="rep-rail-t">Report library</span>
+              <span className="rep-rail-s">{REPORTS.length} reports · {CATEGORIES.length} categories</span>
+            </span>
           </div>
-          <div className="seg seg-wrap" role="group" aria-label="Filter by category">
-            <button type="button" data-on={cat === 'all' || undefined} aria-pressed={cat === 'all'} onClick={() => setCat('all')}>All</button>
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                data-on={cat === c.id || undefined}
-                aria-pressed={cat === c.id}
-                title={c.blurb}
-                onClick={() => setCat(c.id)}
-              >
-                {c.id}
-              </button>
+
+          <div className="rep-rail-list">
+            {RAIL.map((it, i) => (
+              <Fragment key={it.id}>
+                {i === 2 && <div className="rep-rail-k">Categories</div>}
+                <button
+                  type="button"
+                  className="rep-rail-it"
+                  data-on={cat === it.id || undefined}
+                  data-tone={CATEGORY_TONE[it.id]}
+                  aria-pressed={cat === it.id}
+                  title={it.blurb}
+                  onClick={() => setCat(it.id)}
+                >
+                  <Icon name={it.icon} size={14} />
+                  <span className="trunc">{it.label}</span>
+                  <span className="rep-rail-n num">{countOf(it.id)}</span>
+                </button>
+              </Fragment>
             ))}
           </div>
-          <div className="wb-bar-r">
-            <span className="t-xs t-mut">
-              <b className="num">{shown.length}</b> of {REPORTS.length} reports
-            </span>
-            <div className="seg" role="group" aria-label="Catalog layout">
-              {CATALOG_VIEWS.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  data-on={layout === v.id || undefined}
-                  aria-pressed={layout === v.id}
-                  title={v.label}
-                  onClick={() => setLayout(v.id)}
-                >
-                  <Icon name={v.icon} size={13} />
+
+          <div className="rep-rail-note">
+            <Icon name="info" size={13} />
+            <span>Every report reads live console data. An export writes exactly the rows on screen.</span>
+          </div>
+        </nav>
+
+        <section className="rep-main" aria-label={scope.title}>
+          <header className="rep-main-h">
+            <div className="rep-main-t">
+              <h2>{scope.title}<span className="rep-main-n num">{shown.length}</span></h2>
+              <p>{scope.blurb}</p>
+            </div>
+            <div className="rep-main-tools">
+              <div className="wb-search rep-search">
+                <Icon name="search" size={14} />
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Search reports…"
+                  aria-label="Search reports"
+                />
+              </div>
+              <div className="seg" role="group" aria-label="Catalog layout">
+                {CATALOG_VIEWS.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    data-on={layout === v.id || undefined}
+                    aria-pressed={layout === v.id}
+                    title={v.label}
+                    onClick={() => setLayout(v.id)}
+                  >
+                    <Icon name={v.icon} size={13} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          {shelf.length > 0 && (
+            <div className="rep-shelf" aria-label="Pinned reports">
+              <span className="rep-shelf-k"><Icon name="star" size={12} />Pinned</span>
+              {shelf.map((m) => (
+                <button key={m.report.id} type="button" className="rep-shelf-it" onClick={() => onOpen(m.report.id)}>
+                  <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
+                  <span className="trunc">{m.report.name}</span>
+                  <span className="num t-mut">{num(m.count)}</span>
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-
-        <div className="rep-body">
-          {shown.length === 0 ? (
-            <EmptyState
-              icon="report"
-              title="No report matches"
-              body="Clear the search or choose another category to see the rest of the catalog."
-            />
-          ) : (
-            <>
-              {pinned.length > 0 && (
-                <section className="rep-sect">
-                  <h2 className="rep-sect-k"><Icon name="star" size={12} />Pinned</h2>
-                  {layout === 'grid'
-                    ? <div className="rep-grid">{pinned.map(reportCard)}</div>
-                    : <div className="rep-list">{pinned.map(reportRow)}</div>}
-                </section>
-              )}
-
-              <section className="rep-sect">
-                <h2 className="rep-sect-k">
-                  <Icon name="menu" size={12} />
-                  {pinned.length > 0 ? 'All reports' : 'Reports'}
-                </h2>
-                {layout === 'grid'
-                  ? <div className="rep-grid">{rest.map(reportCard)}</div>
-                  : <div className="rep-list">{rest.map(reportRow)}</div>}
-              </section>
-            </>
           )}
-        </div>
 
-        <div className="wb-foot">
-          <span>
-            Every report reads live console data · export writes exactly the rows on screen
-          </span>
-          <div className="spacer" />
-          <span className="t-faint">Data through {niceDate(TODAY)}</span>
-        </div>
+          <div className="rep-body">
+            {shown.length === 0 ? (
+              <EmptyState
+                icon={cat === 'pinned' && !needle ? 'star' : 'report'}
+                title={cat === 'pinned' && !needle ? 'Nothing pinned yet' : 'No report matches'}
+                body={cat === 'pinned' && !needle
+                  ? 'Pin a report with the star on its card and it is kept here, and on a shelf above the whole catalog.'
+                  : 'Clear the search or choose another category to see the rest of the catalog.'}
+                actions={needle ? <Button onClick={() => setQ('')}>Clear search</Button> : null}
+              />
+            ) : groups.map((g) => (
+              <section className="rep-group" key={g.id}>
+                {cat === 'all' && (
+                  <div className="rep-group-h">
+                    <span className="rep-group-ic" data-tone={CATEGORY_TONE[g.id]}><Icon name={g.icon} size={13} /></span>
+                    <h3 className="rep-group-t">{g.id}</h3>
+                    <span className="rep-group-n num">{g.items.length}</span>
+                    <span className="rep-group-b">{g.blurb}</span>
+                  </div>
+                )}
+                {layout === 'grid'
+                  ? <div className="rep-grid">{g.items.map(reportCard)}</div>
+                  : <div className="rep-list">{g.items.map(reportRow)}</div>}
+              </section>
+            ))}
+          </div>
+
+          <footer className="rep-main-f">
+            <span><b className="num">{shown.length}</b> of {REPORTS.length} reports</span>
+            <span className="spacer" />
+            <span className="t-faint">Data through {niceDate(TODAY)}</span>
+          </footer>
+        </section>
       </div>
     </>
   )

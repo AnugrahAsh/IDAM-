@@ -19,7 +19,7 @@
 /* Kept for the few call sites that still compose their own left cluster. */
 .wb-bar-l{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
   flex:1 1 320px;min-width:0}
-.wb-search{display:flex;align-items:center;gap:7px;height:29px;padding:0 9px;min-width:230px;flex:0 1 300px;
+.wb-search{display:flex;align-items:center;gap:7px;height:1.8125rem;padding:0 9px;min-width:230px;flex:0 1 300px;
   border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);
   transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
 .wb-search:focus-within{border-color:var(--accent);box-shadow:var(--sh-focus)}
@@ -200,16 +200,16 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{c
 .drawer-scrim{position:fixed;inset:var(--hdr-h) 0 var(--status-h) 0;background:rgba(17,24,39,.3);
   z-index:var(--z-scrim);animation:fade var(--dur-2) var(--ease)}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-.drawer{position:fixed;top:var(--hdr-h);right:0;bottom:var(--status-h);width:560px;max-width:calc(100vw - 40px);
+.drawer{position:fixed;top:var(--hdr-h);right:0;bottom:var(--status-h);width:35rem;max-width:calc(100vw - 40px);
   background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--sh-lg);
   z-index:var(--z-drawer);display:flex;flex-direction:column;
   animation:drawerIn var(--dur-3) var(--ease-out)}
 @keyframes drawerIn{from{transform:translateX(100%)}to{transform:none}}
-.drawer[data-size="wide"]{width:760px}
+.drawer[data-size="wide"]{width:47.5rem}
 /* A record editor needs room for two columns; the schema browser needs room
    for a table with an OID column. */
-.drawer[data-size="lg"]{width:820px}
-.drawer[data-size="xl"]{width:1180px}
+.drawer[data-size="lg"]{width:51.25rem}
+.drawer[data-size="xl"]{width:73.75rem}
 .drawer-h{display:flex;align-items:flex-start;gap:10px;padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--hair);flex:none}
 .drawer-b{flex:1;overflow-y:auto;padding:var(--sp-4)}
 .drawer-f{padding:11px var(--sp-4);border-top:1px solid var(--hair);display:flex;justify-content:flex-end;gap:8px;
@@ -217,12 +217,12 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{c
 
 .modal-scrim{position:fixed;inset:0;background:rgba(17,24,39,.42);z-index:var(--z-modal);
   display:flex;align-items:center;justify-content:center;padding:24px;animation:fade var(--dur-2) var(--ease)}
-.modal{position:relative;width:460px;max-width:100%;background:var(--surface);border:1px solid var(--line-2);
+.modal{position:relative;width:28.75rem;max-width:100%;background:var(--surface);border:1px solid var(--line-2);
   border-radius:var(--r-xl);box-shadow:var(--sh-lg);overflow:hidden;animation:modalIn var(--dur-3) var(--ease-out)}
 @keyframes modalIn{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
-.modal[data-size="lg"]{width:680px}
+.modal[data-size="lg"]{width:42.5rem}
 /* A modal that hosts a side-by-side editor needs more than the large size. */
-.modal[data-size="xl"]{width:1040px}
+.modal[data-size="xl"]{width:65rem}
 .modal-h{display:flex;align-items:flex-start;gap:11px;padding:var(--sp-4) var(--sp-4) 6px}
 .modal-x{margin-left:auto;flex:none}
 .modal-ic{width:34px;height:34px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;flex:none}
@@ -250,13 +250,22 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{c
 .menu-lbl{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-bold);
   color:var(--faint);padding:7px 9px 4px}
 
-.toasts{position:fixed;bottom:calc(var(--status-h) + 12px);right:14px;z-index:var(--z-toast);
-  display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
+/* Top-right, just under the header — the corner a glance already goes to for
+   status, and clear of the sticky save bars and the status bar the old
+   bottom-right stack sat on. The stack runs newest-first, so the toast that
+   just arrived is the one nearest the corner. */
+.toasts{position:fixed;top:calc(var(--hdr-h) + 12px);right:14px;z-index:var(--z-toast);
+  display:flex;flex-direction:column-reverse;gap:8px;align-items:flex-end;pointer-events:none;
+  max-width:calc(100vw - 28px)}
+/* An open drawer owns the top of the right edge — its title and its close
+   button sit exactly where the stack would land — so the stack steps down
+   below the drawer's header while one is open. */
+body:has(.drawer) .toasts{top:calc(var(--hdr-h) + 76px)}
 .toast{display:flex;align-items:flex-start;gap:10px;background:#1B2434;color:#fff;
   padding:10px 12px;border-radius:var(--r);box-shadow:var(--sh-lg);border:1px solid #303C52;
-  font-size:var(--t-sm);max-width:380px;min-width:250px;pointer-events:auto;
+  font-size:var(--t-sm);max-width:min(23.75rem, calc(100vw - 28px));min-width:min(15.625rem, calc(100vw - 28px));pointer-events:auto;
   animation:toastIn var(--dur-3) var(--ease-spring)}
-@keyframes toastIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
 .toast[data-leaving="true"]{animation:toastOut var(--dur-2) var(--ease) forwards}
 @keyframes toastOut{to{opacity:0;transform:translateX(12px)}}
 .toast svg{width:15px;height:15px;flex:none;margin-top:1px}

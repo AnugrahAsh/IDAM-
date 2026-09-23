@@ -19,37 +19,111 @@
 .rep-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .rep-presets .chip{cursor:pointer}
 
-/* --- Report catalog: pinned shelf, card grid and a dense list --------------- */
-.rep-catalog .wb-bar{align-items:center}
-.rep-body{padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-5)}
-.rep-sect{display:flex;flex-direction:column;gap:var(--sp-3)}
-.rep-sect-k{display:flex;align-items:center;gap:6px;margin:0;
-  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+/* --- Report library: category rail, grouped cards and a dense list ----------
+   The categories hold the left of the page and the reports under the chosen
+   one hold the right — the same hub the connector catalogue uses. */
+.rep-shell{display:grid;grid-template-columns:15.5rem minmax(0,1fr);gap:var(--sp-3);align-items:start}
+
+.rep-rail{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-3)}
+.rep-rail-h{display:flex;align-items:center;gap:10px;padding:2px 4px var(--sp-3);border-bottom:1px solid var(--hair)}
+.rep-rail-mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:2.25rem;height:2.25rem;
+  border-radius:var(--r-lg);background:var(--accent-solid);color:#fff}
+.rep-rail-hm{display:flex;flex-direction:column;min-width:0}
+.rep-rail-t{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.rep-rail-s{font-size:var(--t-xs);color:var(--mut)}
+.rep-rail-list{display:flex;flex-direction:column;gap:2px}
+.rep-rail-k{padding:10px 8px 4px;font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
   font-weight:var(--w-bold);color:var(--faint)}
-.rep-sect-k svg{color:var(--faint)}
+.rep-rail-it{display:flex;align-items:center;gap:9px;width:100%;min-width:0;padding:7px 8px;border-radius:var(--r-sm);
+  text-align:left;font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink-2);cursor:pointer;
+  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.rep-rail-it svg{flex:none;color:var(--faint)}
+.rep-rail-it[data-tone="acc"] svg{color:var(--accent)}
+.rep-rail-it[data-tone="viol"] svg{color:var(--viol)}
+.rep-rail-it[data-tone="warn"] svg{color:var(--warn)}
+.rep-rail-it[data-tone="ok"] svg{color:var(--ok)}
+.rep-rail-it:hover{background:var(--surface-3);color:var(--ink)}
+.rep-rail-it:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+.rep-rail-it[data-on]{background:var(--accent-bg);color:var(--accent-a);font-weight:var(--w-semi)}
+.rep-rail-it[data-on] svg{color:var(--accent-a)}
+.rep-rail-n{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  min-width:1.375rem;height:1.25rem;padding:0 6px;border-radius:var(--r-pill);
+  background:var(--surface-3);color:var(--mut);font-size:var(--t-micro);font-weight:var(--w-bold)}
+.rep-rail-it[data-on] .rep-rail-n{background:var(--accent-solid);color:#fff}
+.rep-rail-note{display:flex;align-items:flex-start;gap:8px;padding:10px;border-radius:var(--r);
+  background:var(--accent-bg);border:1px solid var(--accent-line);font-size:var(--t-xs);line-height:1.45;color:var(--ink-2)}
+.rep-rail-note svg{flex:none;margin-top:1px;color:var(--accent-a)}
 
-.rep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:var(--sp-3)}
-.rep-card{display:flex;flex-direction:column;gap:9px;min-width:0;cursor:pointer;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 14px;
-  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
-.rep-card:hover{border-color:var(--accent-line);box-shadow:var(--sh-md)}
+.rep-main{display:flex;flex-direction:column;min-width:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.rep-main-h{display:flex;align-items:flex-start;gap:var(--sp-3);flex-wrap:wrap;padding:var(--sp-4);border-bottom:1px solid var(--hair)}
+.rep-main-t{flex:1 1 16rem;min-width:0}
+.rep-main-t h2{margin:0;display:flex;align-items:center;gap:8px;
+  font-size:var(--t-h2);font-weight:var(--w-semi);letter-spacing:var(--t-h2-ls);color:var(--ink)}
+.rep-main-t p{margin:3px 0 0;font-size:var(--t-xs);color:var(--mut)}
+.rep-main-n{display:inline-flex;align-items:center;height:1.25rem;padding:0 7px;border-radius:var(--r-pill);
+  background:var(--surface-3);color:var(--mut);font-size:var(--t-xs);font-weight:var(--w-semi)}
+.rep-main-tools{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.rep-search{min-width:15rem}
+
+/* Pinned reports, one click away above the sections. */
+.rep-shelf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px var(--sp-4);
+  border-bottom:1px solid var(--hair);background:var(--surface-2)}
+.rep-shelf-k{display:inline-flex;align-items:center;gap:5px;margin-right:2px;
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-bold);color:var(--warn)}
+.rep-shelf-k svg{fill:currentColor}
+.rep-shelf-it{display:inline-flex;align-items:center;gap:7px;max-width:18rem;min-width:0;padding:3px 10px 3px 4px;
+  border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);
+  font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--ink-2);cursor:pointer;
+  transition:border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.rep-shelf-it:hover{border-color:var(--accent-line);color:var(--ink)}
+.rep-shelf-it .feed-ic{width:1.25rem;height:1.25rem;border-radius:50%}
+
+.rep-body{padding:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-5)}
+.rep-group{display:flex;flex-direction:column;gap:var(--sp-3)}
+.rep-group-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.rep-group-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.5rem;height:1.5rem;
+  border-radius:var(--r-sm);background:var(--accent-bg);color:var(--accent-a)}
+.rep-group-ic[data-tone="viol"]{background:var(--viol-bg);color:var(--viol)}
+.rep-group-ic[data-tone="warn"]{background:var(--warn-bg);color:var(--warn)}
+.rep-group-ic[data-tone="ok"]{background:var(--ok-bg);color:var(--ok)}
+.rep-group-t{margin:0;font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.rep-group-n{font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--mut)}
+.rep-group-b{flex:1 1 14rem;min-width:0;padding-left:9px;border-left:1px solid var(--line);font-size:var(--t-xs);color:var(--mut)}
+
+.rep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(17rem,1fr));gap:var(--sp-3);align-items:stretch}
+.rep-card{display:flex;flex-direction:column;gap:10px;min-width:0;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 14px 12px;
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease),transform var(--dur-1) var(--ease)}
+.rep-card:hover{border-color:var(--accent-line);box-shadow:var(--sh-md);transform:translateY(-1px)}
 .rep-card:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
-.rep-card-top{display:flex;align-items:center;gap:9px;min-width:0}
-.rep-card-id{display:flex;flex-direction:column;min-width:0;flex:1}
-.rep-card-name{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
-.rep-card-cat{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
-  font-weight:var(--w-semi);color:var(--mut)}
+.rep-card-top{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.rep-card .feed-ic,.rep-row .feed-ic{width:2rem;height:2rem;border-radius:var(--r)}
+/* `viol` has a pill variant but no feed-ic variant in the shared sheet. */
+.rep-card .feed-ic[data-tone="viol"],.rep-row .feed-ic[data-tone="viol"],.rep-shelf-it .feed-ic[data-tone="viol"]{
+  background:var(--viol-bg);color:var(--viol);border-color:var(--viol-line)}
+.rep-card-id{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.rep-card-name{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink);line-height:1.3}
+.rep-card-cat{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-semi);color:var(--mut)}
 .rep-card-desc{margin:0;font-size:var(--t-sm);line-height:1.5;color:var(--mut);
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.rep-card-facts{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;
-  font-size:var(--t-xs);color:var(--mut)}
-.rep-card-facts span{display:inline-flex;align-items:center;gap:5px}
-.rep-card-facts svg{color:var(--faint)}
-.rep-card-facts b{color:var(--ink);font-weight:var(--w-semi)}
-.rep-card-foot{border-top:1px solid var(--hair);padding-top:9px;margin-top:auto}
-.rep-card-foot .link{font-size:var(--t-sm)}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* The count and its trend together: how much the report holds, and whether
+   it is still filling. */
+.rep-card-stats{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-3);margin-top:auto;
+  padding:10px 12px;border-radius:var(--r);background:var(--surface-2)}
+.rep-card-count{display:flex;flex-direction:column;line-height:1.1}
+.rep-card-count b{font-size:var(--t-h1);font-weight:var(--w-bold);color:var(--ink);letter-spacing:-.02em}
+.rep-card-count span{font-size:var(--t-xs);color:var(--mut);margin-top:3px}
+.rep-card-spark{display:inline-flex;flex:none}
+.rep-card-foot{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;font-size:var(--t-xs);color:var(--mut)}
+.rep-card-when{display:inline-flex;align-items:center;gap:5px}
+.rep-card-when svg{color:var(--faint)}
+.rep-card-go{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--link)}
+.rep-card-go svg{transition:transform var(--dur-1) var(--ease)}
+.rep-card:hover .rep-card-go svg{transform:translateX(2px)}
 
-/* The star is the only control on the card that is not "open the report". */
+/* The star is the only control on a card that is not "open the report". */
 .rep-pin{display:inline-flex;align-items:center;justify-content:center;flex:none;
   width:26px;height:26px;border-radius:var(--r-sm);background:none;border:none;cursor:pointer;
   color:var(--faint);transition:color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
@@ -59,21 +133,40 @@
 
 .rep-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .rep-row{display:flex;align-items:center;gap:var(--sp-3);width:100%;padding:9px var(--sp-3);
-  background:var(--surface);border:none;border-bottom:1px solid var(--hair);cursor:pointer;text-align:left;
-  font:inherit;transition:background var(--dur-1) var(--ease)}
+  background:var(--surface);border-bottom:1px solid var(--hair);cursor:pointer;text-align:left;
+  transition:background var(--dur-1) var(--ease)}
 .rep-row:last-child{border-bottom:none}
 .rep-row:hover{background:var(--row-hover)}
+.rep-row:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent-line)}
 .rep-row-m{display:flex;flex-direction:column;min-width:0;flex:1;gap:1px}
 .rep-row-name{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
 .rep-row-desc{font-size:var(--t-xs);color:var(--mut)}
-.rep-row-cat{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;flex:none;width:160px}
+.rep-row-cat{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;flex:none;width:11rem}
+.rep-row-spark{display:inline-flex;flex:none}
 .rep-row-n{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);
-  font-variant-numeric:tabular-nums;text-align:right;flex:none;width:64px}
-.rep-row-when{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;flex:none;width:82px}
+  font-variant-numeric:tabular-nums;text-align:right;flex:none;width:4rem}
+.rep-row-when{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;flex:none;width:5.5rem}
 .rep-row-go{color:var(--faint);flex:none}
 
+.rep-main-f{display:flex;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);
+  border-top:1px solid var(--hair);font-size:var(--t-xs);color:var(--mut)}
+.rep-main-f b{color:var(--ink)}
+.rep-main-f .spacer{flex:1 1 auto}
+
+/* Narrow: the rail becomes a row of category chips above the reports. */
+@media(max-width:1080px){
+  .rep-shell{grid-template-columns:minmax(0,1fr)}
+  .rep-rail{padding:8px}
+  .rep-rail-h,.rep-rail-note,.rep-rail-k{display:none}
+  .rep-rail-list{flex-direction:row;overflow-x:auto;gap:6px;scrollbar-width:thin}
+  .rep-rail-it{width:auto;flex:none;white-space:nowrap}
+}
 @media(max-width:900px){
-  .rep-row-cat,.rep-row-when{display:none}
+  .rep-row-cat,.rep-row-when,.rep-row-spark{display:none}
+}
+@media(max-width:560px){
+  .rep-main-tools{flex:1 1 100%}
+  .rep-search{min-width:0;flex:1 1 auto}
 }
 
 /* Attribute-level diff on an audit event: the value that was replaced, and the

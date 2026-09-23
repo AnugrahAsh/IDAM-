@@ -10,7 +10,7 @@
 .tile-k{display:flex;align-items:center;gap:6px;font-size:var(--t-xs);font-weight:var(--w-med);color:var(--mut);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile-k svg{width:12px;height:12px;color:var(--faint);flex:none}
-.tile-v{display:flex;align-items:baseline;gap:6px;font-size:22px;font-weight:var(--w-bold);letter-spacing:-.026em;
+.tile-v{display:flex;align-items:baseline;gap:6px;font-size:1.375rem;font-weight:var(--w-bold);letter-spacing:-.026em;
   color:var(--ink);line-height:1.14;font-variant-numeric:tabular-nums;margin-top:3px}
 .tile-unit{font-size:var(--t-xs);font-weight:var(--w-med);color:var(--mut);letter-spacing:0}
 .tile-f{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:var(--t-xs);color:var(--mut);
@@ -18,6 +18,13 @@
 .tile[data-tone="bad"]{border-left:2px solid var(--bad)}
 .tile[data-tone="warn"]{border-left:2px solid var(--warn-core)}
 .tile[data-tone="ok"]{border-left:2px solid var(--ok)}
+/* A connector's mark at the head of a catalogue tile: the logo on a white,
+   bordered square, as the connector hub has always shown it. The selected
+   tile rings its logo in the accent as well as marking the tile. */
+.tile-logo{display:inline-flex;flex:none}
+.tile-logo .applogo{box-shadow:0 1px 2px rgba(17,24,39,.06)}
+.tile-logo .applogo-svg svg{width:80%;height:80%}
+.tile-logo[data-on="true"] .applogo{border-color:var(--accent-line);box-shadow:var(--sh-focus)}
 
 .factor{display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid var(--hair)}
 .factor:last-child{border-bottom:none}
@@ -80,7 +87,7 @@
 .stat-cell[data-nav="true"]{cursor:pointer;transition:background var(--dur-1) var(--ease)}
 .stat-cell[data-nav="true"]:hover{background:var(--surface-2)}
 .stat-k{font-size:var(--t-xs);color:var(--mut);display:flex;align-items:center;gap:5px}
-.stat-v{font-size:18px;font-weight:var(--w-bold);letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+.stat-v{font-size:1.125rem;font-weight:var(--w-bold);letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
 
 .wizard{display:flex;gap:var(--sp-6);align-items:flex-start}
 .wiz-rail{flex:none;width:220px;position:sticky;top:96px}
@@ -117,7 +124,7 @@
 .role-stat{display:flex;align-items:baseline;gap:6px;min-width:0}
 .role-stat-k{display:flex;align-items:center;gap:5px;font-size:var(--t-xs);color:var(--mut)}
 .role-stat-k svg{color:var(--faint)}
-.role-stat-v{font-size:var(--t-md,15px);font-weight:var(--w-bold);letter-spacing:-.01em;color:var(--ink);
+.role-stat-v{font-size:var(--t-md,.9375rem);font-weight:var(--w-bold);letter-spacing:-.01em;color:var(--ink);
   font-variant-numeric:tabular-nums}
 
 .job-filter{display:inline-flex;align-items:center;gap:7px}

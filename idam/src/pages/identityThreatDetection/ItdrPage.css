@@ -1,0 +1,39 @@
+/* Page-owned styles for the Identity Threat Detection page. Shared primitives
+   remain in src/styles. */
+
+/* --- Register cells ---------------------------------------------------------
+   Parameter chips read "threshold 2", "window 2m": the name quiet, the value
+   carrying the weight, because the value is what an operator is checking. */
+.itdr-params{display:inline-flex;flex-wrap:wrap;gap:4px;min-width:0}
+.itdr-params .tag b{font-weight:var(--w-semi);color:var(--ink);margin-left:4px}
+
+/* Response glyphs keep a fixed order and place; an off response is drawn in
+   the line colour rather than removed, so the row keeps its shape. */
+.itdr-resp{display:inline-flex;align-items:center;gap:9px}
+.itdr-resp-i{display:inline-flex;color:var(--line-2)}
+.itdr-resp-i[data-on="true"]{color:var(--accent)}
+
+/* --- Configure drawer ------------------------------------------------------- */
+.itdr-lede{margin:0;display:flex;flex-direction:column;gap:3px;
+  padding-bottom:var(--sp-3);border-bottom:1px solid var(--hair)}
+
+/* A number with its unit: the unit is part of the field, not a hint under it. */
+.itdr-affix{display:flex;align-items:stretch;min-width:0}
+.itdr-affix .inp{flex:1;min-width:0;border-top-right-radius:0;border-bottom-right-radius:0}
+.itdr-affix-u{display:inline-flex;align-items:center;padding:0 10px;
+  border:1px solid var(--line-2);border-left:none;border-radius:0 var(--r-sm) var(--r-sm) 0;
+  background:var(--surface-2);color:var(--mut);font-size:var(--t-sm);white-space:nowrap}
+
+.itdr-opts{display:flex;flex-direction:column}
+.itdr-opts > *{padding:10px 0;border-bottom:1px solid var(--hair)}
+.itdr-opts > *:last-child{border-bottom:none}
+
+/* --- Alert timeline --------------------------------------------------------- */
+.itdr-tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.itdr-tl-it{display:flex;align-items:flex-start;gap:10px;position:relative}
+.itdr-tl-it:not(:last-child)::before{content:"";position:absolute;left:11px;top:24px;bottom:-12px;width:1px;background:var(--line)}
+.itdr-tl-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:22px;height:22px;border-radius:50%;background:var(--surface-3);color:var(--mut);border:1px solid var(--line)}
+.itdr-tl-m{display:flex;flex-direction:column;gap:1px;min-width:0;padding-top:2px}
+
+@media(max-width:640px){ .itdr-thresholds{grid-template-columns:minmax(0,1fr)} }

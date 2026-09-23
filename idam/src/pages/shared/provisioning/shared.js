@@ -69,16 +69,27 @@ const BRAND_BY_APP = {
   AD_CORP: 'microsoft',
   WORKDAY_HR: 'workday',
   SALESFORCE: 'salesforce',
-  ENTRA_TENANT: 'azure',
+  ENTRA_TENANT: 'entraid',
   ORACLE_ERP: 'oracle',
 }
 
+/* Every connector the catalogues offer has a mark of its own, so a tile, a
+   source row and an onboarded application all show the same logo for the same
+   connector. An application with a vendor logo of its own (above) keeps it. */
 const BRAND_BY_CONNECTOR = {
-  ad: 'microsoft',
-  msentra: 'azure',
-  oracle: 'oracle',
-  mssql: 'mssql',
+  postgres: 'postgresql',
+  mysql: 'mysql',
   mongodb: 'mongodb',
+  oracle: 'oracledb',
+  db2: 'ibmdb2',
+  mssql: 'mssql',
+  ad: 'activedirectory',
+  ldap: 'ldap',
+  api: 'restapi',
+  custom: 'customapi',
+  msentra: 'entraid',
+  scim: 'scim',
+  none: 'noprovisioning',
 }
 
 export const brandFor = (app) => BRAND_BY_APP[app.name] || BRAND_BY_CONNECTOR[app.connector] || ''

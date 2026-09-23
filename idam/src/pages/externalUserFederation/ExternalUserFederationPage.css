@@ -1,0 +1,98 @@
+/* Page-owned styles for External User Federation. Shared primitives remain in
+   src/styles. */
+
+/* --- Connector Hub: category rail and connector list -------------------------
+   The same hub shape the report library uses: categories on the left, the
+   connectors under the chosen one on the right. The rail keeps its own height
+   rather than stretching down the list, which left an empty panel beside the
+   lower connectors once the page scrolled. */
+.fed-hub{display:grid;grid-template-columns:16.5rem minmax(0,1fr);gap:var(--sp-4);align-items:start}
+
+.fed-rail{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-3)}
+.fed-rail-h{display:flex;align-items:center;gap:11px;padding:4px 4px var(--sp-3);border-bottom:1px solid var(--hair)}
+.fed-rail-mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:2.5rem;height:2.5rem;
+  border-radius:var(--r-lg);background:var(--accent-solid);color:#fff;box-shadow:0 4px 10px -4px rgba(15,98,254,.55)}
+.fed-rail-hm{display:flex;flex-direction:column;min-width:0}
+.fed-rail-t{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.fed-rail-s{font-size:var(--t-xs);color:var(--mut)}
+.fed-rail-list{display:flex;flex-direction:column;gap:2px}
+.fed-rail-it{display:flex;align-items:center;gap:10px;width:100%;min-width:0;padding:8px 10px;border-radius:var(--r);
+  text-align:left;font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink-2);cursor:pointer;
+  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+.fed-rail-it svg{flex:none;color:var(--faint)}
+.fed-rail-it:hover{background:var(--surface-3);color:var(--ink)}
+.fed-rail-it:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+.fed-rail-it[data-on]{background:var(--accent-bg);color:var(--accent-a);font-weight:var(--w-semi)}
+.fed-rail-it[data-on] svg{color:var(--accent-a)}
+.fed-rail-n{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  min-width:1.5rem;height:1.25rem;padding:0 7px;border-radius:var(--r-pill);
+  background:var(--surface-3);color:var(--mut);font-size:var(--t-micro);font-weight:var(--w-bold)}
+.fed-rail-it[data-on] .fed-rail-n{background:var(--accent-solid);color:#fff}
+.fed-rail-note{display:flex;align-items:flex-start;gap:8px;padding:11px 12px;border-radius:var(--r);
+  background:var(--accent-bg);border:1px solid var(--accent-line);font-size:var(--t-xs);line-height:1.5;color:var(--ink-2)}
+.fed-rail-note svg{flex:none;margin-top:2px;color:var(--accent-a)}
+.fed-rail-note .link{display:inline;font-size:inherit}
+
+.fed-main{display:flex;flex-direction:column;min-width:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.fed-main-h{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;padding:var(--sp-4);border-bottom:1px solid var(--hair)}
+.fed-main-t{flex:1 1 16rem;min-width:0}
+.fed-main-t h2{margin:0;font-size:var(--t-h2);font-weight:var(--w-semi);letter-spacing:var(--t-h2-ls);color:var(--ink)}
+.fed-main-t p{margin:3px 0 0;font-size:var(--t-xs);color:var(--mut)}
+.fed-search{min-width:15rem}
+.fed-search-x{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.25rem;height:1.25rem;
+  border-radius:50%;color:var(--mut);cursor:pointer}
+.fed-search-x:hover{background:var(--surface-3);color:var(--ink)}
+
+.fed-list{list-style:none;margin:0;padding:var(--sp-4);display:flex;flex-direction:column;gap:10px}
+.fed-conn{display:flex;align-items:center;gap:14px;width:100%;min-width:0;padding:13px 16px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);text-align:left;cursor:pointer;
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.fed-conn:hover{border-color:var(--accent-line);background:var(--row-hover);box-shadow:var(--sh-md)}
+.fed-conn:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
+.fed-conn-m{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.fed-conn-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+.fed-conn-name{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
+.fed-conn-top .tag{text-transform:uppercase;letter-spacing:.06em;font-size:var(--t-micro);font-weight:var(--w-semi)}
+.fed-conn-desc{font-size:var(--t-sm);line-height:1.45;color:var(--mut)}
+/* "Set up" states what a click does, on the row the pointer or focus is on.
+   A touch screen has no hover, so there it is always shown. */
+.fed-conn-go{display:inline-flex;align-items:center;gap:6px;flex:none;height:2rem;padding:0 13px;border-radius:var(--r);
+  background:var(--accent-solid);color:#fff;font-size:var(--t-sm);font-weight:var(--w-semi);
+  opacity:0;transform:translateX(-4px);transition:opacity var(--dur-1) var(--ease),transform var(--dur-1) var(--ease)}
+.fed-conn:hover .fed-conn-go,.fed-conn:focus-visible .fed-conn-go{opacity:1;transform:none}
+@media(hover:none){.fed-conn-go{opacity:1;transform:none}}
+
+.fed-main-f{display:flex;align-items:center;gap:8px;margin-top:auto;padding:11px var(--sp-4);
+  border-top:1px solid var(--hair);font-size:var(--t-xs);color:var(--mut)}
+.fed-main-f svg{flex:none;color:var(--faint)}
+
+/* --- Setup form -------------------------------------------------------------- */
+/* A value the connector fixes: it reads as a field, with a lock to say why it
+   cannot be edited. */
+.fed-locked{position:relative;display:block}
+.fed-locked .inp{padding-right:30px;background:var(--surface-2);color:var(--ink-2);cursor:default}
+.fed-locked .inp:hover{border-color:var(--line-2)}
+.fed-locked svg{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
+.fed-note{margin-top:var(--sp-3)}
+
+/* --- Narrow ------------------------------------------------------------------ */
+/* The rail becomes a row of category chips above the list; the help note
+   follows the chips. */
+@media(max-width:1080px){
+  .fed-hub{grid-template-columns:minmax(0,1fr)}
+  .fed-rail{padding:8px}
+  .fed-rail-h{display:none}
+  .fed-rail-list{flex-direction:row;overflow-x:auto;gap:6px;scrollbar-width:thin}
+  .fed-rail-it{width:auto;flex:none;white-space:nowrap}
+}
+/* A phone keeps the arrow and drops the label, so every row still says it
+   opens something. */
+@media(max-width:640px){
+  .fed-search{min-width:0;flex:1 1 100%}
+  .fed-list{padding:var(--sp-3)}
+  .fed-conn{padding:12px;gap:12px}
+  .fed-conn-go{width:2rem;padding:0;justify-content:center;background:var(--accent-bg);color:var(--accent-a)}
+  .fed-conn-go-t{display:none}
+}

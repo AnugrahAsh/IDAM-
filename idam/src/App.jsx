@@ -5,7 +5,7 @@ import Toasts from './components/shell/Toasts'
 import StatusBar from './components/shell/StatusBar'
 import CommandPalette from './components/shell/CommandPalette'
 import NotificationPopup from './components/shell/NotificationPopup'
-import { TITLES, isRecertifyLinkPath, moduleFor } from './data/nav'
+import { TITLES, isPublicRoute, isRecertifyLinkPath, moduleFor } from './data/nav'
 import RouteBoundary from './components/shell/RouteBoundary'
 import EmptyState from './components/primitives/EmptyState'
 import Button from './components/primitives/Button'
@@ -13,12 +13,14 @@ import Drawer from './components/primitives/Drawer'
 import Modal from './components/primitives/Modal'
 import { SkeletonTable } from './components/primitives/Skeleton'
 import PlaceholderPage from './pages/placeholder/PlaceholderPage'
+import LoginPage from './pages/login/LoginPage'
 import { useApp } from './store/AppContext'
 import { useHotkeys } from './lib/useHotkeys'
 
 
 // Every route is its own chunk: opening the console downloads the shell and the
 // page being viewed, not all forty-seven screens.
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
 const MyAppsPage = lazy(() => import('./pages/myApps/MyAppsPage'))
 const NotificationsPage = lazy(() => import('./pages/notificationCenter/NotificationsPage'))
 const UsefulLinksPage = lazy(() => import('./pages/quickLinks/UsefulLinksPage'))
@@ -33,6 +35,7 @@ const AuthenticationPage = lazy(() => import('./pages/multiFactorAuthentication/
 const PoliciesPage = lazy(() => import('./pages/dynamicPolicies/PoliciesPage'))
 const SodPage = lazy(() => import('./pages/segregationOfDuties/SodPage'))
 const ReconciliationPage = lazy(() => import('./pages/trustReconciliation/ReconciliationPage'))
+const ExternalUserFederationPage = lazy(() => import('./pages/externalUserFederation/ExternalUserFederationPage'))
 const NetworkPolicyPage = lazy(() => import('./pages/networkAccessPolicies/NetworkPolicyPage'))
 const SchedulersPage = lazy(() => import('./pages/schedulers/SchedulersPage'))
 const RecertificationPage = lazy(() => import('./pages/recertification/RecertificationPage'))
@@ -41,6 +44,7 @@ const PasswordPolicyPage = lazy(() => import('./pages/passwordPolicy/PasswordPol
 const JobsPage = lazy(() => import('./pages/backgroundJobs/JobsPage'))
 const ConfigurationsPage = lazy(() => import('./pages/configurations/ConfigurationsPage'))
 const LogsPage = lazy(() => import('./pages/securityEvents/LogsPage'))
+const ItdrPage = lazy(() => import('./pages/identityThreatDetection/ItdrPage'))
 const LicensePage = lazy(() => import('./pages/license/LicensePage'))
 const ProfilePage = lazy(() => import('./pages/myProfile/ProfilePage'))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
@@ -56,8 +60,11 @@ const ApplicationsPage = lazy(() => import('./pages/applications/ApplicationsPag
 const GroupsPage = lazy(() => import('./pages/groups/GroupsPage'))
 const SignOnPolicyPage = lazy(() => import('./pages/signOnPolicies/SignOnPolicyPage'))
 const RecertifyLinkPage = lazy(() => import('./pages/recertification/RecertifyLinkPage'))
+const SelfEnrollmentPage = lazy(() => import('./pages/selfEnrollment/SelfEnrollmentPage'))
 
 const PAGES = {
+  login: LoginPage,
+  dashboard: DashboardPage,
   myapps: MyAppsPage,
   notifications: NotificationsPage,
   usefullinks: UsefulLinksPage,
@@ -74,6 +81,7 @@ const PAGES = {
   signOnPolicy: SignOnPolicyPage,
   applications: ApplicationsPage,
   trustReconciliation: ReconciliationPage,
+  externalUserFederation: ExternalUserFederationPage,
   ipRestrictionPolicy: NetworkPolicyPage,
   schedulers: SchedulersPage,
   recertification: RecertificationPage,
@@ -82,6 +90,7 @@ const PAGES = {
   jobs: JobsPage,
   configurations: ConfigurationsPage,
   syslogs: LogsPage,
+  itdr: ItdrPage,
   licenses: LicensePage,
   profile: ProfilePage,
   settings: SettingsPage,
@@ -108,6 +117,13 @@ function PageFallback() {
   )
 }
 
+/* A packet opens on a demo session rather than on the sign-in form. The
+   session is started once per page load: `demoSessionStarted` stops it being
+   restarted after Log Out, and `demoSessionLive` keeps the sign-in form off
+   screen for the frames before that first session arrives. */
+let demoSessionStarted = false
+let demoSessionLive = false
+
 export default function App() {
   const { route, segments, navMin, navOpen, setNavOpen, drawer, setDrawer, modal, setModal,
     closeOverlays, paletteOpen, setPaletteOpen, can, role, navigate,
@@ -127,13 +143,27 @@ export default function App() {
     clearGreeting()
   }, [greeted, clearGreeting, setNotifOpen])
 
-  // The sign-in page is outside this packet. Preserve deep links while starting
-  // a demo session, including after Log Out; public review links stay public.
+  /* The demo session, started once per page load. A deep link is preserved
+     through it; a review link and the self-enrollment page are public, so they
+     are left as they are rather than signed into the console.
+
+     The sign-in waits a tick: the store rewrites the address on mount, and a
+     session opened before that runs has its address overwritten — the console
+     then shows the deep-linked page under /iam/login. The flag is set when the
+     tick fires rather than when it is scheduled, so a cancelled tick is
+     rescheduled instead of counting as the session. */
   useEffect(() => {
-    if (isRecertifyLinkPath(window.location.pathname) || (signedIn && route !== 'login')) return undefined
-    const t = setTimeout(signIn, 0)
+    if (demoSessionStarted || isRecertifyLinkPath(window.location.pathname) || isPublicRoute(route)) return undefined
+    if (signedIn && route !== 'login') { demoSessionStarted = true; return undefined }
+    const t = setTimeout(() => { demoSessionStarted = true; signIn() }, 0)
     return () => clearTimeout(t)
   }, [signedIn, route, signIn])
+
+  // Once the console has been reached, signing out shows the sign-in page —
+  // the same page the product shows, with its own way back in.
+  useEffect(() => {
+    if (signedIn) demoSessionLive = true
+  }, [signedIn])
 
   useHotkeys(useMemo(() => ({
     'mod+k': () => setPaletteOpen((v) => !v),
@@ -161,9 +191,31 @@ export default function App() {
     )
   }
 
-  /* A pending demo sign-in does not render the console. */
+  /* Self-enrollment is opened from the sign-in screen by someone the directory
+     does not know yet, so like the review link it renders without the shell. */
+  if (route === 'selfEnrollment') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <SelfEnrollmentPage />
+        </Suspense>
+        <Toasts />
+        {drawer && <Drawer {...drawer} onClose={() => setDrawer(null)} />}
+        {modal && <Modal {...modal} onClose={() => setModal(null)} />}
+      </>
+    )
+  }
+
+  /* The gate. Not merely "the login route is showing": a session that has not
+     signed in cannot render the console whatever the address bar says. */
   if (!signedIn || route === 'login') {
-    return <Toasts />
+    if (!demoSessionLive) return <Toasts />
+    return (
+      <>
+        <LoginPage />
+        <Toasts />
+      </>
+    )
   }
 
   return (

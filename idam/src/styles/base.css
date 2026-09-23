@@ -1,6 +1,14 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{height:100%}
-html{-webkit-text-size-adjust:100%}
+/* The root size is the one lever every rem in the console hangs off. It starts
+   from the browser's own default — a reader who has raised that in their
+   browser settings gets larger text here too — and the Text size control in
+   the header scales it from there. Percentages, not pixels, so the two
+   compound instead of one overriding the other. */
+html{-webkit-text-size-adjust:100%;font-size:100%}
+:root[data-text-size="sm"]{font-size:93.75%}
+:root[data-text-size="lg"]{font-size:112.5%}
+:root[data-text-size="xl"]{font-size:125%}
 body{
   font-family:var(--sans);
   font-size:var(--t-body);

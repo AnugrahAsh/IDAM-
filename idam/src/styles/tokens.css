@@ -33,15 +33,21 @@
   --sev-med:#9A5B00;  --sev-med-bg:#FCF2DF;  --sev-med-line:#F0D9A8;
   --sev-low:#5D6776;  --sev-low-bg:#F1F3F6;  --sev-low-line:#DDE1E8;
 
-  --t-display:24px; --t-display-lh:1.2;  --t-display-ls:-0.022em;
-  --t-h1:19px;      --t-h1-lh:1.26;      --t-h1-ls:-0.018em;
-  --t-h2:15px;      --t-h2-lh:1.34;      --t-h2-ls:-0.012em;
-  --t-h3:13.5px;    --t-h3-lh:1.4;       --t-h3-ls:-0.006em;
-  --t-body:13px;    --t-body-lh:1.54;
-  --t-sm:12.25px;   --t-sm-lh:1.5;
-  --t-xs:11.25px;   --t-xs-lh:1.45;
-  --t-micro:10.25px;--t-micro-ls:0.055em;
-  --t-num:13px;
+  /* Type is set in rem, so every size follows the root: the browser's own
+     default font size first, then the console's Text size setting on top of it
+     (data-text-size on <html>, see base.css). At the default root of 16px the
+     values below are exactly the 24 / 19 / 15 / 13.5 / 13 / 12.25 / 11.25 /
+     10.25px scale the console was drawn at. Spacing stays in px: the text
+     grows, the frame holds. */
+  --t-display:1.5rem;    --t-display-lh:1.2;  --t-display-ls:-0.022em;
+  --t-h1:1.1875rem;      --t-h1-lh:1.26;      --t-h1-ls:-0.018em;
+  --t-h2:.9375rem;       --t-h2-lh:1.34;      --t-h2-ls:-0.012em;
+  --t-h3:.84375rem;      --t-h3-lh:1.4;       --t-h3-ls:-0.006em;
+  --t-body:.8125rem;     --t-body-lh:1.54;
+  --t-sm:.765625rem;     --t-sm-lh:1.5;
+  --t-xs:.703125rem;     --t-xs-lh:1.45;
+  --t-micro:.640625rem;  --t-micro-ls:0.055em;
+  --t-num:.8125rem;
   --w-reg:400; --w-med:500; --w-semi:600; --w-bold:700;
 
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
@@ -63,7 +69,10 @@
   --ease-out:cubic-bezier(.16,1,.3,1);
   --ease-spring:cubic-bezier(.34,1.4,.64,1);
 
-  --hdr-h:50px; --status-h:26px; --side-w:248px; --side-min:50px;
+  /* The sidebar is measured in rem so its labels keep their room when the
+     text is enlarged — 248px at the default size. The collapsed rail holds
+     icons only, so it stays in px. */
+  --hdr-h:50px; --status-h:26px; --side-w:15.5rem; --side-min:50px;
   --canvas-px:22px;
   --row-h:36px;
   --td-py:6px;

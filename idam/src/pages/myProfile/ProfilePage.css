@@ -14,8 +14,8 @@
 .pf-hero{display:flex;align-items:flex-start;gap:var(--sp-4);flex-wrap:wrap}
 .pf-hero-meta{flex:1;min-width:260px;display:flex;flex-direction:column;gap:10px}
 .pf-hero-name{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
-.pf-name{font-size:20px;font-weight:650;letter-spacing:-.02em;color:var(--ink)}
-.pf-handle{font-size:13px;color:var(--mut)}
+.pf-name{font-size:1.25rem;font-weight:650;letter-spacing:-.02em;color:var(--ink)}
+.pf-handle{font-size:.8125rem;color:var(--mut)}
 .pf-facts{display:flex;align-items:flex-start;gap:var(--sp-6);flex-wrap:wrap}
 .pf-hero-actions{display:flex;flex-direction:column;gap:7px;flex:none;align-items:stretch}
 .pf-body{margin-top:var(--sp-4)}
@@ -30,7 +30,7 @@
 .pf-sec{display:flex;flex-direction:column}
 .pf-sec-row{
   display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);
-  padding:8px 0;border-bottom:1px solid var(--hair);font-size:12.75px;
+  padding:8px 0;border-bottom:1px solid var(--hair);font-size:.796875rem;
 }
 .pf-sec-row:last-child{border-bottom:none}
 .pf-sec-row > span{color:var(--mut)}

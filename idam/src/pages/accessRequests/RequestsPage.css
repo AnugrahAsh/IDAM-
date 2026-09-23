@@ -161,7 +161,7 @@
    to take a row of its own rather than being clipped. */
 .gp-scope{flex:0 0 auto;max-width:100%}
 .gp-scope button{gap:6px}
-.gp-n{font-size:9.5px;font-weight:var(--w-bold);line-height:1;padding:2px 5px;border-radius:var(--r-xs);
+.gp-n{font-size:.59375rem;font-weight:var(--w-bold);line-height:1;padding:2px 5px;border-radius:var(--r-xs);
   background:var(--surface-3);color:var(--mut)}
 .gp-scope button[data-on="true"] .gp-n{background:var(--accent-bg-2);color:var(--accent-a)}
 

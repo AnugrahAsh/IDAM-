@@ -3,7 +3,7 @@
 /* Overview: decided share, the certified/revoked split, and the three counts. */
 .rc-standing{padding:14px var(--sp-4) 16px}
 .rc-standing-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-.rc-standing-pct{font-size:26px;font-weight:var(--w-bold);letter-spacing:-.03em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.rc-standing-pct{font-size:1.625rem;font-weight:var(--w-bold);letter-spacing:-.03em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
 .rc-standing-of{font-size:var(--t-sm);color:var(--mut);font-variant-numeric:tabular-nums}
 .rc-standing-of b{font-weight:var(--w-semi);color:var(--ink)}
 .rc-split{display:flex;gap:2px;height:8px;border-radius:var(--r-pill);background:var(--surface-3);overflow:hidden}
@@ -17,7 +17,7 @@
 .rc-key{width:8px;height:8px;border-radius:50%;flex:none;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--line-2)}
 .rc-key[data-tone="ok"]{background:var(--ok);box-shadow:none}
 .rc-key[data-tone="bad"]{background:var(--bad);box-shadow:none}
-.rc-fig-v{font-size:20px;font-weight:var(--w-bold);letter-spacing:-.02em;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.rc-fig-v{font-size:1.25rem;font-weight:var(--w-bold);letter-spacing:-.02em;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
 .rc-fig-s{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:720px){
   .rc-figs{grid-template-columns:minmax(0,1fr)}

@@ -77,12 +77,16 @@
   transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);
 }
 .pagebar[data-stuck="true"]{border-bottom-color:var(--line);box-shadow:0 1px 0 rgba(17,24,39,.02)}
-.pagebar-top{display:flex;align-items:flex-start;gap:var(--sp-4);min-height:28px}
-.pagebar-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+/* The title block claims a minimum measured in rem, so when it and the action
+   cluster stop fitting on one line — a narrow window, a larger text size, or
+   both — the actions wrap onto their own row rather than running past the
+   canvas edge. At the default size the row breaks exactly where it did. */
+.pagebar-top{display:flex;align-items:flex-start;gap:var(--sp-4);min-height:28px;flex-wrap:wrap}
+.pagebar-meta{flex:1 1 16rem;min-width:0;display:flex;flex-direction:column;gap:5px}
 .pagebar-title{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
-.pagebar-title h1{font-size:22px;line-height:1.25;letter-spacing:-.02em}
+.pagebar-title h1{font-size:1.375rem;line-height:1.25;letter-spacing:-.02em}
 .pagebar-sub{color:var(--mut);font-size:var(--t-sm);line-height:var(--t-sm-lh);max-width:104ch}
-.pagebar-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;flex-wrap:wrap;justify-content:flex-end}
+.pagebar-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;flex-wrap:wrap;justify-content:flex-end;max-width:100%}
 .pagebar-rail{display:flex;align-items:center;gap:var(--sp-2);margin-top:7px;flex-wrap:wrap}
 .pagebar-rail:empty{display:none}
 
@@ -139,13 +143,13 @@
 /* The breadcrumb row sits directly above the title block and shares its left
    edge with the media tile, so the header reads as one aligned column. */
 .detail-head .crumbs{margin-bottom:5px;padding-top:2px}
-.detail-top{display:flex;align-items:flex-start;gap:var(--sp-4);padding:2px 0 9px}
+.detail-top{display:flex;align-items:flex-start;gap:var(--sp-4);padding:2px 0 9px;flex-wrap:wrap}
 .detail-media{flex:none}
-.detail-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.detail-meta{flex:1 1 16rem;min-width:0;display:flex;flex-direction:column;gap:3px}
 .detail-eyebrow{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
   font-weight:var(--w-bold);color:var(--mut)}
 .detail-title-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;min-width:0}
-.detail-title{margin:0;min-width:0;overflow-wrap:anywhere;font-size:22px;line-height:1.24}
+.detail-title{margin:0;min-width:0;overflow-wrap:anywhere;font-size:1.375rem;line-height:1.24}
 .detail-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .detail-sub{font-size:var(--t-sm);color:var(--mut);max-width:100ch;line-height:1.45}
 .detail-facts{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;margin-top:4px}
@@ -153,8 +157,14 @@
 .detail-fact svg{color:var(--faint);flex:none}
 .detail-fact-k{color:var(--mut)}
 .detail-fact-v{color:var(--ink);font-weight:var(--w-semi);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.detail-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;flex-wrap:wrap;justify-content:flex-end;padding-top:2px}
+.detail-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;flex-wrap:wrap;justify-content:flex-end;padding-top:2px;max-width:100%}
 .detail-head .tabs{border-bottom:none;margin-bottom:0}
+/* Below 960px the canvas gutter narrows to --sp-4 (see .canvas-inner above).
+   The header bleeds to the canvas edges by the gutter width, so it narrows with
+   it; otherwise it runs past both edges and clips its own right-hand actions. */
+@media(max-width:960px){
+  .detail-head{padding-left:var(--sp-4);padding-right:var(--sp-4);margin:0 calc(var(--sp-4) * -1)}
+}
 
 /* Below this width the action cluster and the title are competing for the same
    row, and `flex:none` means the actions always win — the title was wrapping to
@@ -164,7 +174,7 @@
   .detail-top{flex-wrap:wrap;gap:var(--sp-3)}
   .detail-meta{flex:1 1 200px}
   .detail-actions{flex:1 0 100%;justify-content:flex-start;padding-top:2px}
-  .detail-title{font-size:19px}
+  .detail-title{font-size:1.1875rem}
 }
 
 .detail-body{padding-top:var(--sp-4)}

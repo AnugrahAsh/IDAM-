@@ -11,7 +11,8 @@ import Tag from '../../components/primitives/Tag'
 import TextInput from '../../components/primitives/TextInput'
 import { useApp } from '../../store/AppContext'
 import { CONNECTOR_TYPES } from '../../data/seed'
-import { profileFor } from '../shared/provisioning/shared'
+import AppLogo from '../../components/primitives/AppLogo'
+import { brandForConnector, profileFor } from '../shared/provisioning/shared'
 import { ConnectionFields } from '../applications/facetControls'
 import TestResult from '../applications/TestResult'
 import {
@@ -154,8 +155,8 @@ export default function TrustSourceForm({ source, onSave, onCancel }) {
                             onKeyDown={(e) => e.key === 'Enter' && pickConnector(c)}
                           >
                             <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
-                              <span className="feed-ic" data-tone={d.connector === c.id ? 'acc' : 'mut'} style={{ width: 30, height: 30 }}>
-                                <Icon name={c.icon} size={15} />
+                              <span className="tile-logo" data-on={d.connector === c.id || undefined}>
+                                <AppLogo brand={brandForConnector(c.id)} name={c.name} size={38} />
                               </span>
                               <span style={{ minWidth: 0, flex: 1 }}>
                                 <span className="t-sm trunc" style={{ fontWeight: 600, display: 'block' }}>{c.name}</span>

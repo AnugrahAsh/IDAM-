@@ -1,0 +1,101 @@
+/* Page-owned styles for the dashboard. Shared primitives remain in src/styles. */
+
+.dash-count{display:inline-flex;align-items:center;justify-content:center;min-width:1.25rem;height:1.125rem;padding:0 5px;
+  border-radius:var(--r-pill);background:var(--warn-bg);color:var(--warn);font-size:var(--t-micro);font-weight:var(--w-bold)}
+
+/* --- Headline tiles ------------------------------------------------------------
+   Six figures across, each a door onto the register it counts: the tinted mark
+   says which part of the platform it comes from, the number is the figure, and
+   the line under it qualifies the number so it never stands alone. */
+.dash-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:var(--sp-3)}
+.dash-tile{position:relative;overflow:hidden;display:flex;align-items:flex-start;gap:11px;min-width:0;text-align:left;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 14px 22px;cursor:pointer;
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease),transform var(--dur-1) var(--ease)}
+.dash-tile:hover{border-color:var(--accent-line);box-shadow:var(--sh-md);transform:translateY(-1px)}
+.dash-tile:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
+.dash-tile-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:2.375rem;height:2.375rem;
+  border-radius:var(--r-lg);background:var(--accent-bg);color:var(--accent-a)}
+.dash-tile-ic[data-tone="viol"]{background:var(--viol-bg);color:var(--viol)}
+.dash-tile-ic[data-tone="ok"]{background:var(--ok-bg);color:var(--ok)}
+.dash-tile-ic[data-tone="warn"]{background:var(--warn-bg);color:var(--warn)}
+.dash-tile-ic[data-tone="info"]{background:var(--info-bg);color:var(--info)}
+.dash-tile-ic[data-tone="bad"]{background:var(--bad-bg);color:var(--bad)}
+.dash-tile-ic[data-tone="teal"]{background:var(--teal-bg);color:var(--teal)}
+.dash-tile-m{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.dash-tile-v{display:flex;align-items:baseline;gap:3px;font-size:var(--t-display);font-weight:var(--w-bold);
+  letter-spacing:-.024em;line-height:1.1;color:var(--ink)}
+.dash-tile-u{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--mut);letter-spacing:0}
+.dash-tile-k{font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--ink-2)}
+.dash-tile-s{font-size:var(--t-xs);color:var(--mut)}
+/* The trend runs along the bottom edge, the full width of the tile. It used to
+   be a fixed rectangle pinned to the top-right corner, which on a narrow tile
+   was drawn straight across the figure it was meant to describe. */
+.dash-tile-spark{position:absolute;left:0;right:0;bottom:0;height:1.375rem;opacity:.85;pointer-events:none}
+.dash-tile-spark svg{display:block;width:100%;height:100%}
+
+.dash-row{margin-bottom:var(--sp-3)}
+.dash-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+
+/* --- Figures, sub-heads and meters inside the cards ------------------------- */
+.dash-figs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.dash-figs-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.dash-figs > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dash-fig-k{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;font-weight:var(--w-bold);
+  color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-fig-v{font-size:var(--t-h2);font-weight:var(--w-bold);color:var(--ink)}
+.dash-sub-h{font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--ink-2);margin:14px 0 8px}
+.dash-note{margin-top:6px}
+.dash-meters{margin-top:16px;gap:10px}
+
+.dash-posture{display:flex;align-items:center;gap:16px}
+.dash-posture-m{display:flex;flex-direction:column;gap:9px;min-width:0;flex:1}
+.dash-posture-m .legend{gap:6px 12px}
+.lg-it b{font-weight:var(--w-semi);color:var(--ink);margin-left:2px}
+
+.dash-gov{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 24px}
+.dash-gov .dash-sub-h{margin-top:4px}
+
+/* --- Insights ------------------------------------------------------------------
+   Worst first. Each row is the finding, the evidence behind it, and a way into
+   the register that holds it. */
+.dash-insights{list-style:none;margin:0;padding:0}
+.dash-insights li + li{border-top:1px solid var(--hair)}
+.dash-insight{display:flex;align-items:flex-start;gap:10px;width:100%;padding:11px var(--sp-4);text-align:left;
+  color:var(--faint);cursor:pointer;transition:background var(--dur-1) var(--ease)}
+.dash-insight:hover{background:var(--row-hover)}
+.dash-insight:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent-line)}
+.dash-insight > svg:last-child{flex:none;margin-top:5px}
+.dash-insight-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.75rem;height:1.75rem;
+  border-radius:var(--r);background:var(--surface-3);color:var(--mut)}
+.dash-insight-ic[data-tone="bad"]{background:var(--bad-bg);color:var(--bad)}
+.dash-insight-ic[data-tone="warn"]{background:var(--warn-bg);color:var(--warn)}
+.dash-insight-ic[data-tone="info"]{background:var(--info-bg);color:var(--info)}
+.dash-insight-ic[data-tone="ok"]{background:var(--ok-bg);color:var(--ok)}
+.dash-insight-m{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.dash-insight-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.dash-insight-b{font-size:var(--t-xs);color:var(--mut);line-height:1.45}
+
+/* --- Application health ------------------------------------------------------- */
+.dash-apps{list-style:none;margin:0;padding:0}
+.dash-apps li{display:flex;align-items:center;gap:10px;padding:8px var(--sp-4)}
+.dash-apps li + li{border-top:1px solid var(--hair)}
+.dash-app-m{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.dash-app-m > .trunc:first-child{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+
+/* --- Responsive ----------------------------------------------------------------
+   The tiles step 6 → 3 → 2 → 1 and the lower cards 3 → 2 → 1, so no figure is
+   ever squeezed below the width its number needs. */
+@media(max-width:1420px){ .dash-tiles{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media(max-width:1240px){ .dash-cols{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:900px){
+  .dash-figs{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dash-gov{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  .dash-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dash-cols{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:480px){
+  .dash-tiles{grid-template-columns:minmax(0,1fr)}
+  .dash-posture{flex-direction:column;align-items:flex-start}
+}

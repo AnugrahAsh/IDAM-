@@ -1,0 +1,42 @@
+/* Page-owned styles for Self-enrollment. Shared primitives remain in src/styles.
+   The page renders outside the console shell, so it brings its own bar; the
+   form below it runs in the console's own canvas and reads exactly as the Add
+   User form does. */
+
+.se-page{height:100%;display:flex;flex-direction:column;background:var(--bg)}
+.se-top{position:sticky;top:0;z-index:5;flex:none;display:flex;align-items:center;gap:12px;
+  padding:10px var(--canvas-px);background:var(--surface);border-bottom:1px solid var(--line)}
+.se-logo{height:22px;width:auto;display:block}
+.se-top-sep{width:1px;height:18px;background:var(--line)}
+.se-top-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink-2)}
+.se-top .spacer{flex:1 1 auto}
+.se-top-q{font-size:var(--t-xs);color:var(--mut)}
+
+.se-canvas{flex:1}
+.se-inner{width:100%;max-width:1280px;margin:0 auto}
+
+/* --- Submitted ---------------------------------------------------------------- */
+.se-done{max-width:34rem;margin:var(--sp-10) auto;padding:var(--sp-8) var(--sp-8) var(--sp-6);
+  display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);text-align:center;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.se-done-ic{display:inline-flex;align-items:center;justify-content:center;width:3rem;height:3rem;border-radius:50%;
+  background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
+.se-done-h{margin:0;font-size:var(--t-display);font-weight:var(--w-bold);letter-spacing:var(--t-display-ls);color:var(--ink)}
+.se-done-s{margin:0;font-size:var(--t-body);line-height:var(--t-body-lh);color:var(--mut)}
+.se-done-s b{color:var(--ink)}
+.se-done .btn{margin-top:var(--sp-2);width:100%;justify-content:center}
+
+.se-steps{list-style:none;margin:var(--sp-2) 0 0;padding:0;width:100%;display:flex;flex-direction:column;gap:12px;text-align:left}
+.se-step{display:flex;align-items:flex-start;gap:10px;position:relative}
+.se-step:not(:last-child)::before{content:"";position:absolute;left:12px;top:26px;bottom:-12px;width:1px;background:var(--line)}
+.se-step-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.5625rem;height:1.5625rem;border-radius:50%;
+  background:var(--surface-3);color:var(--mut);border:1px solid var(--line)}
+.se-step[data-state="done"] .se-step-ic{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
+.se-step-m{display:flex;flex-direction:column;gap:1px;min-width:0;padding-top:3px}
+.se-step-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.se-step-b{font-size:var(--t-xs);line-height:1.45;color:var(--mut)}
+
+@media(max-width:640px){
+  .se-top-q,.se-top-sep,.se-top-t{display:none}
+  .se-done{margin:var(--sp-6) auto;padding:var(--sp-6) var(--sp-5) var(--sp-5)}
+}

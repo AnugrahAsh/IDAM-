@@ -6,7 +6,7 @@
  * every distinct capability into `Edit` — an operator who should hold only
  * `MFA Email Test` had to be granted write on the whole MFA module.
  *
- * This register restores per-feature granularity: 43 modules, 400+ named
+ * This register restores per-feature granularity: 45 modules, 400+ named
  * permissions, each mapping to exactly one reachable control in the product.
  * Module names follow the platform's own vocabulary so an existing role
  * definition imports without unresolved permissions; `legacy` carries the
@@ -348,6 +348,34 @@ export const PERMISSION_MODULES = [
       'Add Access Request', 'Modify Access Request', 'Delete Access Request',
       'View Access Request Details', 'View Access Requests List',
       'Raise Other Request', 'Track Request', 'Export Access Requests',
+    ],
+  },
+  // Appended rather than filed alphabetically: a module's id is its position,
+  // and inserting mid-list would renumber every module after it.
+  {
+    // One page, one module: the rules, the alert queue and the blocked
+    // addresses are granted independently inside it.
+    name: 'Identity Threat Detection',
+    legacy: ['ITDR'],
+    desc: 'Detection rules watching the sign-in stream, the alerts they raise and the source addresses they block.',
+    perms: [
+      'View Detection Rules', 'Configure Detection Rule', 'Change Rule Status',
+      'View Alerts', 'Acknowledge Alert', 'Resolve Alert',
+      'View Blocked IPs', 'Block IP', 'Unblock IP',
+    ],
+  },
+  {
+    name: 'Dashboard',
+    desc: 'The analytics overview: identities, sign-in activity, governance findings and open threats.',
+    perms: ['View Dashboard'],
+  },
+  {
+    // The register, the Connector Hub and each setup form are one page.
+    name: 'External User Federation',
+    desc: 'External user stores federated into LDAP applications through the Connector Hub.',
+    perms: [
+      ...CRUD('Federated Application', 'Federated Applications'),
+      'Test Connection', 'Sync Now', 'Pause/Resume Federation',
     ],
   },
 ].map((m, i) => ({ id: i + 1, legacy: [], ...m }))
