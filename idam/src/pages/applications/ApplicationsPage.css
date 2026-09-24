@@ -66,6 +66,15 @@
 .fgroup .section-head{margin-bottom:10px}
 
 /* --- Operation / grant checks -------------------------------------------- */
+/* The application image: what is chosen, beside what it will look like. */
+.img-field{display:flex;align-items:flex-start;gap:var(--sp-3);min-width:0}
+.img-field-preview{flex:none;display:inline-flex;padding:3px;border-radius:var(--r-lg);background:var(--surface-2);border:1px solid var(--hair)}
+.img-field-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.img-field-f{display:flex;align-items:center;gap:var(--sp-3);min-width:0}
+.img-field-n{flex:1;min-width:0;font-size:var(--t-xs);color:var(--mut)}
+.img-field-err{flex:1;min-width:0;font-size:var(--t-xs);color:var(--bad)}
+@media(max-width:560px){ .img-field{flex-direction:column} }
+
 .op-grid{
   display:grid;gap:10px;
   grid-template-columns:repeat(auto-fill,minmax(280px,1fr));

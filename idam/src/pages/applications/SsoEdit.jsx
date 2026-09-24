@@ -3,7 +3,7 @@ import Banner from '../../components/primitives/Banner'
 import Button from '../../components/primitives/Button'
 import Card from '../../components/primitives/Card'
 import Field from '../../components/primitives/Field'
-import FileDrop from '../../components/primitives/FileDrop'
+import ImageField from './ImageField'
 import KeyValue from '../../components/primitives/KeyValue'
 import Select from '../../components/primitives/Select'
 import Switch from '../../components/primitives/Switch'
@@ -37,6 +37,7 @@ export default function SsoEdit({ app, onPatch, onDone }) {
     org: app.org || '',
     description: app.description || '',
     logo: app.logo || '',
+    logoSrc: app.logoSrc || '',
     enabled: facet.enabled,
     spec: specValuesFor(facet),
     link: { ...blankLink(), ...(facet.link || {}) },
@@ -81,12 +82,17 @@ export default function SsoEdit({ app, onPatch, onDone }) {
   ]
 
   const save = () => {
-    if (issues.length) { setAttempted(true); return }
+    if (issues.length) {
+      setAttempted(true)
+      toast('warn', 'Cannot save yet', `${issues[0]}${issues.length > 1 ? ` (${issues.length - 1} more to fix)` : ''}`)
+      return
+    }
     onPatch(app.id, (r) => ({
       displayName: draft.displayName.trim(),
       org: draft.org,
       description: draft.description.trim(),
       logo: draft.logo,
+      logoSrc: draft.logoSrc,
       sso: {
         ...r.sso,
         sourceDisplayName: draft.displayName.trim(),
@@ -124,11 +130,11 @@ export default function SsoEdit({ app, onPatch, onDone }) {
               <Field label="Description" span={2} htmlFor="se-desc">
                 <TextInput as="textarea" id="se-desc" rows={2} value={draft.description} placeholder="What the application does and who depends on it." onChange={(e) => set({ description: e.target.value })} />
               </Field>
-              <Field label="Application image" span={2} htmlFor="se-logo" hint="Shown on the launchpad, the sign-in screen and the consent screen. Optional.">
-                <FileDrop
-                  accept="image/*"
-                  label={draft.logo || 'Drop an image, or choose a file'}
-                  onFiles={(files) => set({ logo: files && files[0] ? files[0].name : '' })}
+              <Field label="Application image" span={2} hint="Shown in the register, on the record, on the launchpad and on the sign-in screen. Replacing it changes the mark everywhere this application appears.">
+                <ImageField
+                  idPrefix="se-logo"
+                  value={{ name: draft.logo, src: draft.logoSrc }}
+                  onChange={(img) => set({ logo: img.name, logoSrc: img.src })}
                 />
               </Field>
             </div>

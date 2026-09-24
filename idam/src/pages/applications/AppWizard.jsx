@@ -11,7 +11,7 @@ import TextInput from '../../components/primitives/TextInput'
 import Select from '../../components/primitives/Select'
 import Banner from '../../components/primitives/Banner'
 import AppLogo from '../../components/primitives/AppLogo'
-import FileDrop from '../../components/primitives/FileDrop'
+import ImageField from './ImageField'
 import { useApp } from '../../store/AppContext'
 import SpecField, { SpecSection } from './SpecFields'
 import { PROTOCOL_SECTIONS, cleanPrefill, clientIdField, defaultsFor, missingRequired } from './ssoFields'
@@ -57,6 +57,7 @@ export default function AppWizard({ onCancel, onCreate }) {
     ssoSpec: {},
     link: blankLink(),
     logo: '',
+    logoSrc: '',
     cert: null,
   })
   const [attempted, setAttempted] = useState(() => new Set())
@@ -228,6 +229,7 @@ export default function AppWizard({ onCancel, onCreate }) {
       description: d.description.trim(),
       org: d.org,
       logo: d.logo,
+      logoSrc: d.logoSrc,
       owner: 'IT Operations',
       createdOn: '2026-08-13',
       provisioning: hasProv(d.capability) ? {
@@ -373,7 +375,7 @@ export default function AppWizard({ onCancel, onCreate }) {
         eyebrow="New application"
         title={d.displayName || 'Add an application'}
         sub="Register one application record with the capability it needs — a provisioning connector or SSO federation. Nothing is written until the final step."
-        media={<AppLogo name={d.displayName || 'New application'} size={56} />}
+        media={<AppLogo src={d.logoSrc} name={d.displayName || 'New application'} size={56} />}
         badges={
           <>
             <Pill tone="acc" dot>Draft</Pill>
@@ -476,11 +478,11 @@ export default function AppWizard({ onCancel, onCreate }) {
                   {/* One image field for every application type, held with the
                       other common fields rather than repeated in each protocol
                       register under a slightly different label. */}
-                  <Field label="Application image" span={2} htmlFor="aw-logo" hint="Shown on the launchpad, the sign-in screen and the consent screen. Optional.">
-                    <FileDrop
-                      accept="image/*"
-                      label={d.logo || 'Drop an image, or choose a file'}
-                      onFiles={(files) => set({ logo: files && files[0] ? files[0].name : '' })}
+                  <Field label="Application image" span={2} hint="Shown in the register, on the record, on the launchpad and on the sign-in screen. Optional — without one the application takes its vendor mark, or initials from its name.">
+                    <ImageField
+                      idPrefix="aw-logo"
+                      value={{ name: d.logo, src: d.logoSrc }}
+                      onChange={(img) => set({ logo: img.name, logoSrc: img.src })}
                     />
                   </Field>
                 </div>

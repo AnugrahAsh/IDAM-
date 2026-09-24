@@ -744,6 +744,9 @@ button.legend-it:hover{border-color:var(--line-2)}
   font:inherit;font-size:var(--t-sm);color:var(--ink);text-align:left;cursor:pointer}
 .ssel-opt[data-cursor]{background:var(--surface-2)}
 .ssel-opt[data-on]{color:var(--accent-a);font-weight:var(--w-semi)}
+.ssel-grp{padding:9px 9px 3px;font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--faint)}
+.ssel-grp:not(:first-child){margin-top:4px;border-top:1px solid var(--hair);padding-top:8px}
 .ssel-empty{padding:12px 9px;font-size:var(--t-sm);color:var(--mut);text-align:center}
 .ssel-foot{display:flex;align-items:center;justify-content:space-between;
   padding:6px 9px;border-top:1px solid var(--hair)}

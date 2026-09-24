@@ -131,6 +131,19 @@
 .rep-pin[data-on]{color:var(--warn-core)}
 .rep-pin[data-on] svg{fill:currentColor}
 
+/* The table iteration: the same rows as the list, with every figure in its
+   own column so two reports can be compared down the page. */
+.rep-tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+.rep-tbl{width:100%;min-width:44rem}
+.rep-tr{cursor:pointer}
+.rep-tr:hover{background:var(--row-hover)}
+.rep-tr:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent-line)}
+.rep-tbl .feed-ic{width:1.75rem;height:1.75rem;border-radius:var(--r-sm)}
+.rep-tbl .rep-pin{width:22px;height:22px}
+
+.rep-shelf-recent{background:var(--surface)}
+.rep-shelf-recent .rep-shelf-k{color:var(--accent-a)}
+
 .rep-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .rep-row{display:flex;align-items:center;gap:var(--sp-3);width:100%;padding:9px var(--sp-3);
   background:var(--surface);border-bottom:1px solid var(--hair);cursor:pointer;text-align:left;

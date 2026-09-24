@@ -272,3 +272,105 @@ export const roleAt = (lvl) => {
   return chain[Math.min(lvl, chain.length) - 1]
 }
 
+
+/* ---------------------------------------------------------------------------
+   The change log.
+
+   Every change this request carries, in one list: what the requester asked
+   for, what each approver did to it before signing, and the decisions
+   themselves. An approver who edits a request is changing what will be written
+   to a person's record, so the record of that edit — who, what, from, to,
+   when, and at which level — is the evidence an audit asks for afterwards.
+   ------------------------------------------------------------------------- */
+
+const OP_ACTION = {
+  modify: { label: 'Changed', icon: 'edit', tone: 'warn' },
+  remove: { label: 'Struck out', icon: 'minus', tone: 'bad' },
+  add: { label: 'Added', icon: 'plus', tone: 'ok' },
+}
+
+/* `roleAt` answers with the chain step, which is an object; the log wants the
+   name of the role that step is filled by. */
+const roleNameAt = (lvl) => {
+  const step = roleAt(lvl)
+  return (step && (step.role || step.title)) || `Level ${lvl}`
+}
+
+export const changeLogFor = (row, draft = emptyDraft()) => {
+  const out = []
+  const view = approvalView(row)
+
+  out.push({
+    id: `${row.id}-raised`,
+    when: row.raised,
+    who: row.requester,
+    role: 'Requester',
+    where: 'Request raised',
+    what: `${row.type}${row.username ? ` for ${row.username}` : ''}`,
+    from: '',
+    to: row.detail || row.target || '',
+    icon: 'request',
+    tone: 'acc',
+  })
+
+  view.edits.forEach((e, i) => {
+    const spec = OP_ACTION[e.op] || OP_ACTION.modify
+    out.push({
+      id: `${row.id}-edit-${i}`,
+      when: e.when,
+      who: e.approver,
+      role: e.role || roleNameAt(e.level),
+      where: `Level ${e.level}`,
+      what: e.field,
+      from: e.op === 'add' ? '' : e.from,
+      to: e.op === 'remove' ? 'Not provisioned' : e.to,
+      action: spec.label,
+      icon: spec.icon,
+      tone: spec.tone,
+    })
+  })
+
+  for (let lvl = 1; lvl <= (row.levels || 1); lvl += 1) {
+    const state = stepState(row, lvl)
+    if (state !== 'done' && state !== 'rejected') continue
+    out.push({
+      id: `${row.id}-decision-${lvl}`,
+      when: stampAt(row, lvl),
+      who: approverAt(row, lvl),
+      role: roleNameAt(lvl),
+      where: `Level ${lvl}`,
+      what: state === 'rejected' ? 'Rejected' : 'Approved',
+      from: '',
+      to: commentAt(row, lvl) || '',
+      icon: state === 'rejected' ? 'x' : 'checkC',
+      tone: state === 'rejected' ? 'bad' : 'ok',
+    })
+  }
+
+  /* What the current approver has staged but not yet committed. It is shown as
+     pending rather than as history, because nothing has been written. */
+  const ops = (draft && draft.ops) || []
+  ops.forEach((o, i) => {
+    const spec = OP_ACTION[o.op] || OP_ACTION.modify
+    out.push({
+      id: `${row.id}-draft-${i}`,
+      when: '',
+      who: 'You',
+      role: roleNameAt(row.level),
+      where: `Level ${row.level}`,
+      what: o.field,
+      from: o.op === 'add' ? '' : o.from,
+      to: o.op === 'remove' ? 'Not provisioned' : o.to,
+      action: spec.label,
+      icon: spec.icon,
+      tone: spec.tone,
+      pending: true,
+    })
+  })
+
+  // Newest first, with anything still uncommitted at the very top.
+  return out.sort((a, b) => {
+    if (a.pending !== b.pending) return a.pending ? -1 : 1
+    return String(b.when).localeCompare(String(a.when))
+  })
+}

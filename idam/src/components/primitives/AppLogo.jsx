@@ -21,12 +21,22 @@ const FILE_LOGOS = {
 
 const FALLBACK_TINT = ['#0F62FE', '#6941C6', '#0E7D74', '#B25E09', '#C2255C', '#1F7A3D', '#0B65B8', '#8A5A00']
 
-export default function AppLogo({ brand, name = '', size = 34, rounded = true }) {
+/* `src` is an image chosen for this application, which outranks the vendor
+   mark and the generated initials: someone picked it on purpose. */
+export default function AppLogo({ brand, name = '', size = 34, rounded = true, src }) {
   // Marks that define gradients need an id unique to this instance.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const key = brand || name.toLowerCase().replace(/[^a-z0-9]/g, '')
   const file = FILE_LOGOS[key]
   const mark = BRAND_MARKS[key]
+
+  if (src) {
+    return (
+      <span className="applogo" data-rounded={rounded || undefined} style={{ width: size, height: size }}>
+        <img src={src} alt="" width={size} height={size} loading="lazy" />
+      </span>
+    )
+  }
 
   if (file) {
     return (

@@ -16,6 +16,8 @@ import TextInput from '../../components/primitives/TextInput'
 import EmptyState from '../../components/primitives/EmptyState'
 import Menu from '../../components/primitives/Menu'
 import { useApp } from '../../store/AppContext'
+import UserInformation from './UserInformation'
+import ChangeLog from '../approvals/ChangeLog'
 import { num } from '../../lib/format'
 import {
   useChain, OPEN, grantsFor, levelColumnDefs, nameOf, requesterProfile, shiftStamp, statusTone, userOf,
@@ -205,6 +207,10 @@ export default function RequestTracking({ id, rows, onCancel, onDuplicate }) {
               />
             </Card>
 
+            {/* Who the request is about, in full, between what was asked for
+                and what is being done about it. */}
+            <UserInformation row={row} changes={Array.isArray(row.changes) ? row.changes : []} />
+
             {Array.isArray(row.changes) && row.changes.length > 0 && (
               <Card
                 title="Requested changes"
@@ -247,6 +253,14 @@ export default function RequestTracking({ id, rows, onCancel, onDuplicate }) {
                 ))}
               </div>
             </Card>
+
+            {/* What an approver changed on the way through, beside the state
+                changes the trail below records. */}
+            <ChangeLog
+              row={row}
+              title="Change log"
+              sub="What was asked for, and what each approver changed before signing."
+            />
 
             <Card title="Audit trail" sub="Every state change on this request, newest first">
               <div className="tl">

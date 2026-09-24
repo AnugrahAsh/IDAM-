@@ -65,7 +65,6 @@ export function AppProvider({ children }) {
   /* The reader's text size: sm / md / lg / xl. It scales the root font size,
      which every rem in the console follows (base.css), and index.html applies
      it before the first paint so a reload does not flash the default size. */
-  const [textSize, setTextSize] = useLocalState('tf-idam-text-size', 'md')
   /* Which role the console is being viewed as. Screens that fold an admin
      surface into a user-facing page read this to decide whether to offer it. */
   const [roleId, setRoleId] = useLocalState('tf-idam-roleid', 1)
@@ -106,11 +105,6 @@ export function AppProvider({ children }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-density', density)
   }, [density])
-
-  useEffect(() => {
-    if (textSize === 'md') document.documentElement.removeAttribute('data-text-size')
-    else document.documentElement.setAttribute('data-text-size', textSize)
-  }, [textSize])
 
   const navigate = useCallback((id, opts = {}) => {
     const path = typeof id === 'string' && id.startsWith('/') ? id : pathFor(id)
@@ -190,12 +184,25 @@ export function AppProvider({ children }) {
 
   const dismissToast = useCallback((id) => setToasts((t) => t.filter((x) => x.id !== id)), [])
 
-  const toast = useCallback((tone, title, body) => {
+  /* `opts` carries what a plain notice does not: `sticky` for one that stays
+     until it is updated or dismissed, `progress` for one that shows how far a
+     download has got, and `icon` where the tone's own icon is not the point. */
+  const toast = useCallback((tone, title, body, opts) => {
     seq.current += 1
     const id = seq.current
-    setToasts((t) => [...t, { id, tone, title, body }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4600)
+    setToasts((t) => [...t, { id, tone, title, body, ...opts }])
+    if (!opts || !opts.sticky) setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4600)
     return id
+  }, [])
+
+  /* A notice already on screen, changed in place: the download that announced
+     itself becomes the one that reports the file, rather than a second notice
+     arriving beside the first. Clearing `sticky` starts its dismissal. */
+  const updateToast = useCallback((id, patch) => {
+    setToasts((t) => t.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+    if (patch && patch.sticky === false) {
+      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4600)
+    }
   }, [])
 
   const grants = useMemo(() => grantsFor(roleId), [roleId])
@@ -214,18 +221,17 @@ export function AppProvider({ children }) {
     signedIn, signIn, signOut, greeted, clearGreeting,
     notifOpen, setNotifOpen,
     density, setDensity,
-    textSize, setTextSize,
     roleId, setRoleId, role, grants, can,
     navMin, setNavMin, navOpen, setNavOpen,
     paletteOpen, setPaletteOpen,
     theme, toggleTheme,
-    toasts, toast, dismissToast,
+    toasts, toast, updateToast, dismissToast,
     drawer, setDrawer, modal, setModal, confirm,
     closeOverlays,
   }), [route, segments, navigate, signedIn, signIn, signOut, greeted, clearGreeting, notifOpen,
-    density, setDensity, textSize, setTextSize, roleId, setRoleId, role, grants, can, navMin, setNavMin,
+    density, setDensity, roleId, setRoleId, role, grants, can, navMin, setNavMin,
     navOpen, paletteOpen, theme, toggleTheme,
-    toasts, toast, dismissToast, drawer, modal, confirm, closeOverlays])
+    toasts, toast, updateToast, dismissToast, drawer, modal, confirm, closeOverlays])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

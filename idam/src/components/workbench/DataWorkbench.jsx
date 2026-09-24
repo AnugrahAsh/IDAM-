@@ -64,7 +64,11 @@ export default function DataWorkbench({
   emptyIcon = 'search',
   loading = false,
   pageSize = 10,
-  scrollBody = false,
+  // The body is bounded by default: a register with more rows than fit scrolls
+  // them inside the panel, leaving the page bar, the toolbar, the column header
+  // and the pager where they were. A page that wants the old behaviour — the
+  // panel growing to fit every row — passes scrollBody={false}.
+  scrollBody = true,
   footNote,
 }) {
   const { density, setDensity } = useApp()

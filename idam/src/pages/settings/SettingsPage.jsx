@@ -20,6 +20,7 @@ import RedirectUris from './sections/RedirectUris'
 import PasswordFlows from './sections/PasswordFlows'
 import Regions from './sections/Regions'
 import ApprovalLevels from './sections/ApprovalLevels'
+import ApprovalFlow from './sections/ApprovalFlow'
 import NotificationTaxonomy from './sections/NotificationTaxonomy'
 import SodSeverities from './sections/SodSeverities'
 import DateTime from './sections/DateTime'
@@ -55,6 +56,7 @@ const SECTION_META = [
   { id: 'passwordFlows', icon: 'key', label: 'Password flow configuration', desc: 'Which credential-delivery journeys are active, and which may combine.' },
   { id: 'regionFlows', icon: 'globe', label: 'Region based password flows', desc: 'Regions, the master switch and the bindings that route each workflow.' },
   { id: 'approvalLevels', icon: 'approve', label: 'Approval levels', desc: 'The named, ordered chain every request runs through.' },
+  { id: 'approvalFlow', icon: 'hierarchy', label: 'Approval flow rules', desc: 'Whether requests and approvals are scoped by organization or by the office hierarchy, and the rules for each level.' },
   { id: 'notificationTaxonomy', icon: 'bell', label: 'Notification Management Setup', desc: 'The Category and Severity options an announcement is authored against.' },
   { id: 'sodSeverities', icon: 'sod', label: 'Segregation of duties severity', desc: 'The Severity options a segregation-of-duties rule is graded against.' },
   { id: 'provisioning', icon: 'provision', label: 'Provisioning', desc: 'Reconciliation cadence, leaver handling and orphaned accounts.' },
@@ -298,6 +300,7 @@ export default function SettingsPage() {
             )}
 
             {active === 'approvalLevels' && <ApprovalLevels value={settings.approvalLevels} />}
+            {active === 'approvalFlow' && <ApprovalFlow value={settings.approvalFlow} />}
 
             {active === 'notificationTaxonomy' && <NotificationTaxonomy value={settings.notificationTaxonomy} />}
 

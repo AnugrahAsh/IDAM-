@@ -8,17 +8,8 @@ import { ME } from '../../data/seed'
 import { ROLE_OPTIONS } from '../../lib/access'
 import wordmark from '../../assets/tanflow-wordmark-white.png'
 
-/* The four steps of the text-size control. Each is a root font size, so the
-   whole console — type, controls, drawers and the sidebar — scales together. */
-const TEXT_SIZES = [
-  { id: 'sm', label: 'Small', hint: '94%' },
-  { id: 'md', label: 'Default', hint: '100%' },
-  { id: 'lg', label: 'Large', hint: '113%' },
-  { id: 'xl', label: 'Extra large', hint: '125%' },
-]
-
 export default function TopBar() {
-  const { navigate, setNavOpen, toast, setPaletteOpen, theme, toggleTheme, textSize, setTextSize, roleId, setRoleId, role, signOut } = useApp()
+  const { navigate, setNavOpen, toast, setPaletteOpen, theme, toggleTheme, roleId, setRoleId, role, signOut } = useApp()
   const [menu, setMenu] = useState(null)
   return (
     <header className="topbar">
@@ -41,28 +32,7 @@ export default function TopBar() {
       <div className="top-actions">
         {/* Notifications, Reports and Settings each duplicated a navigation
             entry a few pixels to the left and left the bar. What stays is what
-            has nowhere else to live: how the console reads — its text size —
-            and its theme. */}
-        <button
-          className="top-btn"
-          title="Text size"
-          aria-label={`Text size: ${(TEXT_SIZES.find((s) => s.id === textSize) || TEXT_SIZES[1]).label}`}
-          aria-haspopup="menu"
-          onClick={(e) => setMenu({
-            anchor: e.currentTarget,
-            items: [
-              { label: 'Text size', header: true },
-              ...TEXT_SIZES.map((s) => ({
-                id: `text-${s.id}`,
-                label: `${s.label} · ${s.hint}`,
-                icon: s.id === textSize ? 'check' : 'textSize',
-                onSelect: () => setTextSize(s.id),
-              })),
-            ],
-          })}
-        >
-          <Icon name="textSize" />
-        </button>
+            has nowhere else to live: the theme. */}
         <button
           className="top-btn"
           title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}

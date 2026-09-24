@@ -1,0 +1,46 @@
+/* Styles owned by the consent panel a profile embeds. Imported by the panel
+   itself, because the pages that show it — My Profile and an identity record —
+   are not part of Consent Management and do not load its page styles. */
+
+.cns-panel .scards{margin-bottom:0}
+
+.cns-bar{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.cns-bar .seg button{gap:6px}
+.cns-n{display:inline-flex;align-items:center;justify-content:center;min-width:1.125rem;height:1rem;padding:0 5px;
+  border-radius:var(--r-pill);background:var(--surface-3);color:var(--mut);font-size:var(--t-micro);font-weight:var(--w-bold)}
+.seg button[data-on] .cns-n{background:var(--accent-bg-2);color:var(--accent-a)}
+
+.cns-list{display:flex;flex-direction:column;gap:10px}
+.cns-card{display:flex;align-items:flex-start;gap:var(--sp-3);min-width:0;padding:13px 14px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.cns-card:hover{border-color:var(--accent-line);box-shadow:var(--sh-sm)}
+.cns-card-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.cns-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.cns-card-name{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink);cursor:pointer;text-align:left}
+.cns-card-name:hover{color:var(--accent-a);text-decoration:underline;text-underline-offset:2px}
+.cns-ver{font-size:var(--t-xs);color:var(--mut)}
+.cns-card-f{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;font-size:var(--t-xs);color:var(--mut)}
+.cns-fact{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.cns-fact svg{color:var(--faint);flex:none}
+.cns-fact b{color:var(--ink-2);font-weight:var(--w-semi)}
+.cns-card-a{display:flex;align-items:center;gap:6px;flex:none}
+
+/* The notice itself, as published: a legal text is read as written, so it keeps
+   its own line breaks rather than being reflowed into the drawer's prose. */
+.cns-notice{white-space:pre-wrap;font-size:var(--t-sm);line-height:1.6;color:var(--ink-2);
+  padding:var(--sp-3);border-radius:var(--r);background:var(--surface-2);border:1px solid var(--hair)}
+
+.cns-hist{display:flex;flex-direction:column;gap:6px}
+.cns-hist-it{display:flex;align-items:center;gap:var(--sp-3);min-width:0;padding:7px 9px;border-radius:var(--r-sm);
+  background:var(--surface-2);font-size:var(--t-xs);color:var(--mut)}
+.cns-hist-w{flex:none;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.cns-hist-a{flex:1;min-width:0;font-weight:var(--w-semi);color:var(--ink)}
+.cns-hist-v{flex:none}
+.cns-hist-ip{flex:none;max-width:9rem}
+
+@media(max-width:640px){
+  .cns-card{flex-direction:column}
+  .cns-card-a{width:100%;justify-content:flex-end}
+  .cns-hist-ip{display:none}
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build -- --outDir ../dist-vercel/iam --emptyOutDir",
+  "outputDirectory": "dist-vercel",
+  "redirects": [
+    { "source": "/", "destination": "/iam/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/iam/:path*", "destination": "/iam/index.html" }
+  ]
+}

@@ -1,6 +1,7 @@
 import Banner from '../../components/primitives/Banner'
 import Button from '../../components/primitives/Button'
 import Card from '../../components/primitives/Card'
+import Icon from '../../components/primitives/Icon'
 import KeyValue from '../../components/primitives/KeyValue'
 import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
@@ -57,7 +58,7 @@ const specLabel = (specName) => {
   return 'OpenID Connect client'
 }
 
-export default function SsoView({ app, onEdit, onTab }) {
+export default function SsoView({ app, onEdit, onTab, onChangeImage }) {
   const facet = app.sso
 
   if (!facet) {
@@ -100,8 +101,14 @@ export default function SsoView({ app, onEdit, onTab }) {
                   icon: 'file',
                   node: (
                     <span className="sso-basics-media">
-                      <AppLogo brand={brandOf(app)} name={app.displayName} size={22} />
+                      <AppLogo src={app.logoSrc} brand={brandOf(app)} name={app.displayName} size={22} />
                       <span className="t-xs t-mut">{app.logo || (brandOf(app) ? 'Vendor mark' : 'Generated from the name')}</span>
+                      {onChangeImage && (
+                        <button type="button" className="link" onClick={onChangeImage}>
+                          <Icon name="edit" size={11} />
+                          Change
+                        </button>
+                      )}
                     </span>
                   ),
                 },

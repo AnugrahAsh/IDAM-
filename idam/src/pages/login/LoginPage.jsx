@@ -70,7 +70,36 @@ export default function LoginPage() {
     target.focus({ preventScroll: true })
   }, [step])
 
+  /* The one-time password path: one identifier, no password, and the same
+     verification card the password path ends on. */
+  const passwordless = method === 'otp'
+  const looksLikeEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim())
+  const looksLikeMobile = (v) => /^\+?[\d\s-]{7,15}$/.test(String(v).trim())
+
+  const startOtpSignIn = (e) => {
+    if (e) e.preventDefault()
+    setTouched(true)
+    const id = username.trim()
+    if (!id || (!looksLikeEmail(id) && !looksLikeMobile(id))) return
+    const sms = !looksLikeEmail(id)
+    setChannel(sms ? 'sms' : 'email')
+    setLast4(sms ? id.replace(/\D/g, '').slice(-4) || DEMO_LAST4 : '')
+    setBusy(true)
+    setTimeout(() => {
+      setBusy(false)
+      setResendLeft(RESEND_SECONDS)
+      go('otp')
+    }, 320)
+  }
+
   const userErr = touched && !username.trim() ? 'Enter your username.' : ''
+  const idErr = touched && passwordless
+    ? (!username.trim()
+      ? 'Enter your mobile number or email address.'
+      : (!looksLikeEmail(username) && !looksLikeMobile(username)
+        ? 'That is neither a mobile number nor an email address.'
+        : ''))
+    : ''
   const passErr = touched && !password ? 'Enter your password.' : ''
   const score = useMemo(() => passwordScore(next), [next])
   const mismatch = confirm.length > 0 && next !== confirm
@@ -207,7 +236,42 @@ export default function LoginPage() {
             </Banner>
           )}
 
-          {method !== 'local' ? (
+          {passwordless ? (
+            <>
+              <Field
+                label="Mobile number or email"
+                required
+                error={idErr}
+                hint="The code is sent to whichever of the two this matches on your account."
+                htmlFor="lg-otp-id"
+              >
+                <TextInput
+                  id="lg-otp-id"
+                  autoComplete="username"
+                  placeholder="Mobile number or email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </Field>
+
+              <Button
+                variant="pri"
+                size="lg"
+                className="lg-submit"
+                disabled={busy}
+                onClick={startOtpSignIn}
+              >
+                {busy ? 'Sending a code…' : 'Continue'}
+              </Button>
+
+              <div className="lg-row lg-swap">
+                <span className="t-xs t-mut">Prefer your username and password?</span>
+                <button type="button" className="link" onClick={() => { setMethod('local'); setTouched(false) }}>
+                  Sign in with password
+                </button>
+              </div>
+            </>
+          ) : method !== 'local' ? (
             <>
               <Banner tone="info">{METHODS.find((m) => m.id === method).hint}</Banner>
               <Button variant="pri" size="lg" className="lg-submit" icon="sso" disabled={busy} onClick={() => federated(method)}>
@@ -321,8 +385,8 @@ export default function LoginPage() {
       return (
         <form className="lg-card" onSubmit={(e) => { e.preventDefault(); verifyOtp() }} noValidate>
           <header className="lg-card-h">
-            <span className="lg-eyebrow">Step 2 of 2</span>
-            <h1 className="lg-h">OTP verification</h1>
+            <span className="lg-eyebrow">{passwordless && step === 'otp' ? 'One-time password' : 'Step 2 of 2'}</span>
+            <h1 className="lg-h">{passwordless && step === 'otp' ? 'Verify it is you' : 'OTP verification'}</h1>
             <p className="lg-sub">{otpTarget}</p>
           </header>
 
@@ -345,7 +409,7 @@ export default function LoginPage() {
 
           <div className="lg-hintline">
             <Icon name="info" size={12} />
-            <span>Sent to {channel === 'sms' ? `••• ••• ${DEMO_LAST4}` : maskEmail(username)}. Demo code {DEMO_OTP}.</span>
+            <span>Sent to {channel === 'sms' ? `••• ••• ${last4 || DEMO_LAST4}` : maskEmail(username)}. Demo code {DEMO_OTP}.</span>
           </div>
 
           <Button type="submit" variant="pri" size="lg" className="lg-submit" onClick={verifyOtp}>Verify</Button>
@@ -358,7 +422,9 @@ export default function LoginPage() {
             >
               {resendLeft > 0 ? `Resend in ${resendLeft}s` : 'Resend code'}
             </button>
-            <button type="button" className="link" onClick={() => go('signin')}>Return to login</button>
+            <button type="button" className="link" onClick={() => go('signin')}>
+              {passwordless && step === 'otp' ? 'Start over' : 'Return to login'}
+            </button>
           </div>
         </form>
       )

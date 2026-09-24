@@ -25,8 +25,10 @@ import {
   EntitlementCard, PeersCard, RequesterCard, RiskPanel, auditCell,
 } from '../accessRequests/RequestRail'
 import ChangesPanel from './ChangesPanel'
+import UserInformation from '../accessRequests/UserInformation'
+import ChangeLog from './ChangeLog'
 import ApproverTimeline from './ApproverTimeline'
-import { draftCounts, emptyDraft, targetState } from './data'
+import { draftCounts, emptyDraft, resolveChanges, targetState } from './data'
 
 const BASIS_APPROVE = [
   'Business need confirmed with the requester',
@@ -78,6 +80,7 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
   }
 
   const open = OPEN.has(row.status)
+  const resolved = resolveChanges(row, draft)
   const counts = draftCounts(draft)
   const editCount = counts.total
   const ts = targetState(row, draft)
@@ -168,7 +171,14 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
               />
             </Card>
 
+            {/* The identity itself, as the request currently stands — the
+                approver's own edits included, because those are what will be
+                written if they approve now. */}
+            <UserInformation row={row} changes={resolved} />
+
             <ChangesPanel row={row} draft={draft} setDraft={setDraft} />
+
+            <ChangeLog row={row} draft={draft} />
 
             <Card title="Justification" sub="Written by the requester, unedited">
               <div className="banner" data-tone="info">

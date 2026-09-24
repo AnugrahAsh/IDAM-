@@ -164,6 +164,29 @@ export const DEFAULT_SETTINGS = {
     { id: 3, name: 'Security', role: 'Global Identity Administrator', detail: 'Security review for privileged and conflicting access', sla: 24 },
   ],
   /**
+   * How far a request and an approval reach.
+   *
+   * `organization` is the flow the console has always had: a requester works
+   * within their own organization and an approver approves within theirs.
+   * `hierarchy` scopes both sides by the office-level hierarchy instead, and
+   * the rules below say how far each side sees from the level it sits at.
+   *
+   * A side falls back to its default at any level without a rule of its own.
+   * Requesting and approving are configured separately because a requester
+   * never approves and an approver never requests.
+   */
+  approvalFlow: {
+    mode: 'organization',
+    defaults: { requesting: 'none', approving: 'none' },
+    rules: [
+      { id: 1, level: 'Regional', applies: 'requesting', scope: 'ownPlusBelow', below: 2 },
+      { id: 2, level: 'Divisional', applies: 'requesting', scope: 'own', below: null },
+      { id: 3, level: 'Corporate', applies: 'approving', scope: 'ownPlusAll', below: null },
+      { id: 4, level: 'Regional', applies: 'approving', scope: 'ownPlusAll', below: null },
+      { id: 5, level: 'Divisional', applies: 'approving', scope: 'own', below: null },
+    ],
+  },
+  /**
    * The vocabulary the Notification Center is authored against.
    *
    * Category and Severity are the two selects on an announcement, and they

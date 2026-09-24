@@ -1,8 +1,8 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
 import Icon from './Icon'
 
 const norm = (o) => (o && o.value !== undefined
-  ? { value: o.value, label: o.label !== undefined ? o.label : o.value }
+  ? { value: o.value, label: o.label !== undefined ? o.label : o.value, group: o.group }
   : { value: o, label: o })
 
 // A dropdown with a filter box, and optionally more than one selection.
@@ -138,21 +138,26 @@ export default function SearchSelect({
               const on = multiple
                 ? selected.some((v) => String(v) === String(o.value))
                 : String(selected) === String(o.value)
+              /* A heading is printed when the group changes, so a filtered list
+                 still says which family each remaining option belongs to. */
+              const heading = o.group && (i === 0 || shown[i - 1].group !== o.group) ? o.group : null
               return (
-                <button
-                  type="button"
-                  key={o.value}
-                  role="option"
-                  aria-selected={on}
-                  className="ssel-opt"
-                  data-on={on || undefined}
-                  data-cursor={i === cursor || undefined}
-                  onMouseEnter={() => setCursor(i)}
-                  onClick={() => choose(o)}
-                >
-                  <span className="trunc">{o.label}</span>
-                  {on && <Icon name="check" size={12} />}
-                </button>
+                <Fragment key={o.value}>
+                  {heading && <div className="ssel-grp">{heading}</div>}
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={on}
+                    className="ssel-opt"
+                    data-on={on || undefined}
+                    data-cursor={i === cursor || undefined}
+                    onMouseEnter={() => setCursor(i)}
+                    onClick={() => choose(o)}
+                  >
+                    <span className="trunc">{o.label}</span>
+                    {on && <Icon name="check" size={12} />}
+                  </button>
+                </Fragment>
               )
             })}
           </div>

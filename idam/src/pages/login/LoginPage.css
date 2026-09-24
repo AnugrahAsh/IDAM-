@@ -47,7 +47,7 @@
 
 .lg-hero-h{
   margin:0 0 var(--sp-3);color:#fff;
-  font-size:clamp(1.5rem,2.2vw,1.9375rem);line-height:1.22;letter-spacing:-.024em;
+  font-size:1.9375rem;line-height:1.22;letter-spacing:-.024em;
   font-weight:var(--w-bold);text-wrap:balance;
 }
 .lg-hero-s{margin:0;color:#93a9d6;font-size:var(--t-body);line-height:1.62;max-width:40ch}
@@ -285,6 +285,9 @@
 .lg-other svg{color:var(--faint)}
 
 /* Self-enrollment: a line under the sign-in, never a rival to it. */
+/* The other way in, under the one on screen. */
+.lg-swap{justify-content:center;gap:5px;flex-wrap:wrap}
+
 .lg-enroll{display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-1);padding-top:var(--sp-4);
   border-top:1px solid var(--line)}
 .lg-enroll-t{flex:1;min-width:0;font-size:var(--t-xs);color:var(--mut)}

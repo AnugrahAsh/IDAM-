@@ -19,6 +19,7 @@ import { StatStrip, UrlConfigCard } from './facetControls'
 import ProvisioningTab from './ProvisioningTab'
 import ReconciliationTab from './ReconciliationTab'
 import SsoView from './SsoView'
+import { openImageEditor } from './ImageField'
 import SsoEdit from './SsoEdit'
 import AttributesTab from './AttributesTab'
 import ClientScope from './ClientScope'
@@ -302,7 +303,8 @@ function LinkageTab({ app, rows, onLink, onUnlink }) {
 }
 
 export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelete, onLink, onUnlink }) {
-  const { toast } = useApp()
+  const { toast, setDrawer } = useApp()
+  const changeImage = () => openImageEditor({ app, onPatch, setDrawer, toast })
   const health = healthOf(app)
 
   const tabs = [
@@ -338,7 +340,7 @@ export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelet
         eyebrow="Application"
         title={app.displayName}
         sub={app.description || `${capabilitiesOf(app).join(' and ')} application owned by ${app.owner}.`}
-        media={<AppLogo brand={brandOf(app)} name={app.displayName} size={56} />}
+        media={<AppLogo src={app.logoSrc} brand={brandOf(app)} name={app.displayName} size={56} />}
         badges={
           <>
             <Pill tone={health.tone} dot>{health.label}</Pill>
@@ -358,6 +360,10 @@ export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelet
         }
         actions={
           <>
+            {/* The mark this application is recognised by, changed from the
+                record it belongs to rather than from inside a federation
+                form. */}
+            <Button icon="edit" onClick={changeImage}>Change image</Button>
             {app.provisioning && (
               <Button icon="refresh" disabled={app.provisioning.status === 'Disabled'} onClick={() => toast('ok', 'Sync queued', `A delta sync for ${app.displayName} has been placed on the provisioning queue.`)}>Sync now</Button>
             )}
@@ -376,7 +382,7 @@ export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelet
         {active === 'reconciliation' && <ReconciliationTab key={`rec-${app.id}`} app={app} onPatch={onPatch} />}
         {active === 'sso' && (sub === 'edit'
           ? <SsoEdit key={`sso-edit-${app.id}`} app={app} onPatch={onPatch} onDone={() => onTab('sso')} />
-          : <SsoView key={`sso-${app.id}`} app={app} onEdit={() => onTab('sso/edit')} onTab={onTab} />)}
+          : <SsoView key={`sso-${app.id}`} app={app} onEdit={() => onTab('sso/edit')} onTab={onTab} onChangeImage={changeImage} />)}
         {active === 'attributes' && <AttributesTab key={`attrs-${app.id}`} app={app} onPatch={onPatch} />}
         {active === 'scope' && app.sso && (
           <ClientScope

@@ -57,11 +57,12 @@
     linear-gradient(to left, var(--surface), transparent) 100% 0/24px 100% no-repeat local,
     radial-gradient(farthest-side at 0 50%, var(--line-2), transparent) 0 0/12px 100% no-repeat scroll,
     radial-gradient(farthest-side at 100% 50%, var(--line-2), transparent) 100% 0/12px 100% no-repeat scroll}
-/* Opt-in bounded body. Without a height the workbench grows to fit every row,
-   so a 250-row page scrolls the whole document and the sticky header — which is
-   sticky against .wb-scroll, not the viewport — travels off screen with it.
-   Capping the body keeps the header and the pager in place and scrolls the rows
-   inside the table instead. */
+/* The bounded body, on by default. Without a height the workbench grows to fit
+   every row, so a 250-row page scrolls the whole document and the sticky header
+   — which is sticky against .wb-scroll, not the viewport — travels off screen
+   with it. Capping the body keeps the header and the pager in place and scrolls
+   the rows inside the table instead. The cap is a share of the window rather
+   than a fixed height, so a tall screen shows more rows than a laptop. */
 .wb-scroll[data-bounded]{max-height:min(62vh,640px)}
 .tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--t-sm)}
 /* A table dropped straight into a card body has no horizontal escape of its
@@ -273,8 +274,13 @@ body:has(.drawer) .toasts{top:calc(var(--hdr-h) + 76px)}
 .toast[data-tone="warn"] svg{color:#FBBF24}
 .toast[data-tone="bad"] svg{color:#F87171}
 .toast[data-tone="info"] svg{color:#7EB8F7}
+.toast-m{flex:1;min-width:0}
 .toast-t{font-weight:var(--w-semi)}
 .toast-s{color:rgba(255,255,255,.7);font-size:var(--t-xs);margin-top:1px}
+.toast-bar{margin-top:7px;height:4px;border-radius:var(--r-pill);background:rgba(255,255,255,.16);overflow:hidden}
+.toast-bar span{display:block;height:100%;border-radius:inherit;background:#7EB8F7;
+  transition:width var(--dur-2) var(--ease)}
+.toast[data-tone="ok"] .toast-bar span{background:#4ADE80}
 .toast-x{margin-left:auto;color:rgba(255,255,255,.5);flex:none}
 .toast-x:hover{color:#fff}
 

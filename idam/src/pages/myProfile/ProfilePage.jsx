@@ -23,12 +23,16 @@ import IconButton from '../../components/primitives/IconButton'
 import { useApp } from '../../store/AppContext'
 import { statusTone } from '../../lib/format'
 import { ME, MFA_METHODS, GROUPS, MY_APPS, LOGS, ATTRS, LOOKUPS, ORGS } from '../../data/seed'
+import UserConsentPanel from '../consentManagement/UserConsentPanel'
+import { consentsFor } from '../consentManagement/userConsentData'
 import { DATE_FORMATS, EDITABLE, FACTOR_IDS, HIDDEN_ATTRS, LANGUAGES, MY_ASSIGNED_APPS, MY_EVENTS, MY_GROUPS, NOTIFY_ROWS, PASSWORD_AGE_DAYS, PASSWORD_CHANGED, PREF_DEFAULTS, PROFILE_INITIAL, PROFILE_SECTIONS, SESSIONS, STRENGTH, TIMEZONES, attrOptions, locationText, pwScore } from './profileData'
 
 // Default Strong Policy expires a password after 90 days, so the window left is
 // whatever that policy allows less the age the activity feed records.
 const PASSWORD_POLICY_DAYS = 90
 const PASSWORD_EXPIRES_IN = Math.max(0, PASSWORD_POLICY_DAYS - PASSWORD_AGE_DAYS)
+
+const MY_CONSENTS = consentsFor(ME.username)
 
 export default function ProfilePage() {
   const { toast, confirm, navigate, setDrawer } = useApp()
@@ -284,6 +288,7 @@ export default function ProfilePage() {
           { id: 'personal', label: 'Personal information', icon: 'user' },
           { id: 'security', label: 'Security', icon: 'shield', count: factors.length },
           { id: 'access', label: 'Access', icon: 'group', count: MY_GROUPS.length + MY_ASSIGNED_APPS.length },
+          { id: 'privacy', label: 'Privacy & consent', icon: 'consent', count: MY_CONSENTS.length },
           { id: 'preferences', label: 'Preferences', icon: 'sliders' },
           { id: 'activity', label: 'Activity', icon: 'activity', count: MY_EVENTS.length },
         ]}
@@ -496,6 +501,11 @@ export default function ProfilePage() {
                   </Card>
                 </>
               )}
+
+              {/* Consent is the one part of a profile the person answers for
+                  themselves: it can be given and withdrawn here, and the
+                  record of both is kept as evidence. */}
+              {tab === 'privacy' && <UserConsentPanel username={ME.username} self />}
 
               {tab === 'preferences' && (
                 <div className="stack">

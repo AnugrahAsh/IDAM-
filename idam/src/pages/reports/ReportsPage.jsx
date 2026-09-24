@@ -24,6 +24,7 @@ import { exportRows } from './exportCsv'
 import StatCards from '../../components/workbench/StatCards'
 import { Sparkline } from '../../components/viz/Charts'
 import { useLocalState } from '../../lib/useLocalState'
+import { useDownload } from '../../lib/useDownload'
 import {
   CATALOG_OLDEST, PIN_KEY, activity, exportsFor, freshness, monthLabel, recordExport, totalExports,
 } from './catalogMeta'
@@ -44,8 +45,12 @@ const presetOf = (v) => {
   return hit ? hit.id : 'custom'
 }
 
+/* Three ways to read the same catalogue, because three different questions get
+   asked of it: which report do I want (cards), where is the one I know
+   (list), and how do they compare (table). The choice is remembered. */
 const CATALOG_VIEWS = [
   { id: 'grid', icon: 'apps', label: 'Card view' },
+  { id: 'table', icon: 'columns', label: 'Table view' },
   { id: 'list', icon: 'menu', label: 'List view' },
 ]
 
@@ -78,10 +83,14 @@ const updatedLabel = (label) => (label === 'No timestamps' ? label : `Updated ${
  * grid, and each card carries the report's last fourteen days of activity, so
  * a report that has gone quiet is visible without opening it.
  */
+export const RECENT_KEY = 'tf-idam-reports-recent'
+export const RECENT_LIMIT = 6
+
 function ReportCatalog({ onOpen }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
   const [layout, setLayout] = useLocalState('tf-idam-reports-layout', 'grid')
+  const [recent] = useLocalState(RECENT_KEY, [])
   const [pins, setPins] = useLocalState(PIN_KEY, [])
 
   // Every catalog figure is read from the reports themselves on render.
@@ -122,6 +131,12 @@ function ReportCatalog({ onOpen }) {
   // The shelf repeats pinned reports above the sections so they are one click
   // away — only while the whole catalog is on screen and not being searched.
   const shelf = cat === 'all' && !needle ? meta.filter((m) => pins.includes(m.report.id)) : []
+  /* The reports this browser opened last, newest first — the other half of
+     "take me back to the one I was looking at", beside the pins someone chose
+     deliberately. */
+  const recentStrip = cat === 'all' && !needle
+    ? recent.map((id) => meta.find((m) => m.report.id === id)).filter(Boolean).slice(0, RECENT_LIMIT)
+    : []
 
   const cards = [
     {
@@ -333,6 +348,19 @@ function ReportCatalog({ onOpen }) {
             </div>
           )}
 
+          {recentStrip.length > 0 && (
+            <div className="rep-shelf rep-shelf-recent" aria-label="Recently viewed reports">
+              <span className="rep-shelf-k"><Icon name="history" size={12} />Recently viewed</span>
+              {recentStrip.map((m) => (
+                <button key={m.report.id} type="button" className="rep-shelf-it" onClick={() => onOpen(m.report.id)}>
+                  <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
+                  <span className="trunc">{m.report.name}</span>
+                  <span className="num t-mut">{num(m.count)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="rep-body">
             {shown.length === 0 ? (
               <EmptyState
@@ -353,7 +381,54 @@ function ReportCatalog({ onOpen }) {
                     <span className="rep-group-b">{g.blurb}</span>
                   </div>
                 )}
-                {layout === 'grid'
+                {layout === 'table' ? (
+                  <div className="rep-tbl-wrap">
+                  <table className="tbl rep-tbl">
+                    <thead>
+                      <tr>
+                        <th>Report</th>
+                        <th style={{ width: '9rem' }}>Category</th>
+                        <th className="td-num" style={{ width: '6.5rem' }}>Records</th>
+                        <th style={{ width: '7rem' }}>14 days</th>
+                        <th style={{ width: '7rem' }}>Updated</th>
+                        <th className="td-num" style={{ width: '5rem' }}>Exports</th>
+                        <th style={{ width: '3rem' }} />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.items.map((m) => (
+                        <tr
+                          key={m.report.id}
+                          className="rep-tr"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Open ${m.report.name}`}
+                          onClick={() => onOpen(m.report.id)}
+                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(m.report.id))}
+                        >
+                          <td className="td-main">
+                            <span className="cell-id">
+                              <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
+                              <span className="trunc">
+                                <span style={{ display: 'block' }}>{m.report.name}</span>
+                                <span className="cell-sub trunc">{m.report.description}</span>
+                              </span>
+                            </span>
+                          </td>
+                          <td>{m.report.category}</td>
+                          <td className="td-num">{num(m.count)}</td>
+                          <td>
+                            <Sparkline data={m.trend} w={76} h={22} color={TONE_SERIES[m.report.tone] || 'var(--s1)'} fill={false} />
+                          </td>
+                          <td className="t-xs t-mut">{updatedLabel(m.label)}</td>
+                          <td className="td-num">{m.exports || '—'}</td>
+                          <td>{pinButton(m.report, pins.includes(m.report.id), 13)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  </div>
+                ) : layout === 'grid'
                   ? <div className="rep-grid">{g.items.map(reportCard)}</div>
                   : <div className="rep-list">{g.items.map(reportRow)}</div>}
               </section>
@@ -516,6 +591,7 @@ function FilterPanel({ report, initial, onApply, onReset }) {
 
 function ReportView({ report, onBack }) {
   const { toast, setDrawer } = useApp()
+  const startDownload = useDownload()
   const specs = report.filters || []
   const [f, setF] = useState(() => blankValues(specs))
   const [zone, setZone] = useLocalState('tf-idam-report-zone', 'app')
@@ -590,17 +666,27 @@ function ReportView({ report, onBack }) {
     const csvColumns = report.columns.map((c) => (c.key === 'ts'
       ? { ...c, label: `${c.label} (${zoneSuffix(zone)})`, csv: (r) => inZone(r.ts, zone) }
       : c))
-    // Exactly the rows on screen: the filters are applied before the file is
-    // written, never after it.
-    const name = exportRows(report, csvColumns, rows, TODAY)
-    recordExport(report.id)
-    toast(
-      'ok',
-      'Report downloaded',
-      nActive === 0
-        ? `All ${num(rows.length)} rows written to ${name} in ${zoneById(zone).label.replace(' (default)', '')}.`
-        : `${num(rows.length)} filtered rows of ${num(all.length)} written to ${name}, matching the ${nActive} active filter${nActive === 1 ? '' : 's'}.`,
-    )
+    /* The file is written when the bar completes, so a report still being
+       prepared has not written anything yet. A larger report takes longer to
+       appear than a small one, which is the only honest thing a progress bar
+       over a local file can say. */
+    startDownload({
+      title: 'Preparing report',
+      body: `${report.name} · ${num(rows.length)} row${rows.length === 1 ? '' : 's'}`,
+      ms: Math.min(3200, 600 + rows.length * 7),
+      // Exactly the rows on screen: the filters are applied before the file is
+      // written, never after it.
+      write: () => {
+        const name = exportRows(report, csvColumns, rows, TODAY)
+        recordExport(report.id)
+        return {
+          title: 'Report downloaded',
+          body: nActive === 0
+            ? `All ${num(rows.length)} rows written to ${name} in ${zoneById(zone).label.replace(' (default)', '')}.`
+            : `${num(rows.length)} filtered rows of ${num(all.length)} written to ${name}, matching the ${nActive} active filter${nActive === 1 ? '' : 's'}.`,
+        }
+      },
+    })
   }
 
   return (
@@ -751,6 +837,22 @@ export default function ReportsPage({ segments = [] }) {
     )
   }
 
-  if (!report) return <ReportCatalog onOpen={(id) => navigate(`/iam/reports/${id}`)} />
+  if (!report) {
+    return (
+      <ReportCatalog
+        onOpen={(id) => {
+          /* Written here rather than in the catalogue: a report reached from a
+             link or the command palette is just as recently viewed as one
+             opened from a card. */
+          try {
+            const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+            const next = [id, ...(Array.isArray(raw) ? raw : []).filter((x) => x !== id)].slice(0, RECENT_LIMIT)
+            localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+          } catch { /* storage unavailable */ }
+          navigate(`/iam/reports/${id}`)
+        }}
+      />
+    )
+  }
   return <ReportView key={report.id} report={report} onBack={() => navigate('reports')} />
 }

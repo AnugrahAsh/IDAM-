@@ -9,9 +9,10 @@ import Icon from '../../components/primitives/Icon'
 import Pill from '../../components/primitives/Pill'
 import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
-import { ME, REQUESTS } from '../../data/seed'
+import { ME } from '../../data/seed'
+import { useApprovalRows, writeApprovalRows } from '../approvals/approvalStore'
 import {
-  APPROVERS_L1, OPEN, TODAY, TYPE_ORDER, TYPE_SPECS, levelColumnDefs, nextRequestId, statusTone, withAudit,
+  APPROVERS_L1, OPEN, TODAY, TYPE_ORDER, TYPE_SPECS, levelColumnDefs, nextRequestId, statusTone,
 } from './data'
 import { useApprovalLevels } from '../settings/settingsStore'
 import { auditCell } from './RequestRail'
@@ -188,7 +189,12 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
 
 export default function RequestsPage({ segments = [] }) {
   const { toast, confirm, navigate } = useApp()
-  const [rows, setRows] = useState(() => REQUESTS.map(withAudit))
+  /* The same rows the approval queue reads. They used to be this page's own
+     state, seeded from the demo data: a request raised here never reached the
+     approver it named, and an approver's edits never came back to the person
+     who raised it. */
+  const rows = useApprovalRows()
+  const setRows = writeApprovalRows
 
   const stats = useMemo(() => {
     const open = rows.filter((r) => OPEN.has(r.status))
@@ -265,6 +271,7 @@ export default function RequestsPage({ segments = [] }) {
       duration: v.duration || '',
       detail: built.detail,
       changes: built.changes || null,
+      profile: built.profile || null,
       entitlements: built.entitlements || null,
       addGroups: built.addGroups || null,
       removeGroups: built.removeGroups || null,

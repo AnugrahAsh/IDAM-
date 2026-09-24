@@ -17,11 +17,19 @@ The sign-in page and the Self-Enrollment page it opens are now included. Opening
 ## Updates to included screens
 
 - **Toast notifications** appear in the top-right corner, below the header.
-- **Text size** is adjustable from the header's **Text size** button (the Aa icon): Small (94%), Default (100%), Large (113%), or Extra large (125%). Text and controls also follow the browser's own font-size setting, and layouts reflow at every screen width and scaling level without CSS zoom. The choice is remembered in the browser.
-- **Reports catalogue** is redesigned with a category rail, pinned reports, search, card and list views, and each report's last 14 days of activity.
+- **Text and controls** follow the browser's own font-size setting, and layouts reflow at every screen width and scaling level without CSS zoom.
+- **Reports** open from a library with a category rail, pinned and recently viewed reports, search, and three layouts — cards, table and list. A **download** reports its own progress and then names the file it wrote.
 - **Connector logos** appear in the connector catalogue of the Applications registration wizard (Connector step) and the Trust Reconciliation source form.
+- **Registers** fill the canvas and scroll their own rows: the page bar, the toolbar, the column header and the pager stay where they are however many rows are shown, and a wide table scrolls sideways inside its own panel.
+- **Type sizes** are fixed. They follow the browser's own font-size setting, never the width of the window.
+- **Sign-in** offers a one-time password beside the password itself: **Phone / Email OTP** takes a mobile number or an email address, sends a code, and verifies it with resend and start-over.
+- **Schedulers** carry four add-on services — Approval Escalation, Approval Reminder, Audit Log Cleanup and Recertification Campaign — under their own heading in the service picker, each with a full configuration panel.
+- **An application's image** can be chosen, replaced and removed from the application record's **Change image** button, the **Change** link on its SSO tab, the **Change image** row action in the application register, and the registration wizard. It is shown wherever that application appears — the register, the record header, the launchpad and the sign-in screen.
+- **Consent** appears on both profiles: **My Profile → Privacy & consent** gives and withdraws consent against each notice, and an identity record's **Consent** tab shows the same record read-only, with re-consent requests.
+- **Requests and approvals** show **User information** after the request summary — for a joiner, the identity being created; for anything else, the directory record with the request's own changes against it. An approver may correct any of it before signing, and a **Change log** records who changed what, from what to what, when, and at which level.
+- **Settings → Approval flow rules** scopes requests and approvals by organization or by the office hierarchy, with a default per side and per-level exceptions.
 
-- **Self-Enrollment** is reached from the **Self-Enrollment** button on the sign-in page. Its registration form is the Add User form (`idam/src/pages/users/IdentityForm.jsx`) without the sections only an administrator fills in; a submitted enrollment appears in Users as a Pending identity.
+- **Self-Enrollment** is reached from the **Self-Enrollment** button on the sign-in page. It is its own four-step enrollment — About you, Your role, Verification, Review — with document attachments, consent confirmations and a summary of everything before it is sent. A submitted enrollment appears in Users as a Pending identity.
 
 ## Additional Pages source hand-off
 

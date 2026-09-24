@@ -1,0 +1,38 @@
+/* Styles owned by the change log. Imported by the component: the approver's
+   record and the requester's tracking view both show it. */
+
+.clog{display:flex;flex-direction:column}
+.clog-it{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--hair);min-width:0}
+.clog-it:last-child{border-bottom:none}
+.clog-it[data-pending]{background:var(--warn-bg);border-radius:var(--r);padding-left:9px;padding-right:9px;
+  border-bottom-color:transparent}
+.clog-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.375rem;height:1.375rem;
+  margin-top:1px;border-radius:50%;background:var(--surface-3);color:var(--mut);border:1px solid var(--line)}
+.clog-it[data-tone="ok"] .clog-ic{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
+.clog-it[data-tone="warn"] .clog-ic{background:var(--warn-bg);color:var(--warn);border-color:var(--warn-line)}
+.clog-it[data-tone="bad"] .clog-ic{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
+.clog-it[data-tone="acc"] .clog-ic{background:var(--accent-bg);color:var(--accent-a);border-color:var(--accent-line)}
+
+.clog-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.clog-t{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;font-size:var(--t-sm)}
+.clog-act{font-weight:var(--w-bold);color:var(--ink)}
+.clog-what{color:var(--ink-2);font-weight:var(--w-semi)}
+
+/* Previous value, then the one that replaced it — the pair is the point. */
+.clog-v{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;font-size:var(--t-xs)}
+.clog-v svg{color:var(--faint);flex:none}
+.clog-from{color:var(--mut);text-decoration:line-through;text-decoration-thickness:1px;overflow-wrap:anywhere}
+.clog-to{color:var(--ink);font-weight:var(--w-semi);overflow-wrap:anywhere}
+
+.clog-by{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:var(--t-xs);color:var(--mut)}
+.clog-by svg{color:var(--faint);flex:none}
+.clog-by b{color:var(--ink-2);font-weight:var(--w-semi)}
+.clog-role,.clog-where{display:inline-flex;align-items:center;height:1.125rem;padding:0 6px;border-radius:var(--r-xs);
+  background:var(--surface-3);color:var(--mut);font-size:var(--t-micro);font-weight:var(--w-semi);white-space:nowrap}
+
+.clog-when{flex:none;font-size:var(--t-xs);color:var(--mut);white-space:nowrap;padding-top:2px}
+
+@media(max-width:640px){
+  .clog-it{flex-wrap:wrap}
+  .clog-when{width:100%;padding-left:2rem}
+}

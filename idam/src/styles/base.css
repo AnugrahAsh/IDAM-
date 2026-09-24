@@ -6,9 +6,6 @@ html,body,#root{height:100%}
    the header scales it from there. Percentages, not pixels, so the two
    compound instead of one overriding the other. */
 html{-webkit-text-size-adjust:100%;font-size:100%}
-:root[data-text-size="sm"]{font-size:93.75%}
-:root[data-text-size="lg"]{font-size:112.5%}
-:root[data-text-size="xl"]{font-size:125%}
 body{
   font-family:var(--sans);
   font-size:var(--t-body);

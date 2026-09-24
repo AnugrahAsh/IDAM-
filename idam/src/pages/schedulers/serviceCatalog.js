@@ -1517,6 +1517,500 @@ export const CATALOG = [
       notificationGroup('Summary Notification'),
     ],
   },
+
+  /* ---------------------------------------------------------------------------
+     Add-on services.
+
+     A deployment opts into these; `family: 'addon'` is what keeps them under
+     their own heading in the service picker rather than mixed into the list of
+     services every deployment runs.
+     ------------------------------------------------------------------------- */
+
+  {
+    serviceCode: 'APPROVAL_ESCALATION',
+    displayName: 'Approval Escalation',
+    family: 'addon',
+    legacyQueueName: null,
+    permissionCode: null,
+    description: 'Moves approvals that have waited too long to the next level, so one absent approver cannot hold a request indefinitely.',
+    defaultTimeoutMs: min(30),
+    metadata: {
+      retryable: true,
+      requiresApplication: false,
+      idempotent: true,
+      supportsBatch: true,
+      producesItemLogs: true,
+    },
+    configSchema: [
+      {
+        group: 'Scope',
+        fields: [
+          {
+            key: 'requestTypes',
+            label: 'Request Types',
+            type: 'multi-enum',
+            required: true,
+            default: ['ACCESS', 'ROLE', 'GROUP'],
+            options: [
+              { value: 'ACCESS', label: 'Access requests' },
+              { value: 'ROLE', label: 'Role requests' },
+              { value: 'GROUP', label: 'Group requests' },
+              { value: 'USER', label: 'Add user requests' },
+              { value: 'OTHER', label: 'Other requests' },
+            ],
+            help: 'Which pending approvals this scheduler may escalate. Types left unticked are never moved, however long they wait.',
+          },
+          {
+            key: 'includeOnHold',
+            label: 'Include Requests On Hold',
+            type: 'boolean',
+            default: false,
+            help: 'OFF leaves a request an approver has deliberately put on hold where it is. ON treats the hold as waiting time like any other.',
+          },
+        ],
+      },
+      {
+        group: 'Escalation',
+        fields: [
+          {
+            key: 'pendingHours',
+            label: 'Escalate After (hours)',
+            type: 'integer',
+            required: true,
+            default: 48,
+            min: 1,
+            max: 720,
+            help: 'How long an approval may sit with its current approver before it moves, e.g. 48 = two days. Counted from when it reached that approver, not from when the request was raised.',
+          },
+          {
+            key: 'escalateTo',
+            label: 'Escalate To',
+            type: 'enum',
+            required: true,
+            default: 'NEXT_LEVEL',
+            options: [
+              { value: 'NEXT_LEVEL', label: 'Next approval level' },
+              { value: 'APPROVER_MANAGER', label: 'The approver’s manager' },
+              { value: 'NAMED', label: 'Named approvers' },
+            ],
+            help: 'Where the approval goes next. Next approval level follows the level rules configured under Settings; the last level escalates to the named approvers below.',
+          },
+          {
+            key: 'namedApprovers',
+            label: 'Named Approvers',
+            type: 'string-list',
+            required: true,
+            default: [],
+            maxItems: 20,
+            placeholder: 'security_team, it_ops',
+            visibleWhen: { key: 'escalateTo', equals: 'NAMED' },
+            help: 'IDAM usernames that receive the escalated approval. Separate multiple values with commas, e.g. security_team, it_ops.',
+          },
+          {
+            key: 'maxEscalations',
+            label: 'Maximum Escalations Per Request',
+            type: 'integer',
+            required: true,
+            default: 2,
+            min: 1,
+            max: 10,
+            help: 'How many times one request may be escalated, 1–10. A request at the limit stays where it is and is reported instead.',
+          },
+          {
+            key: 'businessHoursOnly',
+            label: 'Count Business Hours Only',
+            type: 'boolean',
+            default: true,
+            help: 'ON leaves weekends and published holidays out of the waiting time, so a Friday afternoon approval is not escalated over the weekend.',
+          },
+        ],
+      },
+      {
+        group: 'Behaviour',
+        fields: [
+          {
+            key: 'reportOnly',
+            label: 'Report Only (dry run)',
+            type: 'boolean',
+            default: false,
+            help: 'ON records every approval that would be escalated without moving any of them. Recommended for the first run.',
+          },
+        ],
+      },
+      notificationGroup('Escalation Notification'),
+    ],
+  },
+
+  {
+    serviceCode: 'APPROVAL_REMINDER',
+    displayName: 'Approval Reminder',
+    family: 'addon',
+    legacyQueueName: null,
+    permissionCode: null,
+    description: 'Emails approvers about the approvals still waiting on them, on a cadence, until each one is answered.',
+    defaultTimeoutMs: min(30),
+    metadata: {
+      retryable: true,
+      requiresApplication: false,
+      idempotent: true,
+      supportsBatch: true,
+      producesItemLogs: true,
+    },
+    configSchema: [
+      {
+        group: 'Scope',
+        fields: [
+          {
+            key: 'requestTypes',
+            label: 'Request Types',
+            type: 'multi-enum',
+            required: true,
+            default: ['ACCESS', 'ROLE', 'GROUP', 'USER'],
+            options: [
+              { value: 'ACCESS', label: 'Access requests' },
+              { value: 'ROLE', label: 'Role requests' },
+              { value: 'GROUP', label: 'Group requests' },
+              { value: 'USER', label: 'Add user requests' },
+              { value: 'OTHER', label: 'Other requests' },
+            ],
+            help: 'Which pending approvals are worth a reminder. Types left unticked are never included.',
+          },
+          {
+            key: 'breachedOnly',
+            label: 'Only Approvals Past Their SLA',
+            type: 'boolean',
+            default: false,
+            help: 'ON reminds only about approvals that have already missed their service level. OFF reminds about everything still pending.',
+          },
+        ],
+      },
+      {
+        group: 'Cadence',
+        fields: [
+          {
+            key: 'firstReminderHours',
+            label: 'First Reminder After (hours)',
+            type: 'integer',
+            required: true,
+            default: 24,
+            min: 1,
+            max: 336,
+            help: 'How long an approval waits before its first reminder, e.g. 24 = one day after it reached the approver.',
+          },
+          {
+            key: 'repeatEveryHours',
+            label: 'Repeat Every (hours)',
+            type: 'integer',
+            required: true,
+            default: 24,
+            min: 1,
+            max: 336,
+            help: 'The gap between reminders about the same approval, e.g. 24 = daily until it is answered or the limit below is reached.',
+          },
+          {
+            key: 'maxReminders',
+            label: 'Maximum Reminders Per Approval',
+            type: 'integer',
+            required: true,
+            default: 3,
+            min: 1,
+            max: 20,
+            help: 'How many reminders one approval may generate, 1–20. Past the limit it is left to Approval Escalation.',
+          },
+          {
+            key: 'digest',
+            label: 'One Email Per Approver',
+            type: 'boolean',
+            default: true,
+            help: 'ON sends each approver a single email listing everything waiting on them. OFF sends one email per approval, which is louder but easier to forward.',
+          },
+        ],
+      },
+      {
+        group: 'Message',
+        fields: [
+          {
+            key: 'reminderTemplate',
+            label: 'Email Template Name',
+            type: 'string',
+            required: true,
+            default: '',
+            maxLength: 128,
+            placeholder: 'approval_reminder',
+            help: 'The template used for the reminder, from Email Management → Templates. Enter the template name exactly, e.g. approval_reminder.',
+          },
+          {
+            key: 'includeRequestLink',
+            label: 'Include A Link To The Approval',
+            type: 'boolean',
+            default: true,
+            help: 'ON puts a direct link to the approval in the email, so the approver lands on the record rather than the queue.',
+          },
+          {
+            key: 'copyRequester',
+            label: 'Copy The Requester',
+            type: 'boolean',
+            default: false,
+            help: 'ON copies the person who raised the request, so they can see it is still waiting and on whom.',
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    serviceCode: 'AUDIT_LOG_CLEANUP',
+    displayName: 'Audit Log Cleanup',
+    family: 'addon',
+    legacyQueueName: null,
+    permissionCode: null,
+    description: 'Removes audit records past their retention period, optionally writing them to an archive first.',
+    defaultTimeoutMs: min(120),
+    metadata: {
+      retryable: true,
+      requiresApplication: false,
+      idempotent: true,
+      supportsBatch: true,
+      producesItemLogs: false,
+    },
+    configSchema: [
+      {
+        group: 'Retention',
+        fields: [
+          {
+            key: 'logTypes',
+            label: 'Records To Clean',
+            type: 'multi-enum',
+            required: true,
+            default: ['SECURITY_EVENTS', 'ADMIN_AUDIT'],
+            options: [
+              { value: 'SECURITY_EVENTS', label: 'Security events' },
+              { value: 'ADMIN_AUDIT', label: 'Admin audit trail' },
+              { value: 'LOGIN_ACTIVITY', label: 'Login activity' },
+              { value: 'REQUEST_HISTORY', label: 'Request and approval history' },
+              { value: 'NOTIFICATION_LOG', label: 'Notification delivery log' },
+            ],
+            help: 'Which record sets this scheduler may prune. A set left unticked is never touched, whatever the retention period says.',
+          },
+          {
+            key: 'retentionDays',
+            label: 'Keep Records For (days)',
+            type: 'integer',
+            required: true,
+            default: 365,
+            min: 30,
+            max: 3650,
+            help: 'Records older than this are removed, e.g. 365 = one year. The floor is 30 days; check the retention your own regulator requires before lowering it.',
+          },
+          {
+            key: 'keepFailedEvents',
+            label: 'Keep Failed And Denied Events',
+            type: 'boolean',
+            default: true,
+            help: 'ON keeps failed sign-ins, denials and errors past the retention period, since those are the records an investigation asks for.',
+          },
+        ],
+      },
+      {
+        group: 'Archive',
+        fields: [
+          {
+            key: 'archiveBeforeDelete',
+            label: 'Archive Before Deleting',
+            type: 'boolean',
+            default: true,
+            help: 'ON writes the records to a file before they are removed. OFF deletes them outright, which cannot be undone.',
+          },
+          {
+            key: 'archiveFormat',
+            label: 'Archive Format',
+            type: 'enum',
+            required: true,
+            default: 'CSV_GZ',
+            options: [
+              { value: 'CSV_GZ', label: 'CSV (gzipped)' },
+              { value: 'JSONL_GZ', label: 'JSON lines (gzipped)' },
+              { value: 'PARQUET', label: 'Parquet' },
+            ],
+            visibleWhen: { key: 'archiveBeforeDelete', equals: true },
+            help: 'The format of the archive file. Gzipped CSV opens anywhere; Parquet is smaller for a warehouse to read.',
+          },
+          {
+            key: 'archivePath',
+            label: 'Archive Location',
+            type: 'string',
+            required: true,
+            default: '',
+            maxLength: 256,
+            placeholder: '/var/idam/archive/audit',
+            visibleWhen: { key: 'archiveBeforeDelete', equals: true },
+            help: 'Server-side directory the archive is written to, e.g. /var/idam/archive/audit. The service account must be able to write there.',
+          },
+        ],
+      },
+      {
+        group: 'Behaviour',
+        fields: [
+          {
+            key: 'batchSize',
+            label: 'Rows Per Batch',
+            type: 'integer',
+            required: true,
+            default: 5000,
+            min: 100,
+            max: 100000,
+            help: 'How many rows are removed per transaction, 100–100,000. Smaller batches take longer but hold shorter locks on a busy database.',
+          },
+          {
+            key: 'reportOnly',
+            label: 'Report Only (dry run)',
+            type: 'boolean',
+            default: false,
+            help: 'ON counts what would be removed and writes nothing. Recommended before the first real run.',
+          },
+        ],
+      },
+      notificationGroup('Cleanup Summary'),
+    ],
+  },
+
+  {
+    serviceCode: 'RECERTIFICATION_CAMPAIGN',
+    displayName: 'Recertification Campaign',
+    family: 'addon',
+    legacyQueueName: null,
+    permissionCode: null,
+    description: 'Opens a recertification campaign on a schedule, assigns its reviewers and closes it when the review window ends.',
+    defaultTimeoutMs: min(60),
+    metadata: {
+      retryable: true,
+      requiresApplication: false,
+      idempotent: false,
+      supportsBatch: true,
+      producesItemLogs: true,
+    },
+    configSchema: [
+      {
+        group: 'Campaign',
+        fields: [
+          {
+            key: 'campaignName',
+            label: 'Campaign Name',
+            type: 'string',
+            required: true,
+            default: '',
+            maxLength: 128,
+            placeholder: 'Quarterly access review',
+            help: 'The name each campaign is opened under. The run date is appended, e.g. Quarterly access review — 2026-10-01.',
+          },
+          {
+            key: 'scope',
+            label: 'What Is Reviewed',
+            type: 'enum',
+            required: true,
+            default: 'APPLICATION_ACCESS',
+            options: [
+              { value: 'APPLICATION_ACCESS', label: 'Application access' },
+              { value: 'ROLE_MEMBERSHIP', label: 'Role membership' },
+              { value: 'GROUP_MEMBERSHIP', label: 'Group membership' },
+              { value: 'PRIVILEGED_ACCESS', label: 'Privileged access only' },
+            ],
+            help: 'The entitlements the campaign puts in front of a reviewer. One kind per campaign keeps the review answerable.',
+          },
+          {
+            key: 'population',
+            label: 'Who Is Reviewed',
+            type: 'enum',
+            required: true,
+            default: 'ALL_ACTIVE',
+            options: [
+              { value: 'ALL_ACTIVE', label: 'Every active identity' },
+              { value: 'ORGANIZATION', label: 'One organization' },
+              { value: 'EMPLOYEE_TYPE', label: 'One employee type' },
+              { value: 'DORMANT', label: 'Dormant identities only' },
+            ],
+            help: 'The identities in scope. Organization and employee type read the value below.',
+          },
+          {
+            key: 'populationValue',
+            label: 'Organization Or Employee Type',
+            type: 'string',
+            required: true,
+            default: '',
+            maxLength: 128,
+            placeholder: 'Tanflow · Finance',
+            visibleWhen: { key: 'population', in: ['ORGANIZATION', 'EMPLOYEE_TYPE'] },
+            help: 'The organization or employee type to review, written exactly as it appears in the console, e.g. Tanflow · Finance.',
+          },
+        ],
+      },
+      {
+        group: 'Reviewers',
+        fields: [
+          {
+            key: 'reviewerSource',
+            label: 'Reviewer',
+            type: 'enum',
+            required: true,
+            default: 'MANAGER',
+            options: [
+              { value: 'MANAGER', label: 'The identity’s manager' },
+              { value: 'APPLICATION_OWNER', label: 'The application owner' },
+              { value: 'NAMED', label: 'Named reviewers' },
+            ],
+            help: 'Who answers for each line of the campaign. An identity with no manager falls back to the named reviewers below.',
+          },
+          {
+            key: 'namedReviewers',
+            label: 'Named Reviewers',
+            type: 'string-list',
+            required: true,
+            default: [],
+            maxItems: 20,
+            placeholder: 'compliance_team, it_ops',
+            visibleWhen: { key: 'reviewerSource', equals: 'NAMED' },
+            help: 'IDAM usernames that review every line. Separate multiple values with commas, e.g. compliance_team, it_ops.',
+          },
+          {
+            key: 'durationDays',
+            label: 'Review Window (days)',
+            type: 'integer',
+            required: true,
+            default: 14,
+            min: 1,
+            max: 180,
+            help: 'How long reviewers have before the campaign closes, e.g. 14 = two weeks from the day it opens.',
+          },
+        ],
+      },
+      {
+        group: 'On Expiry',
+        fields: [
+          {
+            key: 'onExpiry',
+            label: 'Lines Left Unanswered',
+            type: 'enum',
+            required: true,
+            default: 'KEEP_AND_REPORT',
+            options: [
+              { value: 'KEEP_AND_REPORT', label: 'Keep the access and report it' },
+              { value: 'REVOKE', label: 'Revoke the access' },
+              { value: 'ESCALATE', label: 'Escalate to the reviewer’s manager' },
+            ],
+            help: 'What happens to a line no reviewer answered by the closing date. Revoke removes access without a decision, so it belongs to campaigns whose scope is well understood.',
+          },
+          {
+            key: 'autoCloseOnComplete',
+            label: 'Close Early When Every Line Is Answered',
+            type: 'boolean',
+            default: true,
+            help: 'ON closes the campaign as soon as the last reviewer answers, rather than waiting out the window.',
+          },
+        ],
+      },
+      notificationGroup('Campaign Notification'),
+    ],
+  },
 ]
 
 export const SERVICES = CATALOG.map((s) => ({
@@ -1531,7 +2025,17 @@ export const serviceFor = (code) => BY_CODE[code] || null
 
 export const serviceName = (code) => (BY_CODE[code] ? BY_CODE[code].displayName : code || '—')
 
-export const SERVICE_OPTIONS = CATALOG.map((s) => ({ value: s.serviceCode, label: s.displayName }))
+/* The picker keeps the platform's two families apart: the services every
+   deployment runs, and the add-on services a deployment opts into. A service
+   without a family is a core one, so adding an add-on is one line on that
+   service rather than an edit to every other. */
+export const SERVICE_FAMILIES = { core: 'Core services', addon: 'Add-on services' }
+
+export const familyOf = (s) => (s && s.family === 'addon' ? 'addon' : 'core')
+
+export const SERVICE_OPTIONS = [...CATALOG]
+  .sort((a, b) => (familyOf(a) === familyOf(b) ? 0 : familyOf(a) === 'core' ? -1 : 1))
+  .map((s) => ({ value: s.serviceCode, label: s.displayName, group: SERVICE_FAMILIES[familyOf(s)] }))
 
 /** Every field of a service, flattened out of its groups. */
 export const fieldsOf = (code) =>

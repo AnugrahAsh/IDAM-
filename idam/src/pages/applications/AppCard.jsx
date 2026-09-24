@@ -32,7 +32,7 @@ export default function AppCard({ app, ctx = {} }) {
             <Check checked={!!ctx.selected} onChange={ctx.toggle} label={`Select ${app.displayName}`} />
           </span>
         )}
-        <AppLogo brand={brandOf(app)} name={app.displayName} size={30} />
+        <AppLogo src={app.logoSrc} brand={brandOf(app)} name={app.displayName} size={30} />
         <span className="rcard-id">
           <span className="rcard-name trunc">{app.displayName}</span>
           <span className="rcard-sub trunc">{app.name}</span>

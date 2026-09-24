@@ -11,6 +11,7 @@ import AppCard from './AppCard'
 import RegisterHeader from '../../components/workbench/RegisterHeader'
 import AppDetail from './AppDetail'
 import AppWizard from './AppWizard'
+import { openImageEditor } from './ImageField'
 import { BASE, brandOf, buildSeed, capabilitiesOf, healthOf } from './appModel'
 import { useApp } from '../../store/AppContext'
 import { useLocalState } from '../../lib/useLocalState'
@@ -53,8 +54,8 @@ const capabilityOf = (r) => (r.provisioning && r.sso
   ? 'Provisioning and SSO'
   : r.provisioning ? 'Provisioning only' : 'SSO only')
 
-function AppsList({ rows, onDelete, onBulkDelete }) {
-  const { navigate, toast } = useApp()
+function AppsList({ rows, onDelete, onBulkDelete, onPatch }) {
+  const { navigate, toast, setDrawer } = useApp()
   const [facet, setFacet] = useState('all')
   // Dismissal is keyed to the finding itself, so the line comes back when a
   // different connector breaks rather than staying hidden for good.
@@ -110,7 +111,7 @@ function AppsList({ rows, onDelete, onBulkDelete }) {
       value: (r) => `${r.displayName} ${r.name} ${r.org}`,
       render: (r) => (
         <span className="cell-id">
-          <AppLogo brand={brandOf(r)} name={r.displayName} size={22} />
+          <AppLogo src={r.logoSrc} brand={brandOf(r)} name={r.displayName} size={22} />
           <span className="trunc">
             <span style={{ display: 'block' }}>{r.displayName}</span>
             <span className="cell-sub">{r.name}</span>
@@ -173,6 +174,7 @@ function AppsList({ rows, onDelete, onBulkDelete }) {
     ...(r.provisioning ? [{ id: 'prov', label: 'Provisioning settings', icon: 'provision', onSelect: () => navigate(`${BASE}/${r.id}/provisioning`) }] : []),
     ...(r.sso ? [{ id: 'sso', label: 'SSO configuration', icon: 'sso', onSelect: () => navigate(`${BASE}/${r.id}/sso`) }] : []),
     { id: 'link', label: 'Linkage', icon: 'link', onSelect: () => navigate(`${BASE}/${r.id}/linkage`) },
+    { id: 'image', label: 'Change image', icon: 'edit', onSelect: () => openImageEditor({ app: r, onPatch, setDrawer, toast }) },
     { divider: true },
     { id: 'del', label: 'Delete', icon: 'trash', danger: true, onSelect: () => onDelete(r) },
   ]
@@ -343,5 +345,5 @@ export default function ApplicationsPage({ segments = [] }) {
     )
   }
 
-  return <AppsList rows={rows} onDelete={removeApp} onBulkDelete={removeMany} />
+  return <AppsList rows={rows} onDelete={removeApp} onBulkDelete={removeMany} onPatch={patch} />
 }

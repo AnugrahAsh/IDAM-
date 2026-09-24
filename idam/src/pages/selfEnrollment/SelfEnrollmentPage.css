@@ -1,42 +1,143 @@
 /* Page-owned styles for Self-enrollment. Shared primitives remain in src/styles.
-   The page renders outside the console shell, so it brings its own bar; the
-   form below it runs in the console's own canvas and reads exactly as the Add
-   User form does. */
 
-.se-page{height:100%;display:flex;flex-direction:column;background:var(--bg)}
-.se-top{position:sticky;top:0;z-index:5;flex:none;display:flex;align-items:center;gap:12px;
-  padding:10px var(--canvas-px);background:var(--surface);border-bottom:1px solid var(--line)}
-.se-logo{height:22px;width:auto;display:block}
-.se-top-sep{width:1px;height:18px;background:var(--line)}
-.se-top-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink-2)}
-.se-top .spacer{flex:1 1 auto}
-.se-top-q{font-size:var(--t-xs);color:var(--mut)}
+   This page is read by someone who has never seen the console: no sidebar, no
+   register chrome, and one question at a time. The rail on the left says what
+   is being asked and why; the card on the right asks it. */
 
-.se-canvas{flex:1}
-.se-inner{width:100%;max-width:1280px;margin:0 auto}
+.en-page{height:100%;display:grid;grid-template-columns:22rem minmax(0,1fr);background:var(--bg)}
 
-/* --- Submitted ---------------------------------------------------------------- */
-.se-done{max-width:34rem;margin:var(--sp-10) auto;padding:var(--sp-8) var(--sp-8) var(--sp-6);
+/* --- The rail ---------------------------------------------------------------- */
+.en-rail{display:flex;flex-direction:column;gap:var(--sp-6);min-width:0;overflow-y:auto;
+  padding:var(--sp-6) var(--sp-5);background:var(--surface);border-right:1px solid var(--line)}
+.en-rail-top{display:flex;flex-direction:column;gap:var(--sp-3)}
+.en-logo{height:24px;width:auto;align-self:flex-start}
+.en-rail-h{margin:var(--sp-2) 0 0;font-size:var(--t-h1);font-weight:var(--w-bold);letter-spacing:-.02em;
+  line-height:1.25;color:var(--ink)}
+.en-rail-s{margin:0;font-size:var(--t-sm);line-height:1.55;color:var(--mut)}
+
+.en-rail-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.en-rail-step{display:flex;align-items:flex-start;gap:11px;padding:10px;border-radius:var(--r);position:relative}
+.en-rail-step:not(:last-child)::before{content:"";position:absolute;left:1.4375rem;top:2.25rem;bottom:-2px;
+  width:1.5px;background:var(--line)}
+.en-rail-step[data-state="done"]:not(:last-child)::before{background:var(--ok-line)}
+.en-rail-step[data-state="active"]{background:var(--accent-bg)}
+.en-rail-n{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.625rem;height:1.625rem;
+  border-radius:50%;border:1px solid var(--line);background:var(--surface);
+  font-size:var(--t-xs);font-weight:var(--w-bold);color:var(--mut);z-index:1}
+.en-rail-step[data-state="active"] .en-rail-n{background:var(--accent-solid);border-color:var(--accent-solid);color:#fff}
+.en-rail-step[data-state="done"] .en-rail-n{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.en-rail-m{display:flex;flex-direction:column;gap:2px;min-width:0}
+.en-rail-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink-2)}
+.en-rail-step[data-state="active"] .en-rail-t{color:var(--accent-a)}
+.en-rail-b{font-size:var(--t-xs);line-height:1.45;color:var(--mut)}
+
+.en-assure{list-style:none;margin:auto 0 0;padding:var(--sp-4) 0 0;border-top:1px solid var(--hair);
+  display:flex;flex-direction:column;gap:9px}
+.en-assure li{display:flex;align-items:flex-start;gap:8px;font-size:var(--t-xs);line-height:1.45;color:var(--mut)}
+.en-assure svg{flex:none;margin-top:1px;color:var(--ok)}
+
+/* --- The form side ----------------------------------------------------------- */
+.en-main{display:flex;flex-direction:column;min-width:0;overflow-y:auto}
+.en-main-h{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:var(--sp-4) var(--sp-6)}
+.en-main-q{font-size:var(--t-xs);color:var(--mut)}
+.en-main-b{flex:1;display:flex;justify-content:center;padding:0 var(--sp-6) var(--sp-8)}
+
+.en-card{width:100%;max-width:46rem;align-self:flex-start;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--sh-md);overflow:hidden}
+.en-card-h{display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-5) var(--sp-5) 0}
+.en-card-hm{display:flex;flex-direction:column;gap:3px}
+.en-step-n{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--accent-a)}
+.en-card-t{margin:0;font-size:var(--t-display);font-weight:var(--w-bold);letter-spacing:var(--t-display-ls);color:var(--ink)}
+.en-card-s{margin:0;font-size:var(--t-sm);color:var(--mut)}
+.en-progress{height:4px;border-radius:var(--r-pill);background:var(--surface-3);overflow:hidden}
+.en-progress span{display:block;height:100%;border-radius:inherit;background:var(--accent-solid);
+  transition:width var(--dur-3) var(--ease)}
+.en-card-b{padding:var(--sp-5)}
+.en-card-f{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);
+  border-top:1px solid var(--hair);background:var(--surface-2)}
+
+/* A choice with room to say what it means, rather than a dropdown of one-word
+   options a new joiner has to guess between. */
+.en-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));gap:10px}
+.en-choice{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;text-align:left;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
+.en-choice:hover{border-color:var(--accent-line)}
+.en-choice:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
+.en-choice[data-on]{border-color:var(--accent);background:var(--accent-bg)}
+.en-choice-d{flex:none;width:1rem;height:1rem;margin-top:2px;border-radius:50%;border:2px solid var(--line-2);background:var(--surface)}
+.en-choice[data-on] .en-choice-d{border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--surface);background:var(--accent)}
+.en-choice-m{display:flex;flex-direction:column;gap:2px;min-width:0}
+.en-choice-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.en-choice-s{font-size:var(--t-xs);line-height:1.45;color:var(--mut)}
+
+.en-docs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.en-doc{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);
+  background:var(--surface-2);border:1px solid var(--hair);font-size:var(--t-sm)}
+.en-doc svg{flex:none;color:var(--faint)}
+.en-doc-n{flex:1;min-width:0;color:var(--ink-2)}
+.en-doc-s{flex:none;font-size:var(--t-xs);color:var(--mut)}
+.en-doc-x{flex:none;display:inline-flex;align-items:center;justify-content:center;width:1.375rem;height:1.375rem;
+  border-radius:50%;color:var(--mut);cursor:pointer}
+.en-doc-x:hover{background:var(--bad-bg);color:var(--bad)}
+
+.en-consents{display:flex;flex-direction:column;gap:10px}
+.en-consent{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-lg)}
+.en-consent .check{margin-top:1px;flex:none}
+.en-consent-m{display:flex;flex-direction:column;gap:2px;min-width:0}
+.en-consent-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.en-consent-s{font-size:var(--t-xs);line-height:1.5;color:var(--mut)}
+
+/* The review: what will be sent, in the order it was asked for. */
+.en-sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin:0;
+  background:var(--hair);border:1px solid var(--hair);border-radius:var(--r-lg);overflow:hidden}
+.en-sum-r{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:var(--surface);min-width:0}
+.en-sum-r dt{font-size:var(--t-xs);color:var(--mut)}
+.en-sum-r dd{margin:0;font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);overflow-wrap:anywhere}
+.en-sum-docs{display:flex;flex-wrap:wrap;gap:6px}
+
+/* --- Submitted --------------------------------------------------------------- */
+.en-done{width:100%;max-width:34rem;margin:var(--sp-8) auto;padding:var(--sp-8) var(--sp-8) var(--sp-6);
   display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);text-align:center;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
-.se-done-ic{display:inline-flex;align-items:center;justify-content:center;width:3rem;height:3rem;border-radius:50%;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--sh-md)}
+.en-done-ic{display:inline-flex;align-items:center;justify-content:center;width:3.25rem;height:3.25rem;border-radius:50%;
   background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
-.se-done-h{margin:0;font-size:var(--t-display);font-weight:var(--w-bold);letter-spacing:var(--t-display-ls);color:var(--ink)}
-.se-done-s{margin:0;font-size:var(--t-body);line-height:var(--t-body-lh);color:var(--mut)}
-.se-done-s b{color:var(--ink)}
-.se-done .btn{margin-top:var(--sp-2);width:100%;justify-content:center}
+.en-done-h{margin:0;font-size:var(--t-display);font-weight:var(--w-bold);letter-spacing:var(--t-display-ls);color:var(--ink)}
+.en-done-s{margin:0;font-size:var(--t-body);line-height:var(--t-body-lh);color:var(--mut)}
+.en-done-s b{color:var(--ink)}
+.en-done .btn{margin-top:var(--sp-2);width:100%;justify-content:center}
 
-.se-steps{list-style:none;margin:var(--sp-2) 0 0;padding:0;width:100%;display:flex;flex-direction:column;gap:12px;text-align:left}
-.se-step{display:flex;align-items:flex-start;gap:10px;position:relative}
-.se-step:not(:last-child)::before{content:"";position:absolute;left:12px;top:26px;bottom:-12px;width:1px;background:var(--line)}
-.se-step-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.5625rem;height:1.5625rem;border-radius:50%;
-  background:var(--surface-3);color:var(--mut);border:1px solid var(--line)}
-.se-step[data-state="done"] .se-step-ic{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
-.se-step-m{display:flex;flex-direction:column;gap:1px;min-width:0;padding-top:3px}
-.se-step-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
-.se-step-b{font-size:var(--t-xs);line-height:1.45;color:var(--mut)}
+.en-steps{list-style:none;margin:var(--sp-2) 0 0;padding:0;width:100%;display:flex;flex-direction:column;gap:12px;text-align:left}
+.en-step{display:flex;align-items:flex-start;gap:10px;position:relative}
+.en-step:not(:last-child)::before{content:"";position:absolute;left:12px;top:26px;bottom:-12px;width:1px;background:var(--line)}
+.en-step-ic{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.5625rem;height:1.5625rem;
+  border-radius:50%;background:var(--surface-3);color:var(--mut);border:1px solid var(--line)}
+.en-step[data-state="done"] .en-step-ic{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
+.en-step-m{display:flex;flex-direction:column;gap:1px;min-width:0;padding-top:3px}
+.en-step-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
+.en-step-b{font-size:var(--t-xs);line-height:1.45;color:var(--mut)}
 
-@media(max-width:640px){
-  .se-top-q,.se-top-sep,.se-top-t{display:none}
-  .se-done{margin:var(--sp-6) auto;padding:var(--sp-6) var(--sp-5) var(--sp-5)}
+/* --- Narrow ------------------------------------------------------------------ */
+/* The rail becomes a header: the brand, and the steps as a row of markers
+   above the card. */
+@media(max-width:940px){
+  .en-page{grid-template-columns:minmax(0,1fr);height:auto;min-height:100%}
+  .en-rail{gap:var(--sp-4);padding:var(--sp-4) var(--sp-4) var(--sp-3);
+    border-right:none;border-bottom:1px solid var(--line)}
+  .en-rail-h{font-size:var(--t-h2)}
+  .en-rail-s,.en-assure,.en-rail-b{display:none}
+  .en-rail-steps{flex-direction:row;gap:6px;overflow-x:auto;scrollbar-width:thin}
+  .en-rail-step{flex:none;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r-pill)}
+  .en-rail-step::before{display:none}
+  .en-main-h{padding:var(--sp-3) var(--sp-4) 0}
+  .en-main-b{padding:var(--sp-4)}
+}
+@media(max-width:560px){
+  .en-sum{grid-template-columns:minmax(0,1fr)}
+  .en-card-b{padding:var(--sp-4)}
+  .en-card-h{padding:var(--sp-4) var(--sp-4) 0}
+  .en-card-f{padding:var(--sp-3) var(--sp-4)}
+  .en-done{margin:var(--sp-4) auto;padding:var(--sp-6) var(--sp-5) var(--sp-5)}
 }

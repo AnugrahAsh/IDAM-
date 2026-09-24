@@ -371,15 +371,55 @@ export const TYPE_SPECS = {
     build: (v) => {
       const ent = Array.isArray(v.entitlements) ? v.entitlements : []
       const sod = ent.some((name) => { const g = groupOf(name); return Boolean(g && g.sodFlags) })
+      const username = slug(`${v.firstName}_${v.lastName}`, 'NEW_IDENTITY')
+      /* The identity being asked for, carried on the request rather than
+         summarised into one line. A request to create a person is a request
+         about that person's details: an approver has to read them, and may
+         correct them, so they travel with it and are editable like any other
+         requested change. */
+      const attrs = [
+        { id: 'firstName', field: 'First name', to: v.firstName },
+        { id: 'lastName', field: 'Last name', to: v.lastName },
+        { id: 'email', field: 'Email', to: v.email },
+        { id: 'mobileNo', field: 'Mobile no', to: v.mobileNo },
+        { id: 'employeeType', field: 'Employee type', to: v.employeeType, options: LOOKUPS.employee_type },
+        { id: 'organization', field: 'Organization', to: v.organization, options: ORGS },
+        { id: 'department', field: 'Department', to: v.department, options: DEPARTMENTS },
+        { id: 'designation', field: 'Designation', to: v.designation },
+        { id: 'officeLevel', field: 'Office level', to: v.officeLevel, options: LOOKUPS.office_level },
+        { id: 'manager', field: 'Manager', to: v.manager, options: MANAGER_OPTIONS },
+        { id: 'startDate', field: 'Start date', to: v.startDate },
+        { id: 'endDate', field: 'Contract end date', to: v.endDate },
+        { id: 'costCenter', field: 'Cost center', to: v.costCenter },
+      ].filter((a) => String(a.to || '').trim())
       return {
-        username: slug(`${v.firstName}_${v.lastName}`, 'NEW_IDENTITY'),
+        username,
         userId: null,
         target: ent[0] || 'NEW_IDENTITY',
         risk: sod || v.employeeType === 'Service Account' ? 'high' : ent.length > 0 || v.employeeType !== 'Internal' ? 'medium' : 'low',
         sodConflict: sod,
         detail: `${v.employeeType || 'Internal'} · ${v.organization || 'Tanflow'} · ${v.department || 'Unassigned'}${v.startDate ? ` · starts ${v.startDate}` : ''}${ent.length ? ` · ${ent.length} requested entitlement${ent.length === 1 ? '' : 's'}` : ''}`,
         entitlements: ent,
-        changes: ent.map((name) => ({ id: `ent-${name}`, field: 'Group membership', from: 'Not held', to: name, kind: 'add' })),
+        profile: {
+          username,
+          firstName: v.firstName || '',
+          lastName: v.lastName || '',
+          email: v.email || '',
+          mobileNo: v.mobileNo || '',
+          employeeType: v.employeeType || '',
+          organization: v.organization || '',
+          department: v.department || '',
+          designation: v.designation || '',
+          officeLevel: v.officeLevel || '',
+          manager: v.manager || '',
+          startDate: v.startDate || '',
+          endDate: v.endDate || '',
+          costCenter: v.costCenter || '',
+        },
+        changes: [
+          ...attrs.map((a) => ({ id: a.id, field: a.field, from: 'New identity', to: a.to, kind: 'add', options: a.options || null })),
+          ...ent.map((name) => ({ id: `ent-${name}`, field: 'Group membership', from: 'Not held', to: name, kind: 'add' })),
+        ],
       }
     },
   },

@@ -1,3 +1,4 @@
 node_modules/
 dist-idam/
+dist-vercel/
 .DS_Store

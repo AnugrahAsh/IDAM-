@@ -19,6 +19,8 @@ import Select from '../../components/primitives/Select'
 import SearchSelect from '../../components/primitives/SearchSelect'
 import Check from '../../components/primitives/Check'
 import { openResetPassword } from './ResetPasswordForm'
+import UserConsentPanel from '../consentManagement/UserConsentPanel'
+import { consentsFor } from '../consentManagement/userConsentData'
 import { useApp } from '../../store/AppContext'
 import { num, statusTone } from '../../lib/format'
 import { APPLICATIONS, GROUPS, SSO_APPS } from '../../data/seed'
@@ -124,6 +126,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
   const [actF, setActF] = useState({ q: '', outcome: 'All outcomes' })
 
   const entitlements = useMemo(() => [...entitlementsFor(user), ...addedGrants], [user, addedGrants])
+  const consents = useMemo(() => consentsFor(user.username), [user.username])
   const provisioned = useMemo(
     () => [...provisionedFor(user), ...addedAccounts].filter((p) => !revoked.has(p.id)),
     [user, addedAccounts, revoked],
@@ -418,6 +421,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
     { id: 'apps', label: 'Applications', icon: 'apps', count: reachable.length },
     { id: 'activity', label: 'Activity', icon: 'activity', count: events.length },
     { id: 'credentials', label: 'Security', icon: 'shield', count: factors.length + devices.length + liveSessions.length },
+    { id: 'consent', label: 'Consent', icon: 'consent', count: consents.length },
     { id: 'audit', label: 'Audit', icon: 'history' },
   ]
 
@@ -1093,6 +1097,18 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
                 )}
               </Card>
             </div>
+          </div>
+        )}
+
+        {/* Consent given on someone's behalf is not consent, so this side of
+            the panel reads the record and asks again — it never answers. */}
+        {tab === 'consent' && (
+          <div className="stack">
+            <Banner tone="info">
+              What {user.username} has been asked to consent to, and the answer held for each notice. Consent is given
+              and withdrawn by the person themselves, from their own profile.
+            </Banner>
+            <UserConsentPanel username={user.username} />
           </div>
         )}
 

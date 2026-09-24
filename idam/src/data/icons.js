@@ -1,6 +1,5 @@
 export const ICONS = {
   dashboard: '<path d="M3 13h7V3H3zM14 21h7V11h-7zM14 7h7V3h-7zM3 21h7v-4H3z"/>',
-  textSize: '<path d="m3 16 4.5-9 4.5 9"/><path d="M4.5 13h6"/><path d="M16 16v-3.5a2.5 2.5 0 0 1 5 0V16"/><path d="M21 14h-5"/>',
   inbox: '<path d="M3 12h5l1.5 3h5L16 12h5"/><path d="M4.5 5.5h15l1.5 6.5v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Z"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',

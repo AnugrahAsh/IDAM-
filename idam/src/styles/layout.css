@@ -26,6 +26,21 @@
 
 .canvas{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;background:var(--bg);scroll-behavior:smooth}
 .canvas-inner{max-width:1920px;padding:0 var(--canvas-px) var(--sp-10)}
+/* A register takes the height left under the page bar and scrolls its rows
+   inside that, rather than growing with the row count and taking the page with
+   it. The page bar, the toolbar, the column header and the pager then stay
+   where they are however many rows are on screen. Scoped with :has() to a
+   workbench the page places directly on the canvas, so a page that reads as a
+   document — a dashboard, a record, a form — is untouched. */
+.canvas-inner:has(> .wb){display:flex;flex-direction:column;height:100%;min-height:0;padding-bottom:var(--sp-4)}
+.canvas-inner:has(> .wb) > .wb{flex:1;min-height:14rem}
+/* Filling the canvas is not worth four visible rows: under a tall page header
+   the rows keep this much height and the page scrolls the header away instead,
+   which is the one thing left that can give. */
+.canvas-inner:has(> .wb) .wb-scroll{min-height:16rem}
+/* Filling the canvas replaces the share-of-window cap the panel falls back to
+   when it is nested somewhere this rule cannot reach. */
+.canvas-inner:has(> .wb) .wb-scroll[data-bounded]{max-height:none}
 /* A sticky bar only pins while content overflows; on a short page it would sit
    directly under the content. Making the scroll body a full-height flex column
    and pushing the bar with margin-top:auto keeps it on the bottom edge either
@@ -174,7 +189,6 @@
   .detail-top{flex-wrap:wrap;gap:var(--sp-3)}
   .detail-meta{flex:1 1 200px}
   .detail-actions{flex:1 0 100%;justify-content:flex-start;padding-top:2px}
-  .detail-title{font-size:1.1875rem}
 }
 
 .detail-body{padding-top:var(--sp-4)}

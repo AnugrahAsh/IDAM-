@@ -1,0 +1,19 @@
+/* Styles owned by the User information panel. Imported by the panel itself:
+   the requester's tracking view and the approver's record both show it, and
+   neither loads the other's page styles. */
+
+.ui-groups{display:flex;flex-direction:column;gap:var(--sp-4)}
+.ui-group{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ui-group-h{display:inline-flex;align-items:center;gap:6px;
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--faint)}
+.ui-group-h svg{color:var(--faint)}
+.ui-group + .ui-group{padding-top:var(--sp-4);border-top:1px solid var(--hair)}
+
+/* A value the request changes reads as the change: what it was, what it
+   becomes, and whether an approver is the one who made it so. */
+.ui-val{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.ui-val svg{color:var(--faint);flex:none}
+.ui-from{color:var(--mut);text-decoration:line-through;text-decoration-thickness:1px}
+.ui-to{color:var(--ink);font-weight:var(--w-semi);overflow-wrap:anywhere}
+.ui-val .tag{flex:none}
