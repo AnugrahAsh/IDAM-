@@ -9,7 +9,7 @@ import DottedGlobe from './DottedGlobe'
 import WaveField from './WaveField'
 import {
   DEMO_LAST4, DEMO_OTP, EXPIRY_DAYS, LOCK_SECONDS, MAX_ATTEMPTS, METHODS, OTP_LENGTH,
-  RESEND_SECONDS, RULES, SCORE_LABEL, SCORE_TONE, VERIFY_METHODS, maskEmail, passwordScore,
+  RESEND_SECONDS, RULES, SCORE_LABEL, SCORE_TONE, VERIFY_METHODS, maskEmail, maskMobile, passwordScore,
 } from './authModel'
 import { probeDeviceAgent } from './deviceAgent'
 import { useApp } from '../../store/AppContext'
@@ -36,6 +36,7 @@ export default function LoginPage() {
   const [touched, setTouched] = useState(false)
   const [otp, setOtp] = useState('')
   const [otpErr, setOtpErr] = useState('')
+  const [sendErr, setSendErr] = useState('')
   const [channel, setChannel] = useState('email')
   const [last4, setLast4] = useState('')
   const [next, setNext] = useState('')
@@ -79,6 +80,7 @@ export default function LoginPage() {
   const startOtpSignIn = (e) => {
     if (e) e.preventDefault()
     setTouched(true)
+    setSendErr('')
     const id = username.trim()
     if (!id || (!looksLikeEmail(id) && !looksLikeMobile(id))) return
     const sms = !looksLikeEmail(id)
@@ -87,12 +89,13 @@ export default function LoginPage() {
     setBusy(true)
     setTimeout(() => {
       setBusy(false)
+      if (/^offline/i.test(id)) { setSendErr('We could not process your request. Please try again later.'); return }
       setResendLeft(RESEND_SECONDS)
       go('otp')
     }, 320)
   }
 
-  const userErr = touched && !username.trim() ? 'Enter your username.' : ''
+  const userErr = touched && !username.trim() ? 'Enter your username or email address.' : ''
   const idErr = touched && passwordless
     ? (!username.trim()
       ? 'Enter your mobile number or email address.'
@@ -144,7 +147,7 @@ export default function LoginPage() {
   const verifyOtp = (value) => {
     const code = typeof value === 'string' ? value : otp
     if (code.length !== OTP_LENGTH) { setOtpErr(`Enter the ${OTP_LENGTH}-digit code.`); return }
-    if (code !== DEMO_OTP) { setOtpErr('That code is not valid or has expired.'); return }
+    if (code !== DEMO_OTP) { setOtpErr('Incorrect OTP. Please try again.'); return }
     if (step === 'reset-otp') { go('reset'); return }
     toast('ok', 'Signed in', `Welcome back, ${username.trim() || ME.username}.`)
     signIn()
@@ -155,9 +158,9 @@ export default function LoginPage() {
     go('done')
   }
 
-  const otpTarget = channel === 'sms'
-    ? 'Enter the 6-digit code sent to your mobile number'
-    : 'Enter the 6-digit code sent to your email address'
+  // The card's own line, so the method chosen is read before the fields are.
+  const credsSub = passwordless ? 'Sign in with a one-time password.' : 'Please sign in to your account.'
+  const otpSentTo = channel === 'sms' ? maskMobile(last4) : maskEmail(username)
 
   /* One click into the console. The account is already provisioned on this
      tenant, so there is nothing to collect — the card is the credential. */
@@ -177,7 +180,7 @@ export default function LoginPage() {
           <header className="lg-card-h">
             <span className="lg-eyebrow">Console access</span>
             <h1 className="lg-h">Welcome</h1>
-            <p className="lg-sub">Continue as the administrator of this tenant.</p>
+            <p className="lg-sub">{credentials ? credsSub : 'Continue as the administrator of this tenant.'}</p>
           </header>
 
           <button type="button" className="lg-quick" onClick={quickSignIn} disabled={busy}>
@@ -238,6 +241,7 @@ export default function LoginPage() {
 
           {passwordless ? (
             <>
+              {sendErr && <Banner tone="bad">{sendErr}</Banner>}
               <Field
                 label="Mobile number or email"
                 required
@@ -280,11 +284,11 @@ export default function LoginPage() {
             </>
           ) : (
             <>
-              <Field label="Username" required error={userErr} htmlFor="lg-user">
+              <Field label="Username or email" required error={userErr} htmlFor="lg-user">
                 <TextInput
                   id="lg-user"
                   autoComplete="username"
-                  placeholder="Enter your username"
+                  placeholder="Enter your email or username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -334,7 +338,7 @@ export default function LoginPage() {
               )}
 
               <Button type="submit" variant="pri" size="lg" className="lg-submit" disabled={busy || lockLeft > 0} onClick={submit}>
-                {lockLeft > 0 ? `Locked · ${lockLeft}s` : busy ? 'Signing in…' : 'Login'}
+                {lockLeft > 0 ? `Locked · ${lockLeft}s` : busy ? 'Signing in…' : 'Sign in'}
               </Button>
             </>
           )}
@@ -386,11 +390,11 @@ export default function LoginPage() {
         <form className="lg-card" onSubmit={(e) => { e.preventDefault(); verifyOtp() }} noValidate>
           <header className="lg-card-h">
             <span className="lg-eyebrow">{passwordless && step === 'otp' ? 'One-time password' : 'Step 2 of 2'}</span>
-            <h1 className="lg-h">{passwordless && step === 'otp' ? 'Verify it is you' : 'OTP verification'}</h1>
-            <p className="lg-sub">{otpTarget}</p>
+            <h1 className="lg-h">{passwordless && step === 'otp' ? 'Verify OTP' : 'OTP verification'}</h1>
+            <p className="lg-sub">We sent a code to {otpSentTo}</p>
           </header>
 
-          <Field label="One-time code" required error={otpErr} htmlFor="lg-otp">
+          <Field label="One-time password" required error={otpErr} htmlFor="lg-otp">
             <TextInput
               id="lg-otp"
               className="lg-otp mono"
@@ -409,7 +413,7 @@ export default function LoginPage() {
 
           <div className="lg-hintline">
             <Icon name="info" size={12} />
-            <span>Sent to {channel === 'sms' ? `••• ••• ${last4 || DEMO_LAST4}` : maskEmail(username)}. Demo code {DEMO_OTP}.</span>
+            <span>Demo code {DEMO_OTP}.</span>
           </div>
 
           <Button type="submit" variant="pri" size="lg" className="lg-submit" onClick={verifyOtp}>Verify</Button>

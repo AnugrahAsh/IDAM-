@@ -22,6 +22,11 @@ export const OTP_LENGTH = 6
 export const DEMO_OTP = '481902'
 export const DEMO_LAST4 = '4417'
 
+/* A code goes to a number the account holds, and the card has to name it
+   without printing it: the country code, the last four digits, and nothing in
+   between. */
+export const maskMobile = (last4) => `+91XXXXX${last4 || DEMO_LAST4}`
+
 export const maskEmail = (user) => {
   const name = String(user || 'user').toLowerCase().replace(/[^a-z0-9._-]/g, '')
   const head = name.slice(0, 2)

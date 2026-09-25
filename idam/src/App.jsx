@@ -124,6 +124,12 @@ function PageFallback() {
 let demoSessionStarted = false
 let demoSessionLive = false
 
+/* Opening the packet at the sign-in page is a request to see the sign-in page:
+   it is where the password, one-time password, SAML and OAuth methods are, and
+   a link to it has to land on it. Read once, from the address the packet was
+   opened at, so Log Out and the navigation that follows are unaffected. */
+const openedAtSignIn = ['/iam/login', '/iam/login/'].includes(window.location.pathname)
+
 export default function App() {
   const { route, segments, navMin, navOpen, setNavOpen, drawer, setDrawer, modal, setModal,
     closeOverlays, paletteOpen, setPaletteOpen, can, role, navigate,
@@ -153,7 +159,8 @@ export default function App() {
      tick fires rather than when it is scheduled, so a cancelled tick is
      rescheduled instead of counting as the session. */
   useEffect(() => {
-    if (demoSessionStarted || isRecertifyLinkPath(window.location.pathname) || isPublicRoute(route)) return undefined
+    if (demoSessionStarted || openedAtSignIn) return undefined
+    if (isRecertifyLinkPath(window.location.pathname) || isPublicRoute(route)) return undefined
     if (signedIn && route !== 'login') { demoSessionStarted = true; return undefined }
     const t = setTimeout(() => { demoSessionStarted = true; signIn() }, 0)
     return () => clearTimeout(t)
@@ -209,7 +216,7 @@ export default function App() {
   /* The gate. Not merely "the login route is showing": a session that has not
      signed in cannot render the console whatever the address bar says. */
   if (!signedIn || route === 'login') {
-    if (!demoSessionLive) return <Toasts />
+    if (!demoSessionLive && !openedAtSignIn) return <Toasts />
     return (
       <>
         <LoginPage />

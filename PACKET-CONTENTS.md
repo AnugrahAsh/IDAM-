@@ -12,7 +12,14 @@ Dashboard is the first item in the Core section. Identity Threat Detection is in
 
 The Recertification page's public email review link is included. Existing page routes, aliases, and legacy redirects remain in the console navigation. Routes for pages outside this packet render the console's “Screen in progress” placeholder.
 
-The sign-in page and the Self-Enrollment page it opens are now included. Opening the packet still starts a demo session, so it lands in the console rather than on the sign-in form, and a deep link is carried through. **Log Out** ends that session and returns to the sign-in page, where the administrator card signs back in with one click. The demo session starts once per page load, so reloading enters the console again. `/iam/selfEnrollment` is public: it opens on its own, without a session.
+The sign-in page and the Self-Enrollment page it opens are now included. Opening the packet starts a demo session, so it lands in the console rather than on the sign-in form, and a deep link is carried through. **Log Out** ends that session and returns to the sign-in page, where the administrator card signs back in with one click. The demo session starts once per page load, so reloading enters the console again.
+
+Two addresses open on their own, without a session:
+
+| Address | Opens |
+|---|---|
+| `/iam/login` | the sign-in page. **Sign in with credentials** opens the method picker — **Password**, **Phone / Email OTP**, **SAML**, **OAuth** |
+| `/iam/selfEnrollment` | the four-step enrollment |
 
 ## Updates to included screens
 
