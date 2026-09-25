@@ -18,7 +18,7 @@ The sign-in page and the Self-Enrollment page it opens are now included. Opening
 
 - **Toast notifications** appear in the top-right corner, below the header.
 - **Text and controls** follow the browser's own font-size setting, and layouts reflow at every screen width and scaling level without CSS zoom.
-- **Reports** open from a library with a category rail, pinned and recently viewed reports, search, and three layouts — cards, table and list. A **download** reports its own progress and then names the file it wrote.
+- **Reports** open from a library: headline figures, then the category filters across the top of the page, pinned and recently viewed reports, search, and three layouts — cards, table and list. Each report card shows what is actually in that report — the split of the column it is read by, such as delivered against failed, the clients a sign-in came through or the severities in an audit trail — beside the records it holds, the window it covers and a count of anything that failed. A **download** reports its own progress and then names the file it wrote.
 - **Connector logos** appear in the connector catalogue of the Applications registration wizard (Connector step) and the Trust Reconciliation source form.
 - **Registers** fill the canvas and scroll their own rows: the page bar, the toolbar, the column header and the pager stay where they are however many rows are shown, and a wide table scrolls sideways inside its own panel.
 - **Type sizes** are fixed. They follow the browser's own font-size setting, never the width of the window.

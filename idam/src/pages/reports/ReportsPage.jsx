@@ -22,12 +22,12 @@ import {
 } from './reportFilters'
 import { exportRows } from './exportCsv'
 import StatCards from '../../components/workbench/StatCards'
-import { Sparkline } from '../../components/viz/Charts'
 import { useLocalState } from '../../lib/useLocalState'
 import { useDownload } from '../../lib/useDownload'
 import {
-  CATALOG_OLDEST, PIN_KEY, activity, exportsFor, freshness, monthLabel, recordExport, totalExports,
+  CATALOG_OLDEST, PIN_KEY, exportsFor, freshness, monthLabel, recordExport, spanLabel, totalExports,
 } from './catalogMeta'
+import { composition } from './catalogSignal'
 
 const PRESETS = [
   { id: '7', label: 'Last 7 days', days: 7 },
@@ -62,7 +62,6 @@ const CATEGORY_TONE = {
   'Credentials & Notifications': 'warn',
   'Audit & Compliance': 'ok',
 }
-const TONE_SERIES = { acc: 'var(--s1)', ok: 'var(--s2)', warn: 'var(--s3)', bad: 'var(--s6)', viol: 'var(--s5)' }
 
 const RAIL = [
   { id: 'all', label: 'All reports', icon: 'report' },
@@ -86,6 +85,47 @@ const updatedLabel = (label) => (label === 'No timestamps' ? label : `Updated ${
 export const RECENT_KEY = 'tf-idam-reports-recent'
 export const RECENT_LIMIT = 6
 
+/* The composition of a report, drawn from its own rows.
+ *
+ * Segments are ordered by size and widths are percentages of the report's
+ * record count, so two reports of very different sizes are still comparable by
+ * shape. The bar carries the whole reading as its label, and each segment its
+ * own count, so nothing here depends on colour alone. */
+function SignalBar({ comp, size = 'md' }) {
+  if (!comp) return null
+  const reading = `${comp.label}: ${comp.parts.map((p) => `${p.label} ${p.n}`).join(', ')}`
+  return (
+    <span className="rep-sig" data-size={size}>
+      <span className="rep-sig-bar" role="img" aria-label={reading}>
+        {comp.parts.map((p) => (
+          <span
+            key={p.label}
+            className="rep-sig-seg"
+            style={{ width: `${p.pct}%`, '--seg': p.color }}
+            title={`${p.label} — ${num(p.n)} of ${num(comp.total)} (${Math.round(p.pct)}%)${p.title ? ` · ${p.title}` : ''}`}
+          />
+        ))}
+      </span>
+      {/* Every segment the bar draws is named. A legend that stopped at three
+          and called the fourth "other" was naming a value already on screen. */}
+      {size === 'md' && (
+        <span className="rep-sig-key">
+          {comp.parts.map((p) => (
+            <span className="rep-sig-k" key={p.label} data-rest={p.rest || undefined}>
+              <i style={{ '--seg': p.color }} />
+              <span className="trunc">{p.label}</span>
+              <b className="num">{num(p.n)}</b>
+            </span>
+          ))}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/* One line for a dense row: the segment that dominates the report. */
+const topLabel = (comp) => (comp ? `${comp.parts[0].label} ${Math.round(comp.parts[0].pct)}%` : '—')
+
 function ReportCatalog({ onOpen }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
@@ -96,7 +136,15 @@ function ReportCatalog({ onOpen }) {
   // Every catalog figure is read from the reports themselves on render.
   const meta = useMemo(() => REPORTS.map((r) => {
     const rows = r.rows()
-    return { report: r, count: rows.length, ...freshness(rows), exports: exportsFor(r.id), trend: activity(rows) }
+    const fresh = freshness(rows)
+    return {
+      report: r,
+      count: rows.length,
+      ...fresh,
+      span: spanLabel(fresh.oldest, fresh.newest),
+      exports: exportsFor(r.id),
+      comp: composition(r, rows),
+    }
   }), [])
 
   const totals = useMemo(() => {
@@ -128,16 +176,15 @@ function ReportCatalog({ onOpen }) {
   const groups = cat === 'all'
     ? CATEGORIES.map((c) => ({ ...c, items: shown.filter((m) => m.report.category === c.id) })).filter((g) => g.items.length)
     : [{ id: cat, items: shown }]
-  // The shelf repeats pinned reports above the sections so they are one click
-  // away — only while the whole catalog is on screen and not being searched.
+  /* Pins are deliberate and recents are not, but both are ways back to a report
+     already known — so they share one strip above the catalog instead of
+     stacking two full-width shelves in front of it. */
   const shelf = cat === 'all' && !needle ? meta.filter((m) => pins.includes(m.report.id)) : []
-  /* The reports this browser opened last, newest first — the other half of
-     "take me back to the one I was looking at", beside the pins someone chose
-     deliberately. */
   const recentStrip = cat === 'all' && !needle
     ? recent.map((id) => meta.find((m) => m.report.id === id)).filter(Boolean).slice(0, RECENT_LIMIT)
     : []
 
+  // What the catalog holds about itself, above the catalog itself.
   const cards = [
     {
       key: 'catalog', icon: 'report', label: 'Reports in catalog', value: REPORTS.length,
@@ -150,16 +197,12 @@ function ReportCatalog({ onOpen }) {
     {
       key: 'audit', icon: 'logs', label: 'Audit trail entries', value: totals.audit,
       chip: freshness(REPORTS.filter((r) => r.category === 'Audit & Compliance').flatMap((r) => r.rows())).label,
-      sub: 'administrative activity',
+      sub: `retained since ${monthLabel(CATALOG_OLDEST)}`,
     },
     {
       key: 'exports', icon: 'download', label: 'Exports (30d)', value: totals.exports,
       chip: totals.exports ? 'this browser' : 'none yet',
       sub: 'CSV downloads taken',
-    },
-    {
-      key: 'trail', icon: 'lock', label: 'Trail begins', value: monthLabel(CATALOG_OLDEST),
-      chip: 'retained', sub: 'oldest record still held',
     },
   ]
 
@@ -175,6 +218,13 @@ function ReportCatalog({ onOpen }) {
       onKeyDown={(e) => e.stopPropagation()}
     >
       <Icon name="star" size={size} />
+    </button>
+  )
+
+  const quickItem = (m) => (
+    <button key={m.report.id} type="button" className="rep-quick-it" onClick={() => onOpen(m.report.id)}>
+      <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
+      <span className="trunc">{m.report.name}</span>
     </button>
   )
 
@@ -195,22 +245,30 @@ function ReportCatalog({ onOpen }) {
           <span className="feed-ic" data-tone={r.tone}><Icon name={r.icon} size={15} /></span>
           <span className="rep-card-id">
             <span className="rep-card-name">{r.name}</span>
-            <span className="rep-card-cat">{r.category}</span>
+            <span className="rep-card-line">
+              <b className="num">{num(m.count)}</b> records
+              {m.span && <><span className="rep-dot" />{m.span}</>}
+            </span>
           </span>
           {pinButton(r, isPinned)}
         </header>
 
         <p className="rep-card-desc">{r.description}</p>
 
-        <div className="rep-card-stats">
-          <span className="rep-card-count">
-            <b className="num">{num(m.count)}</b>
-            <span>records</span>
-          </span>
-          <span className="rep-card-spark" title="Records per day, last 14 days">
-            <Sparkline data={m.trend} w={104} h={28} color={TONE_SERIES[r.tone] || 'var(--s1)'} />
-          </span>
-        </div>
+        {m.comp && (
+          <div className="rep-card-sig">
+            <span className="rep-sig-h">
+              <span className="rep-sig-t">{m.comp.label}</span>
+              {/* The one figure worth having before the report is opened:
+                  how much of it did not go cleanly. A column that carries no
+                  verdict — a client, an operation — says nothing here. */}
+              {m.comp.flag && (
+                <span className="rep-sig-flag"><Icon name="warn" size={11} />{num(m.comp.flag.n)} {m.comp.flag.label}</span>
+              )}
+            </span>
+            <SignalBar comp={m.comp} />
+          </div>
+        )}
 
         <footer className="rep-card-foot">
           <span className="rep-card-when"><Icon name="clock" size={12} />{updatedLabel(m.label)}</span>
@@ -244,8 +302,9 @@ function ReportCatalog({ onOpen }) {
           <span className="rep-row-desc trunc">{r.description}</span>
         </span>
         {cat !== 'all' && <span className="rep-row-cat">{r.category}</span>}
-        <span className="rep-row-spark" aria-hidden="true">
-          <Sparkline data={m.trend} w={76} h={22} color={TONE_SERIES[r.tone] || 'var(--s1)'} fill={false} />
+        <span className="rep-row-sig">
+          <SignalBar comp={m.comp} size="sm" />
+          <span className="rep-row-top trunc">{topLabel(m.comp)}</span>
         </span>
         <span className="rep-row-n num">{num(m.count)}</span>
         <span className="rep-row-when">{m.label}</span>
@@ -265,183 +324,165 @@ function ReportCatalog({ onOpen }) {
 
       <StatCards items={cards} label="Report catalog summary" />
 
-      <div className="rep-shell">
-        <nav className="rep-rail" aria-label="Report categories">
-          <div className="rep-rail-h">
-            <span className="rep-rail-mark"><Icon name="report" size={16} /></span>
-            <span className="rep-rail-hm">
-              <span className="rep-rail-t">Report library</span>
-              <span className="rep-rail-s">{REPORTS.length} reports · {CATEGORIES.length} categories</span>
-            </span>
+      {/* The catalog is filtered from the top of the page rather than from a
+          rail down its left: the reports then have the full width of the
+          canvas, and the category in force is read on the way in. */}
+      <nav className="rep-filters" aria-label="Report categories">
+        {RAIL.map((it, i) => (
+          <Fragment key={it.id}>
+            {i === 2 && <span className="rep-filters-sep" aria-hidden="true" />}
+            <button
+              type="button"
+              className="rep-filter"
+              data-on={cat === it.id || undefined}
+              data-tone={CATEGORY_TONE[it.id]}
+              aria-pressed={cat === it.id}
+              title={it.blurb}
+              onClick={() => setCat(it.id)}
+            >
+              <Icon name={it.icon} size={14} />
+              <span className="trunc">{it.label}</span>
+              <span className="rep-filter-n num">{countOf(it.id)}</span>
+            </button>
+          </Fragment>
+        ))}
+      </nav>
+
+      <section className="rep-main" aria-label={scope.title}>
+        <header className="rep-main-h">
+          <div className="rep-main-t">
+            <h2>{scope.title}<span className="rep-main-n num">{shown.length}</span></h2>
+            <p>{scope.blurb}</p>
           </div>
-
-          <div className="rep-rail-list">
-            {RAIL.map((it, i) => (
-              <Fragment key={it.id}>
-                {i === 2 && <div className="rep-rail-k">Categories</div>}
-                <button
-                  type="button"
-                  className="rep-rail-it"
-                  data-on={cat === it.id || undefined}
-                  data-tone={CATEGORY_TONE[it.id]}
-                  aria-pressed={cat === it.id}
-                  title={it.blurb}
-                  onClick={() => setCat(it.id)}
-                >
-                  <Icon name={it.icon} size={14} />
-                  <span className="trunc">{it.label}</span>
-                  <span className="rep-rail-n num">{countOf(it.id)}</span>
-                </button>
-              </Fragment>
-            ))}
-          </div>
-
-          <div className="rep-rail-note">
-            <Icon name="info" size={13} />
-            <span>Every report reads live console data. An export writes exactly the rows on screen.</span>
-          </div>
-        </nav>
-
-        <section className="rep-main" aria-label={scope.title}>
-          <header className="rep-main-h">
-            <div className="rep-main-t">
-              <h2>{scope.title}<span className="rep-main-n num">{shown.length}</span></h2>
-              <p>{scope.blurb}</p>
-            </div>
-            <div className="rep-main-tools">
-              <div className="wb-search rep-search">
-                <Icon name="search" size={14} />
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Search reports…"
-                  aria-label="Search reports"
-                />
-              </div>
-              <div className="seg" role="group" aria-label="Catalog layout">
-                {CATALOG_VIEWS.map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    data-on={layout === v.id || undefined}
-                    aria-pressed={layout === v.id}
-                    title={v.label}
-                    onClick={() => setLayout(v.id)}
-                  >
-                    <Icon name={v.icon} size={13} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </header>
-
-          {shelf.length > 0 && (
-            <div className="rep-shelf" aria-label="Pinned reports">
-              <span className="rep-shelf-k"><Icon name="star" size={12} />Pinned</span>
-              {shelf.map((m) => (
-                <button key={m.report.id} type="button" className="rep-shelf-it" onClick={() => onOpen(m.report.id)}>
-                  <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
-                  <span className="trunc">{m.report.name}</span>
-                  <span className="num t-mut">{num(m.count)}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {recentStrip.length > 0 && (
-            <div className="rep-shelf rep-shelf-recent" aria-label="Recently viewed reports">
-              <span className="rep-shelf-k"><Icon name="history" size={12} />Recently viewed</span>
-              {recentStrip.map((m) => (
-                <button key={m.report.id} type="button" className="rep-shelf-it" onClick={() => onOpen(m.report.id)}>
-                  <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
-                  <span className="trunc">{m.report.name}</span>
-                  <span className="num t-mut">{num(m.count)}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="rep-body">
-            {shown.length === 0 ? (
-              <EmptyState
-                icon={cat === 'pinned' && !needle ? 'star' : 'report'}
-                title={cat === 'pinned' && !needle ? 'Nothing pinned yet' : 'No report matches'}
-                body={cat === 'pinned' && !needle
-                  ? 'Pin a report with the star on its card and it is kept here, and on a shelf above the whole catalog.'
-                  : 'Clear the search or choose another category to see the rest of the catalog.'}
-                actions={needle ? <Button onClick={() => setQ('')}>Clear search</Button> : null}
+          <div className="rep-main-tools">
+            <div className="wb-search rep-search">
+              <Icon name="search" size={14} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search reports…"
+                aria-label="Search reports"
               />
-            ) : groups.map((g) => (
-              <section className="rep-group" key={g.id}>
-                {cat === 'all' && (
-                  <div className="rep-group-h">
-                    <span className="rep-group-ic" data-tone={CATEGORY_TONE[g.id]}><Icon name={g.icon} size={13} /></span>
-                    <h3 className="rep-group-t">{g.id}</h3>
-                    <span className="rep-group-n num">{g.items.length}</span>
-                    <span className="rep-group-b">{g.blurb}</span>
-                  </div>
-                )}
-                {layout === 'table' ? (
-                  <div className="rep-tbl-wrap">
-                  <table className="tbl rep-tbl">
-                    <thead>
-                      <tr>
-                        <th>Report</th>
-                        <th style={{ width: '9rem' }}>Category</th>
-                        <th className="td-num" style={{ width: '6.5rem' }}>Records</th>
-                        <th style={{ width: '7rem' }}>14 days</th>
-                        <th style={{ width: '7rem' }}>Updated</th>
-                        <th className="td-num" style={{ width: '5rem' }}>Exports</th>
-                        <th style={{ width: '3rem' }} />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {g.items.map((m) => (
-                        <tr
-                          key={m.report.id}
-                          className="rep-tr"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Open ${m.report.name}`}
-                          onClick={() => onOpen(m.report.id)}
-                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(m.report.id))}
-                        >
-                          <td className="td-main">
-                            <span className="cell-id">
-                              <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
-                              <span className="trunc">
-                                <span style={{ display: 'block' }}>{m.report.name}</span>
-                                <span className="cell-sub trunc">{m.report.description}</span>
-                              </span>
-                            </span>
-                          </td>
-                          <td>{m.report.category}</td>
-                          <td className="td-num">{num(m.count)}</td>
-                          <td>
-                            <Sparkline data={m.trend} w={76} h={22} color={TONE_SERIES[m.report.tone] || 'var(--s1)'} fill={false} />
-                          </td>
-                          <td className="t-xs t-mut">{updatedLabel(m.label)}</td>
-                          <td className="td-num">{m.exports || '—'}</td>
-                          <td>{pinButton(m.report, pins.includes(m.report.id), 13)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </div>
-                ) : layout === 'grid'
-                  ? <div className="rep-grid">{g.items.map(reportCard)}</div>
-                  : <div className="rep-list">{g.items.map(reportRow)}</div>}
-              </section>
-            ))}
+            </div>
+            <div className="seg" role="group" aria-label="Catalog layout">
+              {CATALOG_VIEWS.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  data-on={layout === v.id || undefined}
+                  aria-pressed={layout === v.id}
+                  title={v.label}
+                  onClick={() => setLayout(v.id)}
+                >
+                  <Icon name={v.icon} size={13} />
+                </button>
+              ))}
+            </div>
           </div>
+        </header>
 
-          <footer className="rep-main-f">
-            <span><b className="num">{shown.length}</b> of {REPORTS.length} reports</span>
-            <span className="spacer" />
-            <span className="t-faint">Data through {niceDate(TODAY)}</span>
-          </footer>
-        </section>
-      </div>
+        {(shelf.length > 0 || recentStrip.length > 0) && (
+          <div className="rep-quick">
+            {shelf.length > 0 && (
+              <div className="rep-quick-g" aria-label="Pinned reports">
+                <span className="rep-quick-k"><Icon name="star" size={11} />Pinned</span>
+                {shelf.map(quickItem)}
+              </div>
+            )}
+            {recentStrip.length > 0 && (
+              <div className="rep-quick-g" data-recent="" aria-label="Recently viewed reports">
+                <span className="rep-quick-k"><Icon name="history" size={11} />Recent</span>
+                {recentStrip.map(quickItem)}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="rep-body">
+          {shown.length === 0 ? (
+            <EmptyState
+              icon={cat === 'pinned' && !needle ? 'star' : 'report'}
+              title={cat === 'pinned' && !needle ? 'Nothing pinned yet' : 'No report matches'}
+              body={cat === 'pinned' && !needle
+                ? 'Pin a report with the star on its card and it is kept here, and on a shelf above the whole catalog.'
+                : 'Clear the search or choose another category to see the rest of the catalog.'}
+              actions={needle ? <Button onClick={() => setQ('')}>Clear search</Button> : null}
+            />
+          ) : groups.map((g) => (
+            <section className="rep-group" key={g.id}>
+              {cat === 'all' && (
+                <div className="rep-group-h">
+                  <span className="rep-group-ic" data-tone={CATEGORY_TONE[g.id]}><Icon name={g.icon} size={13} /></span>
+                  <h3 className="rep-group-t">{g.id}</h3>
+                  <span className="rep-group-n num">{g.items.length}</span>
+                  <span className="rep-group-b trunc">{g.blurb}</span>
+                </div>
+              )}
+              {layout === 'table' ? (
+                <div className="rep-tbl-wrap">
+                <table className="tbl rep-tbl">
+                  <thead>
+                    <tr>
+                      <th>Report</th>
+                      <th style={{ width: '9rem' }}>Category</th>
+                      <th className="td-num" style={{ width: '6.5rem' }}>Records</th>
+                      <th style={{ width: '13rem' }}>Composition</th>
+                      <th style={{ width: '7rem' }}>Updated</th>
+                      <th className="td-num" style={{ width: '5rem' }}>Exports</th>
+                      <th style={{ width: '3rem' }} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.items.map((m) => (
+                      <tr
+                        key={m.report.id}
+                        className="rep-tr"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open ${m.report.name}`}
+                        onClick={() => onOpen(m.report.id)}
+                        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(m.report.id))}
+                      >
+                        <td className="td-main">
+                          <span className="cell-id">
+                            <span className="feed-ic" data-tone={m.report.tone}><Icon name={m.report.icon} size={12} /></span>
+                            <span className="trunc">
+                              <span style={{ display: 'block' }}>{m.report.name}</span>
+                              <span className="cell-sub trunc">{m.report.description}</span>
+                            </span>
+                          </span>
+                        </td>
+                        <td>{m.report.category}</td>
+                        <td className="td-num">{num(m.count)}</td>
+                        <td>
+                          <span className="rep-row-sig">
+                            <SignalBar comp={m.comp} size="sm" />
+                            <span className="rep-row-top trunc">{topLabel(m.comp)}</span>
+                          </span>
+                        </td>
+                        <td className="t-xs t-mut">{updatedLabel(m.label)}</td>
+                        <td className="td-num">{m.exports || '—'}</td>
+                        <td>{pinButton(m.report, pins.includes(m.report.id), 13)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                </div>
+              ) : layout === 'grid'
+                ? <div className="rep-grid">{g.items.map(reportCard)}</div>
+                : <div className="rep-list">{g.items.map(reportRow)}</div>}
+            </section>
+          ))}
+        </div>
+
+        <footer className="rep-main-f">
+          <span><b className="num">{shown.length}</b> of {REPORTS.length} reports</span>
+          <span className="rep-dot" />
+          <span>Every report reads live console data; an export writes exactly the rows on screen.</span>
+          <span className="spacer" />
+          <span className="t-faint">Data through {niceDate(TODAY)}</span>
+        </footer>
+      </section>
     </>
   )
 }

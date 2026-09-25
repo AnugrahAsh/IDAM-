@@ -60,16 +60,14 @@ const ALL_STAMPS = REPORTS.flatMap((r) => stampsOf(r.rows()))
 export const CATALOG_NOW = ALL_STAMPS.length ? Math.max(...ALL_STAMPS) : Date.now()
 export const CATALOG_OLDEST = ALL_STAMPS.length ? Math.min(...ALL_STAMPS) : null
 
-/* Records per day over the last `days` days of the catalog's own clock — the
-   trend a catalog card draws beside its count. Oldest day first. */
-export const activity = (rows, days = 14) => {
-  const end = Math.floor(CATALOG_NOW / DAY)
-  const out = Array(days).fill(0)
-  stampsOf(rows).forEach((t) => {
-    const i = days - 1 - (end - Math.floor(t / DAY))
-    if (i >= 0 && i < days) out[i] += 1
-  })
-  return out
+/* The window a report actually covers — the question the trend line was being
+   asked to imply and could not answer. A ledger that holds one day says so. */
+const dayLabel = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+export const spanLabel = (oldest, newest) => {
+  if (!oldest || !newest) return null
+  const from = dayLabel(oldest)
+  const to = dayLabel(newest)
+  return from === to ? from : `${from} – ${to}`
 }
 
 export const monthLabel = (t) => (t
