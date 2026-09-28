@@ -192,12 +192,6 @@ tr:hover .row-act,tr[data-selected="true"] .row-act,.row-act[data-open="true"]{c
 .pager svg{width:12px;height:12px}
 
 
-.skel{background:linear-gradient(90deg,var(--surface-3) 0%,var(--surface-2) 50%,var(--surface-3) 100%);
-  background-size:200% 100%;animation:shimmer 1.25s linear infinite;border-radius:var(--r-xs)}
-@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
-.skel-line{height:9px;margin:5px 0}
-.skel-row{display:flex;align-items:center;gap:12px;height:var(--row-h);padding:0 var(--sp-4);border-bottom:1px solid var(--hair)}
-
 .drawer-scrim{position:fixed;inset:var(--hdr-h) 0 var(--status-h) 0;background:rgba(17,24,39,.3);
   z-index:var(--z-scrim);animation:fade var(--dur-2) var(--ease)}
 @keyframes fade{from{opacity:0}to{opacity:1}}

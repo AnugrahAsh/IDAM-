@@ -1,8 +1,10 @@
 import { REPORTS } from './reportDefs'
 
-// Catalog metadata is derived from the reports themselves: how much each one
-// holds, how fresh it is, and how often it has actually been exported. Nothing
-// here is a stored attribute — it is read from the rows on every render.
+// Catalog metadata is derived from the reports themselves. The catalogue used
+// to read record counts, the window each report covered and an export tally
+// out of here and print all three; it shows no figures at all now, so what is
+// left is how recently a report moved — in words — and the export ledger the
+// report page still writes when a CSV is taken.
 
 const parse = (ts) => {
   if (!ts) return null
@@ -10,7 +12,9 @@ const parse = (ts) => {
   return Number.isNaN(t) ? null : t
 }
 
-export const EXPORT_KEY = 'tf-idam-report-exports'
+// The export ledger is private to this module now that nothing renders it; the
+// pin list is read by the catalogue itself.
+const EXPORT_KEY = 'tf-idam-report-exports'
 export const PIN_KEY = 'tf-idam-report-pins'
 const DAY = 86400000
 
@@ -23,8 +27,10 @@ const readExports = () => {
   }
 }
 
-// Recorded when an operator actually downloads a CSV, so "exports" counts real
-// downloads rather than an invented figure.
+// Recorded when an operator actually downloads a CSV. Nothing prints the tally
+// any more, but the report page keeps writing it: the ledger is the record of
+// what this browser has taken out of the console, and it is not the report
+// page's business that the catalogue stopped displaying it.
 export const recordExport = (reportId) => {
   const all = readExports()
   const now = Date.now()
@@ -33,43 +39,33 @@ export const recordExport = (reportId) => {
   return all[reportId].length
 }
 
-export const exportsFor = (reportId, now = Date.now()) =>
-  (readExports()[reportId] || []).filter((t) => now - t < 30 * DAY).length
-
-export const totalExports = (now = Date.now()) =>
-  Object.values(readExports()).reduce((a, list) => a + list.filter((t) => now - t < 30 * DAY).length, 0)
-
 const stampsOf = (rows) => rows.map((r) => parse(r.ts)).filter(Boolean)
+
+// The seed is a fixed snapshot, so age is measured against its own newest
+// record across the whole catalog rather than against the wall clock — "Today"
+// means the latest day anything in the console happened.
+const ALL_STAMPS = REPORTS.flatMap((r) => stampsOf(r.rows()))
+const CATALOG_NOW = ALL_STAMPS.length ? Math.max(...ALL_STAMPS) : Date.now()
+
+/* How recently a report moved, said in words.
+ *
+ * It used to read "31 hrs ago". A catalogue that carries no figures should not
+ * make its one remaining fact the exception, and "Yesterday" is the part of
+ * "31 hrs ago" a reader choosing a report actually uses. Day boundaries are
+ * counted off the epoch, which is UTC — the same clock the stamps are parsed
+ * in — so the answer does not shift with the reader's zone. */
+const dayOf = (t) => Math.floor(t / DAY)
 
 export const freshness = (rows) => {
   const stamps = stampsOf(rows)
-  if (!stamps.length) return { label: 'No timestamps', newest: null, oldest: null }
+  if (!stamps.length) return 'No timestamps'
   const newest = Math.max(...stamps)
-  const oldest = Math.min(...stamps)
-  // The seed is a fixed snapshot: age is measured against its own newest record
-  // across the whole catalog, so "just now" means the latest thing that happened.
-  const age = CATALOG_NOW - newest
-  const hrs = Math.round(age / 36e5)
-  const label = age < 36e5 ? 'Just now'
-    : age < DAY ? `${hrs} ${hrs === 1 ? 'hr' : 'hrs'} ago`
-      : `${Math.round(age / DAY)}d ago`
-  return { label, newest, oldest }
+  if (CATALOG_NOW - newest < 36e5) return 'Just now'
+  const days = dayOf(CATALOG_NOW) - dayOf(newest)
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return 'This week'
+  if (days < 14) return 'Last week'
+  if (days < 31) return 'This month'
+  return 'Earlier'
 }
-
-const ALL_STAMPS = REPORTS.flatMap((r) => stampsOf(r.rows()))
-export const CATALOG_NOW = ALL_STAMPS.length ? Math.max(...ALL_STAMPS) : Date.now()
-export const CATALOG_OLDEST = ALL_STAMPS.length ? Math.min(...ALL_STAMPS) : null
-
-/* The window a report actually covers — the question the trend line was being
-   asked to imply and could not answer. A ledger that holds one day says so. */
-const dayLabel = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
-export const spanLabel = (oldest, newest) => {
-  if (!oldest || !newest) return null
-  const from = dayLabel(oldest)
-  const to = dayLabel(newest)
-  return from === to ? from : `${from} – ${to}`
-}
-
-export const monthLabel = (t) => (t
-  ? new Date(t).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-  : '—')

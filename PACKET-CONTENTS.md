@@ -20,6 +20,7 @@ Two addresses open on their own, without a session:
 |---|---|
 | `/iam/login` | the sign-in page. **Sign in with credentials** opens the method picker — **Password**, **Phone / Email OTP**, **SAML**, **OAuth** |
 | `/iam/selfEnrollment` | the four-step enrollment |
+| `/iam/consentInitiate` | the tokenised registration a consent invitation links to |
 
 ## Updates to included screens
 
@@ -35,6 +36,14 @@ Two addresses open on their own, without a session:
 - **Consent** appears on both profiles: **My Profile → Privacy & consent** gives and withdraws consent against each notice, and an identity record's **Consent** tab shows the same record read-only, with re-consent requests.
 - **Requests and approvals** show **User information** after the request summary — for a joiner, the identity being created; for anything else, the directory record with the request's own changes against it. An approver may correct any of it before signing, and a **Change log** records who changed what, from what to what, when, and at which level.
 - **Settings → Approval flow rules** scopes requests and approvals by organization or by the office hierarchy, with a default per side and per-level exceptions.
+
+- **Consent** is asked for at the door. After signing in, an identity with an outstanding notice meets the consent screen before the console: the document and its version, a language selector that swaps the text, the terms in a bounded panel, and **Accept & Continue** which stays disabled until the box is ticked. **Decline** says what declining means and offers to sign out rather than dropping the visitor somewhere.
+- **A consent invitation** opens at `/iam/consentInitiate` — the recipient half of Consent Management's own User Consent Initiative. It carries the registration form the administrator sent, with the tenant's own attributes marked as such, and its agreement checkbox stays disabled until the Terms & Policy have actually been opened and acknowledged with **I Understand**. Expired and already-used links each get their own screen.
+- **Loading has a shape.** Registers, card grids, stat tiles and page bars draw skeletons while they settle, so a page arrives as one thing instead of flickering in pieces, and a cold start shows a branded boot screen — the wordmark, the product name and a progress bar — which stays away entirely on a load fast enough not to need it.
+- **The account lives in one place.** The chip in the header opens a profile panel carrying the identity, every role held with the active one switchable, My Profile, the theme and Log Out. The role no longer sits under the name where only one of several could ever be shown, and the duplicate account chip has left the sidebar, which is navigation for its whole height now.
+- **Reports** cards carry no figures at all — no counts, no charts, no progress bars. A card is the report's mark, name, what it evidences and the way in; the catalogue is filtered from the bar across the top.
+- **Email Management's SMTP** tab is divided into sub-tabs — Configuration, Retry policy, Connection test, Test message — the same nesting the Delivery log tab uses, rather than one long scroll. **Health check** keeps the default relay expanded and adds an accordion per client, each holding the same connection status and queue tiles, so an administrator can read another tenant's health without leaving the screen.
+- **SMS Management** forms are built the way the email ones are: grouped sections with their own titles, helper text under the fields that need it, and the full width used. Adding or editing a **client** happens in a drawer over the register instead of on a page of its own.
 
 - **Self-Enrollment** is reached from the **Self-Enrollment** button on the sign-in page. It is its own four-step enrollment — About you, Your role, Verification, Review — with document attachments, consent confirmations and a summary of everything before it is sent. A submitted enrollment appears in Users as a Pending identity.
 

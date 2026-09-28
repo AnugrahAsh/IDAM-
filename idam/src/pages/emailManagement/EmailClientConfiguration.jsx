@@ -45,6 +45,24 @@ export const CONFIG_TABS = [
 
 export const CONFIG_TAB_IDS = CONFIG_TABS.map((t) => t.id)
 
+/* The SMTP tab was one scroll: the binding, then the retry rules, then two
+   tests. Reading the retry interval meant scrolling past a screen of
+   connection fields, and the tests — the things an operator comes here to run
+   — were below the fold on every screen size. They are four questions, so they
+   are four tabs, nested the way the delivery log nests its own two registers.
+
+   "What happens on failure" is deliberately not a fifth tab. It is the retry
+   settings read back as consequences: it says nothing the controls beside it
+   do not set, and it changes as they are changed. Putting the cause on one tab
+   and its effect on another is two tabs nobody can read at once, so it sits
+   next to the policy it describes. */
+const SMTP_TABS = [
+  { id: 'config', label: 'Configuration', icon: 'server' },
+  { id: 'retry', label: 'Retry policy', icon: 'refresh' },
+  { id: 'test', label: 'Connection test', icon: 'activity' },
+  { id: 'message', label: 'Test message', icon: 'mail' },
+]
+
 const TEMPLATE_VIEWS = [
   { id: 'cards', label: 'Cards', icon: 'apps', desc: 'One card per template, with its subject' },
   { id: 'table', label: 'Table', icon: 'menu', desc: 'Dense register with sortable columns' },
@@ -61,6 +79,10 @@ export default function EmailClientConfiguration({
   const [smtp, setSmtp] = useState(() => toProviderDraft(EMAIL_PROVIDERS[0]))
   const [draft, setDraft] = useState(() => toProviderDraft(EMAIL_PROVIDERS[0]))
   const [errors, setErrors] = useState({})
+  /* Not carried in the URL: the outer tab is a location an operator links to
+     and returns to, the sub-tab is where they happen to be standing inside it.
+     Reloading onto Configuration is the right place to land. */
+  const [smtpTab, setSmtpTab] = useState('config')
   const [templates, setTemplates] = useState(() => TEMPLATES.map((t) => ({ ...t })))
   const [templateView, setTemplateView] = useState('cards')
   const [testLog, setTestLog] = useState(null)
@@ -75,7 +97,15 @@ export default function EmailClientConfiguration({
   const saveSmtp = () => {
     const next = providerErrors(draft)
     setErrors(next || {})
-    if (next) { toast('bad', 'Cannot save', 'Fix the highlighted fields.'); return }
+    if (next) {
+      // Every field `providerErrors` can reject lives on Configuration, and the
+      // save bar is reachable from all four sub-tabs — so a rejection has to
+      // bring the operator to the fields it highlighted rather than tell them
+      // about marks on a tab they are not looking at.
+      setSmtpTab('config')
+      toast('bad', 'Cannot save', 'Fix the highlighted fields.')
+      return
+    }
     const committed = fromProviderDraft(draft)
     setSmtp(committed)
     setDraft(committed)
@@ -217,119 +247,156 @@ export default function EmailClientConfiguration({
 
       {tab === 'smtp' && (
         <>
-          <Card
-            title="SMTP configuration"
-            sub="The single relay every transactional message leaves through"
-            actions={(
-              <>
-                <Pill tone={smtp.status === 'Active' ? 'ok' : 'mut'} dot>{smtp.status}</Pill>
-                <Button
-                  size="sm"
-                  icon={smtp.status === 'Active' ? 'ban' : 'checkC'}
-                  onClick={() => {
-                    const status = toggleStatus(smtp.status)
-                    setSmtp((p) => ({ ...p, status }))
-                    setDraft((p) => ({ ...p, status }))
-                    toast('ok', status === 'Active' ? 'Relay activated' : 'Relay deactivated', smtp.code)
-                  }}
-                >
-                  {smtp.status === 'Active' ? 'Deactivate' : 'Activate'}
-                </Button>
-              </>
-            )}
-          >
-            <SmtpFields d={draft} set={set} errors={errors} />
-          </Card>
+          <div className="stack">
+            {/* Same mechanism and same treatment as the delivery log's own
+                Outbox / Delivery log pair, so the two nestings read as one
+                pattern. The badge is the one piece of state that matters from
+                any of the four tabs: a relay switched off dispatches nothing,
+                whichever tab you happen to be reading. */}
+            <Tabs
+              value={smtpTab}
+              onChange={setSmtpTab}
+              tabs={SMTP_TABS.map((t) => (t.id === 'config' && smtp.status !== 'Active'
+                ? { ...t, badge: 'Inactive', badgeTone: 'warn' }
+                : t))}
+            />
 
-          {/* The relay, what it does with mail it could not hand over, and
-              whether any of it works are one configuration, so they are one
-              page: the rules are meaningless without the binding above them,
-              and the test is how you find out whether either is right. */}
-          <div className="grid grid-2">
-            <Card title="Retry policy" sub="Applied to any message the relay rejects with a transient error">
-              <DeliveryFields d={draft} set={set} />
-            </Card>
-
-            <Card title="What happens on failure" sub="Current behavior given the settings above">
-              <div className="tl">
-                <div className="tl-it" data-tone="warn">
-                  <span className="tl-dot"><Icon name="warn" size={8} /></span>
-                  <div className="tl-t">Transient rejection</div>
-                  <div className="tl-s">
-                    {Number(draft.retries) > 0
-                      ? <>Retried up to <b>{draft.retries}</b> {Number(draft.retries) === 1 ? 'time' : 'times'}, {draft.retryInterval} apart.</>
-                      : <>Not retried — retry attempts are set to zero, so a transient rejection is a failure.</>}
-                  </div>
-                </div>
-                <div className="tl-it" data-tone="bad">
-                  <span className="tl-dot"><Icon name="x" size={8} /></span>
-                  <div className="tl-t">Hard bounce</div>
-                  <div className="tl-s">
-                    {draft.bounceHandling
-                      ? 'Address marked undeliverable after three hard failures.'
-                      : 'Bounce handling is off — a dead address keeps being written to on every send.'}
-                  </div>
-                </div>
-                <div className="tl-it" data-tone="acc">
-                  <span className="tl-dot"><Icon name="checkC" size={8} /></span>
-                  <div className="tl-t">Exhausted</div>
-                  <div className="tl-s">Message moves to Failed in the delivery log and raises an operations alert.</div>
-                </div>
-                <div className="tl-it" data-tone="mut">
-                  <span className="tl-dot"><Icon name="clock" size={8} /></span>
-                  <div className="tl-t">Over the daily cap</div>
-                  <div className="tl-s">
-                    Beyond <b>{draft.dailyCap}</b> messages a day, mail stays Queued until the window resets.
-                    {draft.sandbox && <> Sandbox mode is on, so nothing reaches a real recipient in any case.</>}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          <div className="grid grid-2">
-          <Card
-            title="Connection test"
-            sub="Runs a live SMTP handshake without sending mail"
-            actions={<Button size="sm" icon="activity" onClick={runConnectionTest}>Test Config</Button>}
-          >
-            {testLog ? (
-              <div className="log-view">
-                {testLog.map((l, i) => <div className={`lg-${l.tone}`} key={i}>{l.text}</div>)}
-              </div>
-            ) : (
-              <div className="t-sm t-mut">No test has been run in this session.</div>
-            )}
-          </Card>
-
-          <Card title="Send a test message" sub="Delivers a rendered diagnostic email end to end">
-            <div className="stack">
-              <Field
-                label="Destination address"
-                required
-                hint="Use an address you control; the message contains no real identity data."
-                htmlFor="em-test-to"
+            {smtpTab === 'config' && (
+              <Card
+                title="SMTP configuration"
+                sub="The single relay every transactional message leaves through"
+                actions={(
+                  <>
+                    <Pill tone={smtp.status === 'Active' ? 'ok' : 'mut'} dot>{smtp.status}</Pill>
+                    <Button
+                      size="sm"
+                      icon={smtp.status === 'Active' ? 'ban' : 'checkC'}
+                      onClick={() => {
+                        const status = toggleStatus(smtp.status)
+                        setSmtp((p) => ({ ...p, status }))
+                        setDraft((p) => ({ ...p, status }))
+                        toast('ok', status === 'Active' ? 'Relay activated' : 'Relay deactivated', smtp.code)
+                      }}
+                    >
+                      {smtp.status === 'Active' ? 'Deactivate' : 'Activate'}
+                    </Button>
+                  </>
+                )}
               >
-                <TextInput id="em-test-to" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
-              </Field>
-              <div className="row">
-                <Button
-                  variant="pri"
-                  icon="mail"
-                  disabled={!testTo.trim()}
-                  onClick={() => toast('ok', 'Test queued', `A diagnostic message is on its way to ${testTo.trim()}.`)}
-                >
-                  Send test message
-                </Button>
+                <SmtpFields d={draft} set={set} errors={errors} />
+              </Card>
+            )}
+
+            {smtpTab === 'retry' && (
+              <div className="grid grid-2">
+                <Card title="Retry policy" sub="Applied to any message the relay rejects with a transient error">
+                  <DeliveryFields d={draft} set={set} />
+                </Card>
+
+                <Card title="What happens on failure" sub="Current behaviour given the settings beside it">
+                  <div className="tl">
+                    <div className="tl-it" data-tone="warn">
+                      <span className="tl-dot"><Icon name="warn" size={8} /></span>
+                      <div className="tl-t">Transient rejection</div>
+                      <div className="tl-s">
+                        {Number(draft.retries) > 0
+                          ? <>Retried up to <b>{draft.retries}</b> {Number(draft.retries) === 1 ? 'time' : 'times'}, {draft.retryInterval} apart.</>
+                          : <>Not retried — retry attempts are set to zero, so a transient rejection is a failure.</>}
+                      </div>
+                    </div>
+                    <div className="tl-it" data-tone="bad">
+                      <span className="tl-dot"><Icon name="x" size={8} /></span>
+                      <div className="tl-t">Hard bounce</div>
+                      <div className="tl-s">
+                        {draft.bounceHandling
+                          ? 'Address marked undeliverable after three hard failures.'
+                          : 'Bounce handling is off — a dead address keeps being written to on every send.'}
+                      </div>
+                    </div>
+                    <div className="tl-it" data-tone="acc">
+                      <span className="tl-dot"><Icon name="checkC" size={8} /></span>
+                      <div className="tl-t">Exhausted</div>
+                      <div className="tl-s">Message moves to Failed in the delivery log and raises an operations alert.</div>
+                    </div>
+                    <div className="tl-it" data-tone="mut">
+                      <span className="tl-dot"><Icon name="clock" size={8} /></span>
+                      <div className="tl-t">Over the daily cap</div>
+                      <div className="tl-s">
+                        Beyond <b>{draft.dailyCap}</b> messages a day, mail stays Queued until the window resets.
+                        {draft.sandbox && <> Sandbox mode is on, so nothing reaches a real recipient in any case.</>}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
-              <Banner tone="info">
-                A successful send proves relay, authentication, DKIM and rendering together. A failed connection test
-                with a successful send usually means an egress firewall rule.
-              </Banner>
-            </div>
-          </Card>
+            )}
+
+            {/* The two tests stay apart because they prove different things:
+                the handshake proves the binding, the send proves the binding
+                plus DKIM plus rendering. Each banner names the other, so the
+                discrepancy between them stays readable one tab away. */}
+            {smtpTab === 'test' && (
+              <Card
+                title="Connection test"
+                sub="Runs a live SMTP handshake without sending mail"
+                actions={<Button size="sm" icon="activity" onClick={runConnectionTest}>Test Config</Button>}
+              >
+                <div className="stack">
+                  {testLog ? (
+                    <div className="log-view">
+                      {testLog.map((l, i) => <div className={`lg-${l.tone}`} key={i}>{l.text}</div>)}
+                    </div>
+                  ) : (
+                    <div className="t-sm t-mut">No test has been run in this session.</div>
+                  )}
+                  <Banner tone="info">
+                    The handshake stops before DATA, so it proves reachability, TLS and authentication without putting a
+                    message in anybody&rsquo;s inbox. Test message proves rendering and DKIM on top of that.
+                  </Banner>
+                </div>
+              </Card>
+            )}
+
+            {smtpTab === 'message' && (
+              <Card title="Send a test message" sub="Delivers a rendered diagnostic email end to end">
+                <div className="stack">
+                  {/* One field on a full-width tab is a text box the width of
+                      the canvas; the grid holds it to a readable measure and
+                      collapses with every other two-column form. */}
+                  <div className="grid grid-2">
+                    <Field
+                      label="Destination address"
+                      required
+                      hint="Use an address you control; the message contains no real identity data."
+                      htmlFor="em-test-to"
+                    >
+                      <TextInput id="em-test-to" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="row">
+                    <Button
+                      variant="pri"
+                      icon="mail"
+                      disabled={!testTo.trim()}
+                      onClick={() => toast('ok', 'Test queued', `A diagnostic message is on its way to ${testTo.trim()}.`)}
+                    >
+                      Send test message
+                    </Button>
+                  </div>
+                  <Banner tone="info">
+                    A successful send proves relay, authentication, DKIM and rendering together. A failed connection test
+                    with a successful send usually means an egress firewall rule.
+                  </Banner>
+                </div>
+              </Card>
+            )}
           </div>
 
+          {/* Outside the sub-tabs, and outside the wrapper the sub-tabs sit in:
+              the draft spans Configuration and Retry policy, both tests run
+              against it rather than against what was saved, and the bar's
+              growth chain is anchored on the section's own stack. Hiding it on
+              two of four tabs would hide a dirty draft. */}
           <StickyActions dirty={dirty} message={dirty ? 'Unsaved changes to the relay' : `Saved · ${smtp.host}:${smtp.port}`}>
             <Button icon="refresh" disabled={!dirty} onClick={revert}>Revert</Button>
             <Button variant="pri" icon="save" disabled={!dirty} onClick={saveSmtp}>Save configuration</Button>

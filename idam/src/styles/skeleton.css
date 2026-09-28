@@ -1,0 +1,186 @@
+/* Skeleton loaders.
+
+   Every shape in components/primitives/Skeleton.jsx is the same `.skel` block
+   at a different size, and every size here is copied from the rule of the
+   component being waited on — `.pagebar` for the page masthead, `.scard` for a
+   stat tile, `.rcard` for a record card, `.kv` for a field grid. That is the
+   whole point of the file: the real thing has to land in the box its skeleton
+   was holding, or the page jumps when the wait ends and the skeleton has made
+   things worse rather than better.
+
+   This file is imported last, so its `.skel` rules supersede the pair that used
+   to live in workbench.css. */
+
+:root{
+  /* The sweep is a translucent veil over a resting tint rather than a gradient
+     between two surface tokens. Dark theme has no surface *above* --surface-3,
+     so a token-to-token gradient inverts there: the highlight ends up darker
+     than the bar it crosses and reads as a shadow travelling the wrong way. A
+     veil lightens whatever it is laid over, which is correct in both themes —
+     it only needs a different strength, which is what the override below is. */
+  --skel-tint:var(--surface-3);
+  /* .45 over --surface-3 lands on --surface-2, which is the highlight the
+     console's skeletons have always swept with. */
+  --skel-sheen:rgba(255,255,255,.45);
+  --skel-speed:1.25s;
+}
+/* Far less white on a dark surface: at .07 the sweep reads about as strongly
+   against the bar (1.24:1) as the light one does (1.05:1), and the bar itself
+   reads against the card under it slightly better than it does in light. */
+:root[data-theme="dark"]{ --skel-sheen:rgba(255,255,255,.07); }
+
+/* --- The block ------------------------------------------------------------- */
+.skel{
+  background-color:var(--skel-tint);
+  /* Transparent at both ends, so the tile repeats seamlessly and the highlight
+     crosses at a steady rate instead of snapping back at the wrap. */
+  background-image:linear-gradient(90deg,transparent 0%,var(--skel-sheen) 50%,transparent 100%);
+  background-size:200% 100%;
+  border-radius:var(--r-xs);
+  animation:skel-shimmer var(--skel-speed) linear infinite;
+  flex:none;
+}
+@keyframes skel-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+
+/* Asked for less motion, given less motion: the bar keeps its tint so the
+   layout still reads as pending, and nothing on the page moves. base.css
+   already clamps every animation globally; this states the resting appearance
+   rather than leaving it to whichever frame the clamp happens to freeze. */
+@media(prefers-reduced-motion:reduce){
+  .skel{background-image:none;animation:none}
+}
+
+/* The announcing region is a plain block: the shapes inside it keep their own
+   margins, including the negative gutters a page masthead carries. */
+.skel-block{min-width:0}
+
+/* --- Text ------------------------------------------------------------------ */
+.skel-line{height:9px;margin:5px 0}
+.skel-text{display:flex;flex-direction:column;gap:7px;min-width:0}
+.skel-text > span{display:block;height:9px}
+
+/* --- Table ----------------------------------------------------------------- */
+.skel-table{min-width:0}
+.skel-row{display:flex;align-items:center;gap:12px;height:var(--row-h);
+  padding:0 var(--sp-4);border-bottom:1px solid var(--hair)}
+/* The header band sits on the same surface the real `thead` does, so the
+   register does not change colour underneath the reader when the rows land. */
+.skel-row[data-head="true"]{height:32px;background:var(--surface-2);border-bottom-color:var(--line)}
+
+/* --- Panel: Card proportions ------------------------------------------------ */
+.skel-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.skel-card-h{display:flex;flex-direction:column;justify-content:center;gap:5px;
+  min-height:42px;padding:11px var(--sp-4);border-bottom:1px solid var(--hair)}
+.skel-card-b{padding:var(--sp-4)}
+.skel-card-f{padding:9px var(--sp-4);border-top:1px solid var(--hair)}
+
+/* --- Record card: .rcard / .ma-tile proportions ----------------------------- */
+.skel-tile{display:flex;flex-direction:column;gap:9px;min-width:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:12px 13px}
+/* An application tile: the mark takes a row of its own, so the gap between it
+   and the name below matches .ma-tile-top's 10px rather than .rcard's 9px. */
+.skel-tile[data-layout="stacked"]{gap:10px}
+.skel-tile[data-layout="stacked"] .skel-text{margin-top:-2px}
+.skel-tile-title{height:11px}
+.skel-tile-top{display:flex;align-items:center;gap:9px;min-width:0}
+.skel-tile-id{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.skel-tile-id > span{display:block}
+.skel-avatar{width:26px;height:26px;border-radius:50%}
+.skel-media{width:38px;height:38px;border-radius:var(--r-sm)}
+.skel-tile-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px;
+  padding:9px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.skel-tile-fact{display:flex;flex-direction:column;gap:5px;min-width:0}
+.skel-tile-fact > span{display:block}
+.skel-tile-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+
+/* A page whose card skeleton is built from the real card's classes — see
+   pages/users/IdentityCard — marks it, because a card holding space is not a
+   control and should not offer the card's pointer or its hover lift. */
+.rcard[data-skel]{cursor:default}
+.rcard[data-skel]:hover{border-color:var(--line);box-shadow:none}
+
+/* --- Card grid -------------------------------------------------------------- */
+/* The default column is the record-card column. A page whose grid is narrower
+   or wider passes its own class and wins on specificity — see .ma-grid. */
+.skel-grid{display:grid;gap:var(--sp-3);
+  grid-template-columns:repeat(auto-fill,minmax(268px,1fr))}
+
+/* --- Stat tiles: .scards / .scard proportions -------------------------------- */
+.skel-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+  gap:var(--sp-3);margin-bottom:var(--sp-3)}
+.skel-stat{display:flex;flex-direction:column;gap:9px;min-width:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:12px 14px}
+/* Scoped to the bars: .skel-stat-f is a span too, and it has to stay a flex row. */
+.skel-stat > span.skel{display:block}
+/* 1.625rem at line-height 1.1 is the figure the tile actually prints. */
+.skel-stat-v{height:calc(1.625rem * 1.1);border-radius:var(--r-sm)}
+.skel-stat-f{display:flex;align-items:center;gap:7px;min-width:0}
+.skel-chip{height:19px;border-radius:var(--r-xs)}
+
+/* --- List ------------------------------------------------------------------- */
+.skel-list{display:flex;flex-direction:column}
+.skel-listrow{display:flex;align-items:center;gap:10px;min-width:0;
+  padding:9px var(--sp-4);border-bottom:1px solid var(--hair)}
+.skel-listrow:last-child{border-bottom:0}
+.skel-listrow-m{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.skel-listrow-m > span{display:block}
+
+/* --- Mastheads: .pagebar and .detail-head ----------------------------------- */
+.skel-crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:1px 0 0;margin-bottom:7px;min-width:0}
+.skel-crumbs .skel{height:9px}
+.skel-title{height:19px;border-radius:var(--r-sm)}
+.skel-btn{height:1.875rem;border-radius:var(--r-sm)}
+
+.skel-pagebar{padding:10px var(--canvas-px) 16px;margin:0 calc(var(--canvas-px) * -1)}
+.skel-pagebar-top{display:flex;align-items:flex-start;gap:var(--sp-4);min-height:28px;flex-wrap:wrap}
+.skel-pagebar-meta{flex:1 1 16rem;min-width:0;display:flex;flex-direction:column;gap:8px}
+.skel-pagebar-meta > span{display:block}
+.skel-pagebar-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;
+  flex-wrap:wrap;justify-content:flex-end;max-width:100%}
+
+.skel-dh{padding:6px var(--canvas-px) 0;margin:0 calc(var(--canvas-px) * -1);
+  border-bottom:1px solid var(--line)}
+.skel-dh .skel-crumbs{margin-bottom:5px;padding-top:2px}
+.skel-dh-top{display:flex;align-items:flex-start;gap:var(--sp-4);padding:2px 0 9px;flex-wrap:wrap}
+.skel-dh-media{width:52px;height:52px;border-radius:var(--r-lg)}
+.skel-dh-meta{flex:1 1 16rem;min-width:0;display:flex;flex-direction:column;gap:7px}
+.skel-dh-meta > span{display:block}
+.skel-dh-facts{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;margin-top:4px}
+.skel-dh-actions{display:flex;align-items:center;gap:var(--sp-2);flex:none;
+  flex-wrap:wrap;justify-content:flex-end;padding-top:2px;max-width:100%}
+
+/* Both mastheads hand their action cluster a row of its own at the width the
+   real ones do, so the skeleton breaks where the page breaks. */
+@media(max-width:820px){
+  .skel-pagebar-top,.skel-dh-top{gap:var(--sp-3)}
+  .skel-pagebar-actions,.skel-dh-actions{flex:1 0 100%;justify-content:flex-start}
+}
+
+/* --- Key / value: .kv proportions -------------------------------------------- */
+.skel-kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--sp-6)}
+.skel-kv[data-cols="1"]{grid-template-columns:minmax(0,1fr)}
+.skel-kv[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+.skel-kv-row{display:flex;align-items:flex-start;gap:10px;min-width:0;
+  padding:9px 0;border-bottom:1px solid var(--hair)}
+.skel-kv-ic{width:24px;height:24px;border-radius:var(--r-sm)}
+.skel-kv-m{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.skel-kv-m > span{display:block}
+
+/* --- Form -------------------------------------------------------------------- */
+.skel-form{display:flex;flex-direction:column;gap:var(--sp-5)}
+.skel-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4) var(--sp-5)}
+.skel-form-grid[data-cols="1"]{grid-template-columns:minmax(0,1fr)}
+.skel-form-grid[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+.skel-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.skel-field > span{display:block}
+.skel-input{height:32px;border-radius:var(--r-sm)}
+.skel-form-actions{display:flex;align-items:center;gap:var(--sp-2)}
+
+/* One column below the width at which a two-column form stops being readable —
+   the same width .rcard-meta and the field grids collapse at. */
+@media(max-width:600px){
+  .skel-form-grid,.skel-kv,.skel-tile-meta{grid-template-columns:minmax(0,1fr)}
+}

@@ -12,6 +12,9 @@
 
 .ma-workspace{max-width:1440px;margin:0 auto;padding-bottom:var(--sp-8)}
 .ma-workspace .pagebar{margin-bottom:var(--sp-4)}
+/* The masthead skeleton stands in the masthead's place, spacing included, so
+   the panel below it does not move when the real bar arrives. */
+.ma-pagebar-skel{margin-bottom:var(--sp-4)}
 
 /* --- Toolbar --------------------------------------------------------------- */
 /* Search alone. Tiles named after the products they open are found by typing,
@@ -23,6 +26,16 @@
    headings for a taxonomy the launcher does not otherwise mention. */
 .ma-grid{display:grid;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);
   grid-template-columns:repeat(auto-fill,minmax(252px,1fr))}
+
+/* The loading grid is the tile grid. The skeleton kit carries a wider default
+   column for record cards, so the two classes are stated together here — a
+   higher specificity than .skel-grid, which makes the winner a matter of the
+   rule rather than of which stylesheet the bundler emitted last. */
+.ma-grid.skel-grid{grid-template-columns:repeat(auto-fill,minmax(252px,1fr));
+  gap:var(--sp-3);padding:var(--sp-3) var(--sp-4)}
+/* .ma-tile closes with a rule above its owner line; the generic tile does not. */
+.ma-grid.skel-grid .skel-tile-foot{margin-top:1px;padding-top:9px;
+  border-top:1px solid var(--hair)}
 
 /* --- Tile ------------------------------------------------------------------ */
 /* .rcard geometry — the same border, radius, padding and hover the record
@@ -69,7 +82,7 @@
 
 @media(max-width:640px){
   .ma-search{flex:1 1 100%}
-  .ma-grid{grid-template-columns:1fr}
+  .ma-grid,.ma-grid.skel-grid{grid-template-columns:1fr}
 }
 
 @media(prefers-reduced-motion:reduce){

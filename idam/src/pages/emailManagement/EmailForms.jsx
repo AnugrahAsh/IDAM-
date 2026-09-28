@@ -17,10 +17,17 @@ import {
  * across a connection tab and a delivery-rules tab without being two forms
  * editing two copies of it. */
 
-export function Section({ icon, title, children }) {
+/* `actions` puts a control on the heading line — the health accordions need a
+   re-check button beside each section title, and a section that carries one
+   should not become a second kind of section. Without it the heading is the
+   whole row, exactly as it was. */
+export function Section({ icon, title, actions, children }) {
   return (
     <section className="em-fs">
-      <h3 className="em-fs-h"><Icon name={icon} size={13} />{title}</h3>
+      <div className="em-fs-hr">
+        <h3 className="em-fs-h"><Icon name={icon} size={13} />{title}</h3>
+        {actions && <div className="em-fs-a">{actions}</div>}
+      </div>
       <div className="stack">{children}</div>
     </section>
   )

@@ -21,13 +21,9 @@ import {
   optionLabel, optionValue, rangeLabel,
 } from './reportFilters'
 import { exportRows } from './exportCsv'
-import StatCards from '../../components/workbench/StatCards'
 import { useLocalState } from '../../lib/useLocalState'
 import { useDownload } from '../../lib/useDownload'
-import {
-  CATALOG_OLDEST, PIN_KEY, exportsFor, freshness, monthLabel, recordExport, spanLabel, totalExports,
-} from './catalogMeta'
-import { composition } from './catalogSignal'
+import { PIN_KEY, freshness, recordExport } from './catalogMeta'
 
 const PRESETS = [
   { id: '7', label: 'Last 7 days', days: 7 },
@@ -54,8 +50,10 @@ const CATALOG_VIEWS = [
   { id: 'list', icon: 'menu', label: 'List view' },
 ]
 
-/* Each category keeps one tint wherever it appears — its rail entry, its
-   section head — so a category is recognised by colour before it is read. */
+/* Each category keeps one tint wherever it appears — its filter chip, its
+   section head — so a category is recognised by colour before it is read.
+   With the figures gone this tint is most of what distinguishes one block of
+   the catalogue from the next, so it carries more weight than it used to. */
 const CATEGORY_TONE = {
   'Access & Authentication': 'acc',
   'Identity & Entitlements': 'viol',
@@ -69,62 +67,27 @@ const RAIL = [
   ...CATEGORIES.map((c) => ({ id: c.id, label: c.id, icon: c.icon, blurb: c.blurb })),
 ]
 
-/* "2 hrs ago" reads as "Updated 2 hrs ago"; a report with no stamps says so. */
+/* "Today" reads as "Updated today"; a report with no stamps says so. */
 const updatedLabel = (label) => (label === 'No timestamps' ? label : `Updated ${label.charAt(0).toLowerCase()}${label.slice(1)}`)
 
 /**
  * The report library.
  *
  * A catalog is read by what it evidences before it is read by name, so the
- * categories hold the left of the page and the reports under the one chosen
- * hold the right — the same hub the connector catalogue uses. "All reports"
- * keeps every category as its own section rather than one undifferentiated
- * grid, and each card carries the report's last fourteen days of activity, so
- * a report that has gone quiet is visible without opening it.
+ * categories run across the top of the page and the reports under the one
+ * chosen hold the canvas. "All reports" keeps every category as its own
+ * section rather than one undifferentiated grid.
+ *
+ * The catalogue carries no figures. It used to headline the records held and
+ * draw each report's composition on its card, which made choosing a report an
+ * exercise in reading four numbers that only the report itself can settle —
+ * and made a page whose whole job is to route you somewhere read every ledger
+ * in the console to render. A card is a mark, a name, what the report
+ * evidences, when it last moved and the way in; the figures live one click
+ * away, inside the report, where they are filtered and exportable.
  */
 export const RECENT_KEY = 'tf-idam-reports-recent'
 export const RECENT_LIMIT = 6
-
-/* The composition of a report, drawn from its own rows.
- *
- * Segments are ordered by size and widths are percentages of the report's
- * record count, so two reports of very different sizes are still comparable by
- * shape. The bar carries the whole reading as its label, and each segment its
- * own count, so nothing here depends on colour alone. */
-function SignalBar({ comp, size = 'md' }) {
-  if (!comp) return null
-  const reading = `${comp.label}: ${comp.parts.map((p) => `${p.label} ${p.n}`).join(', ')}`
-  return (
-    <span className="rep-sig" data-size={size}>
-      <span className="rep-sig-bar" role="img" aria-label={reading}>
-        {comp.parts.map((p) => (
-          <span
-            key={p.label}
-            className="rep-sig-seg"
-            style={{ width: `${p.pct}%`, '--seg': p.color }}
-            title={`${p.label} — ${num(p.n)} of ${num(comp.total)} (${Math.round(p.pct)}%)${p.title ? ` · ${p.title}` : ''}`}
-          />
-        ))}
-      </span>
-      {/* Every segment the bar draws is named. A legend that stopped at three
-          and called the fourth "other" was naming a value already on screen. */}
-      {size === 'md' && (
-        <span className="rep-sig-key">
-          {comp.parts.map((p) => (
-            <span className="rep-sig-k" key={p.label} data-rest={p.rest || undefined}>
-              <i style={{ '--seg': p.color }} />
-              <span className="trunc">{p.label}</span>
-              <b className="num">{num(p.n)}</b>
-            </span>
-          ))}
-        </span>
-      )}
-    </span>
-  )
-}
-
-/* One line for a dense row: the segment that dominates the report. */
-const topLabel = (comp) => (comp ? `${comp.parts[0].label} ${Math.round(comp.parts[0].pct)}%` : '—')
 
 function ReportCatalog({ onOpen }) {
   const [q, setQ] = useState('')
@@ -133,27 +96,10 @@ function ReportCatalog({ onOpen }) {
   const [recent] = useLocalState(RECENT_KEY, [])
   const [pins, setPins] = useLocalState(PIN_KEY, [])
 
-  // Every catalog figure is read from the reports themselves on render.
-  const meta = useMemo(() => REPORTS.map((r) => {
-    const rows = r.rows()
-    const fresh = freshness(rows)
-    return {
-      report: r,
-      count: rows.length,
-      ...fresh,
-      span: spanLabel(fresh.oldest, fresh.newest),
-      exports: exportsFor(r.id),
-      comp: composition(r, rows),
-    }
-  }), [])
-
-  const totals = useMemo(() => {
-    const records = meta.reduce((a, m) => a + m.count, 0)
-    const audit = meta.filter((m) => m.report.category === 'Audit & Compliance')
-      .reduce((a, m) => a + m.count, 0)
-    const newest = meta.reduce((a, m) => (m.newest && m.newest > a ? m.newest : a), 0)
-    return { records, audit, newest, exports: totalExports() }
-  }, [meta])
+  /* One fact per report, read from its own rows on mount and not again: when
+     it last moved. Everything else the catalogue used to count is gone, so
+     this is the only pass over the ledgers the page makes. */
+  const meta = useMemo(() => REPORTS.map((r) => ({ report: r, updated: freshness(r.rows()) })), [])
 
   const needle = q.trim().toLowerCase()
   const inScope = (m, scope) => scope === 'all'
@@ -161,7 +107,6 @@ function ReportCatalog({ onOpen }) {
   const matches = (m) => !needle
     || `${m.report.name} ${m.report.description} ${m.report.category}`.toLowerCase().includes(needle)
   const shown = meta.filter((m) => inScope(m, cat) && matches(m))
-  const countOf = (scope) => meta.filter((m) => inScope(m, scope)).length
 
   const togglePin = (id) => setPins((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
 
@@ -183,28 +128,6 @@ function ReportCatalog({ onOpen }) {
   const recentStrip = cat === 'all' && !needle
     ? recent.map((id) => meta.find((m) => m.report.id === id)).filter(Boolean).slice(0, RECENT_LIMIT)
     : []
-
-  // What the catalog holds about itself, above the catalog itself.
-  const cards = [
-    {
-      key: 'catalog', icon: 'report', label: 'Reports in catalog', value: REPORTS.length,
-      chip: `${CATEGORIES.length} categories`, sub: 'each exportable as CSV',
-    },
-    {
-      key: 'records', icon: 'layers', label: 'Records held', value: totals.records,
-      chip: 'live', chipTone: 'ok', sub: 'across every source ledger',
-    },
-    {
-      key: 'audit', icon: 'logs', label: 'Audit trail entries', value: totals.audit,
-      chip: freshness(REPORTS.filter((r) => r.category === 'Audit & Compliance').flatMap((r) => r.rows())).label,
-      sub: `retained since ${monthLabel(CATALOG_OLDEST)}`,
-    },
-    {
-      key: 'exports', icon: 'download', label: 'Exports (30d)', value: totals.exports,
-      chip: totals.exports ? 'this browser' : 'none yet',
-      sub: 'CSV downloads taken',
-    },
-  ]
 
   const pinButton = (r, isPinned, size = 14) => (
     <button
@@ -241,42 +164,18 @@ function ReportCatalog({ onOpen }) {
         onClick={() => onOpen(r.id)}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(r.id))}
       >
+        {/* The mark and the name are one line against each other now that
+            nothing sits under the name. */}
         <header className="rep-card-top">
           <span className="feed-ic" data-tone={r.tone}><Icon name={r.icon} size={15} /></span>
-          <span className="rep-card-id">
-            <span className="rep-card-name">{r.name}</span>
-            <span className="rep-card-line">
-              <b className="num">{num(m.count)}</b> records
-              {m.span && <><span className="rep-dot" />{m.span}</>}
-            </span>
-          </span>
+          <span className="rep-card-name">{r.name}</span>
           {pinButton(r, isPinned)}
         </header>
 
         <p className="rep-card-desc">{r.description}</p>
 
-        {m.comp && (
-          <div className="rep-card-sig">
-            <span className="rep-sig-h">
-              <span className="rep-sig-t">{m.comp.label}</span>
-              {/* The one figure worth having before the report is opened:
-                  how much of it did not go cleanly. A column that carries no
-                  verdict — a client, an operation — says nothing here. */}
-              {m.comp.flag && (
-                <span className="rep-sig-flag"><Icon name="warn" size={11} />{num(m.comp.flag.n)} {m.comp.flag.label}</span>
-              )}
-            </span>
-            <SignalBar comp={m.comp} />
-          </div>
-        )}
-
         <footer className="rep-card-foot">
-          <span className="rep-card-when"><Icon name="clock" size={12} />{updatedLabel(m.label)}</span>
-          {m.exports > 0 && (
-            <span className="rep-card-when" title="CSV exports in the last 30 days">
-              <Icon name="download" size={12} />{m.exports}
-            </span>
-          )}
+          <span className="rep-card-when"><Icon name="clock" size={12} />{updatedLabel(m.updated)}</span>
           <span className="rep-card-go">Open report<Icon name="chevR" size={12} /></span>
         </footer>
       </article>
@@ -301,13 +200,9 @@ function ReportCatalog({ onOpen }) {
           <span className="rep-row-name trunc">{r.name}</span>
           <span className="rep-row-desc trunc">{r.description}</span>
         </span>
-        {cat !== 'all' && <span className="rep-row-cat">{r.category}</span>}
-        <span className="rep-row-sig">
-          <SignalBar comp={m.comp} size="sm" />
-          <span className="rep-row-top trunc">{topLabel(m.comp)}</span>
-        </span>
-        <span className="rep-row-n num">{num(m.count)}</span>
-        <span className="rep-row-when">{m.label}</span>
+        {/* In "All reports" the section head above already names the category. */}
+        {cat !== 'all' && <span className="rep-row-cat trunc">{r.category}</span>}
+        <span className="rep-row-when">{m.updated}</span>
         {pinButton(r, isPinned, 13)}
         <Icon name="chevR" size={13} className="rep-row-go" />
       </div>
@@ -322,11 +217,12 @@ function ReportCatalog({ onOpen }) {
         crumbs={[{ label: 'Reports' }]}
       />
 
-      <StatCards items={cards} label="Report catalog summary" />
-
       {/* The catalog is filtered from the top of the page rather than from a
           rail down its left: the reports then have the full width of the
-          canvas, and the category in force is read on the way in. */}
+          canvas, and the category in force is read on the way in. The chips
+          carried a count of the reports behind each one; the catalogue prints
+          no figures at all now, and a tally of four or five is not worth being
+          the exception. */}
       <nav className="rep-filters" aria-label="Report categories">
         {RAIL.map((it, i) => (
           <Fragment key={it.id}>
@@ -342,7 +238,6 @@ function ReportCatalog({ onOpen }) {
             >
               <Icon name={it.icon} size={14} />
               <span className="trunc">{it.label}</span>
-              <span className="rep-filter-n num">{countOf(it.id)}</span>
             </button>
           </Fragment>
         ))}
@@ -351,7 +246,7 @@ function ReportCatalog({ onOpen }) {
       <section className="rep-main" aria-label={scope.title}>
         <header className="rep-main-h">
           <div className="rep-main-t">
-            <h2>{scope.title}<span className="rep-main-n num">{shown.length}</span></h2>
+            <h2>{scope.title}</h2>
             <p>{scope.blurb}</p>
           </div>
           <div className="rep-main-tools">
@@ -414,22 +309,22 @@ function ReportCatalog({ onOpen }) {
                 <div className="rep-group-h">
                   <span className="rep-group-ic" data-tone={CATEGORY_TONE[g.id]}><Icon name={g.icon} size={13} /></span>
                   <h3 className="rep-group-t">{g.id}</h3>
-                  <span className="rep-group-n num">{g.items.length}</span>
                   <span className="rep-group-b trunc">{g.blurb}</span>
                 </div>
               )}
               {layout === 'table' ? (
                 <div className="rep-tbl-wrap">
+                {/* A table of reports that prints no figures still has four
+                    columns worth ruling: what the report is and evidences,
+                    which body of evidence it belongs to, when it last moved,
+                    and the way into it. */}
                 <table className="tbl rep-tbl">
                   <thead>
                     <tr>
                       <th>Report</th>
-                      <th style={{ width: '9rem' }}>Category</th>
-                      <th className="td-num" style={{ width: '6.5rem' }}>Records</th>
-                      <th style={{ width: '13rem' }}>Composition</th>
-                      <th style={{ width: '7rem' }}>Updated</th>
-                      <th className="td-num" style={{ width: '5rem' }}>Exports</th>
-                      <th style={{ width: '3rem' }} />
+                      <th style={{ width: '12rem' }}>Category</th>
+                      <th style={{ width: '9rem' }}>Updated</th>
+                      <th style={{ width: '4.5rem' }} />
                     </tr>
                   </thead>
                   <tbody>
@@ -453,16 +348,14 @@ function ReportCatalog({ onOpen }) {
                           </span>
                         </td>
                         <td>{m.report.category}</td>
-                        <td className="td-num">{num(m.count)}</td>
-                        <td>
-                          <span className="rep-row-sig">
-                            <SignalBar comp={m.comp} size="sm" />
-                            <span className="rep-row-top trunc">{topLabel(m.comp)}</span>
-                          </span>
+                        <td className="t-xs t-mut">{updatedLabel(m.updated)}</td>
+                        {/* Pin and the way in share the last cell: two narrow
+                            columns of their own left a gap between them wide
+                            enough to read as a column that failed to load. */}
+                        <td className="rep-tbl-end">
+                          {pinButton(m.report, pins.includes(m.report.id), 13)}
+                          <Icon name="chevR" size={13} className="rep-row-go" />
                         </td>
-                        <td className="t-xs t-mut">{updatedLabel(m.label)}</td>
-                        <td className="td-num">{m.exports || '—'}</td>
-                        <td>{pinButton(m.report, pins.includes(m.report.id), 13)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -475,12 +368,10 @@ function ReportCatalog({ onOpen }) {
           ))}
         </div>
 
+        {/* What the catalogue can honestly say about itself without counting
+            anything: where the figures are, and what leaves in an export. */}
         <footer className="rep-main-f">
-          <span><b className="num">{shown.length}</b> of {REPORTS.length} reports</span>
-          <span className="rep-dot" />
-          <span>Every report reads live console data; an export writes exactly the rows on screen.</span>
-          <span className="spacer" />
-          <span className="t-faint">Data through {niceDate(TODAY)}</span>
+          <span>Every report reads live console data. Open one to filter it, read its figures and export exactly the rows on screen.</span>
         </footer>
       </section>
     </>

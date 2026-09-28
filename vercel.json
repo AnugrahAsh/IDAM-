@@ -3,9 +3,26 @@
   "buildCommand": "npm run build -- --outDir ../dist-vercel/iam --emptyOutDir",
   "outputDirectory": "dist-vercel",
   "redirects": [
-    { "source": "/", "destination": "/iam/", "permanent": false }
+    {
+      "source": "/",
+      "destination": "/iam/",
+      "permanent": false
+    },
+    {
+      "source": "/consent-initiate",
+      "destination": "/iam/consentInitiate",
+      "permanent": false
+    },
+    {
+      "source": "/consentInitiate",
+      "destination": "/iam/consentInitiate",
+      "permanent": false
+    }
   ],
   "rewrites": [
-    { "source": "/iam/:path*", "destination": "/iam/index.html" }
+    {
+      "source": "/iam/:path*",
+      "destination": "/iam/index.html"
+    }
   ]
 }

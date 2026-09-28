@@ -38,7 +38,7 @@ export default function ConsentsPage({ segments = [], embedded, templates = [], 
       : r)))
     if (initiative && initiative.clear) initiative.clear()
     setInitiative(null)
-    toast('ok', 'Consent initiated', `${form.firstName} ${form.lastName} (${form.email}) is asked to accept ${consent.name}.`)
+    toast('ok', 'Consent initiated', `${form.firstName} ${form.lastName} (${form.email}) is asked to accept ${consent.name}. Their invitation opens the registration form at /consent-initiate.`)
   }
 
   // One Initiate control everywhere: a single person through the User Consent
@@ -48,6 +48,10 @@ export default function ConsentsPage({ segments = [], embedded, templates = [], 
     items: [
       { id: 'init', label: 'Initiate', icon: 'user', onSelect: () => setInitiative({ preselect: targets.length === 1 ? targets[0] : null, clear }) },
       { id: 'bulk', label: 'Bulk Initiate', icon: 'users', onSelect: () => openInitiate(targets, clear) },
+      /* The other end of an initiation. An administrator about to send one has
+         a fair claim to see what lands in the recipient's inbox, and this is
+         the only route to that screen from inside the console. */
+      { id: 'recipient', label: 'Open the registration page', icon: 'external', onSelect: () => navigate('consentInitiate') },
     ],
   })
 

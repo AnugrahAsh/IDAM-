@@ -10,6 +10,10 @@ export const ROUTES = [
   // Reached from the sign-in screen by someone the directory does not know yet,
   // so it is public: it renders without a session and without the shell.
   { id: 'selfEnrollment', path: '/iam/selfEnrollment', label: 'Self-Enrollment', icon: 'user' },
+  // The recipient half of Consent Management's User Consent Initiative: opened
+  // from a mailed link carrying a token, by someone who holds no session and
+  // may not be in the directory yet. Public, like self-enrollment.
+  { id: 'consentInitiate', path: '/iam/consentInitiate', label: 'Consent Registration', icon: 'consent' },
   // The administrator's analytics overview. My Apps stays the landing page:
   // it is the one screen every identity may open.
   { id: 'dashboard', path: '/iam/dashboard', label: 'Dashboard', icon: 'dashboard', module: 'Dashboard' },
@@ -72,7 +76,7 @@ export const ROUTES = [
 
 /* Routes a visitor without a session may open. Everything else waits behind
    the sign-in gate. */
-export const PUBLIC_ROUTES = ['selfEnrollment']
+export const PUBLIC_ROUTES = ['selfEnrollment', 'consentInitiate']
 export const isPublicRoute = (id) => PUBLIC_ROUTES.includes(id)
 
 export const BY_ID = Object.fromEntries(ROUTES.map((r) => [r.id, r]))
@@ -205,6 +209,9 @@ export const LEGACY = {
   '/iam/consentPolicies': '/iam/consent/rules',
   '/iam/consentTemplates': '/iam/consent/templates',
   '/iam/consentRecords': '/iam/consent/records',
+  // The address the mailed invitations have always carried, in both casings.
+  '/iam/consent-initiate': '/iam/consentInitiate',
+  '/iam/consentinitiate': '/iam/consentInitiate',
   // The two management screens are now the Manage view of the page they feed.
   '/iam/ssoapplications': '/iam/applications',
   '/iam/ssoApplications': '/iam/applications',

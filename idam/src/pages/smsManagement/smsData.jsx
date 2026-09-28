@@ -353,3 +353,159 @@ export const fromProviderDraft = (d) => {
     retries: Number(d.retries) || 0,
   }
 }
+
+/* ---------------------------------------------------------------------------
+   What the binding actually sends.
+
+   A provider is eight controls spread over five groups, and none of them says
+   what the gateway receives. An operator could read every field correctly and
+   still be surprised by the request — the serializer decides the Content-Type
+   until encryption overrides it, the auth type decides whether the credential
+   is a header or a payload field, and the signature lands wherever its target
+   says. So the request is derived from the draft and shown, rather than left
+   to be assembled in the reader's head.
+
+   Everything below is computed on render from the draft in hand. Nothing here
+   is stored, and no value is a real credential: a secret appears as the name of
+   the environment variable that holds it, which is all the record ever knows.
+   --------------------------------------------------------------------------- */
+
+/* One seeded send, used for every preview on the page so the message, the
+   character count and the body are describing the same message. */
+export const SAMPLE_SEND = {
+  to: '+91 98861 04455',
+  sender: 'TANFLW',
+  message: 'Your Tanflow verification code is 418302. It expires in 10 minutes. Do not share it with anyone.',
+}
+
+const envRef = (d) => `\${${String(d.authEnvRef || '').trim() || 'ENV_REF'}}`
+
+/* The default alphabet a carrier bills in. Characters outside it force the
+   whole message to UCS-2, and the seven characters in the extension table cost
+   two septets each — which is why a single curly brace can push a body that
+   looks like one message into two. */
+const GSM7 = '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà'
+const GSM7_EXT = '^{}\\[~]|€'
+
+export const smsSegments = (text) => {
+  const chars = [...String(text || '')]
+  const gsm = chars.every((c) => GSM7.includes(c) || GSM7_EXT.includes(c))
+  const units = gsm
+    ? chars.reduce((n, c) => n + (GSM7_EXT.includes(c) ? 2 : 1), 0)
+    : chars.length
+  // A concatenated message spends part of every segment on the header that
+  // says how the parts reassemble, so the per-segment room drops once there
+  // is more than one.
+  const single = gsm ? 160 : 70
+  const joined = gsm ? 153 : 67
+  const segments = units === 0 ? 0 : units <= single ? 1 : Math.ceil(units / joined)
+  return { chars: chars.length, units, segments, single, encoding: gsm ? 'GSM-7' : 'UCS-2' }
+}
+
+/** The request line. The endpoint itself belongs to the template, not here. */
+export const previewRequestLine = (d) => {
+  const query = isSignatureAuth(d.auth) && d.sigOutputTarget === 'QUERY'
+    ? `?${String(d.sigOutputField || 'signature').trim()}=<digest>`
+    : ''
+  return `${d.method || 'POST'} {{template endpoint}}${query}`
+}
+
+export const previewHeaders = (d) => {
+  // Encryption rewrites the body to ciphertext, so the declared type is what
+  // the gateway is handed rather than what the serializer produced.
+  const rows = [['Content-Type', d.encryptionOn ? 'text/plain' : d.serializer]]
+  if (d.auth === 'API_KEY_HEADER') rows.push([String(d.authHeaderName || 'X-API-Key').trim(), envRef(d)])
+  else if (d.auth === 'BEARER_STATIC' || d.auth === 'OAUTH_TOKEN') rows.push(['Authorization', `Bearer ${envRef(d)}`])
+  else if (d.auth === 'BASIC') rows.push(['Authorization', `Basic base64(${String(d.authUsername || 'user').trim()}:${envRef(d)})`])
+  if (isSignatureAuth(d.auth) && d.sigOutputTarget === 'HEADER') {
+    rows.push([String(d.sigOutputField || 'signature').trim(), '<digest>'])
+  }
+  return rows
+}
+
+/** The body before the serializer and before encryption — field order included. */
+export const previewFields = (d) => {
+  const body = { to: SAMPLE_SEND.to, message: SAMPLE_SEND.message }
+  if (d.auth === 'API_KEY_PAYLOAD') body[String(d.authFieldName || 'apiKey').trim()] = envRef(d)
+  if (isSignatureAuth(d.auth) && d.sigOutputTarget === 'PAYLOAD') {
+    body[String(d.sigOutputField || 'signature').trim()] = '<digest>'
+  }
+  return body
+}
+
+export const previewBody = (d) => {
+  const fields = previewFields(d)
+  if (d.encryptionOn) {
+    const key = String(d.encryptionKeyRef || '').trim() || 'KEY_ENV_REF'
+    return `<${encryptionShort(d.encryption) || 'AES'} ciphertext of the JSON body, keyed from process.env.${key}>`
+  }
+  if (d.serializer === 'application/x-www-form-urlencoded') {
+    return Object.entries(fields).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+  }
+  return JSON.stringify(fields, null, 2)
+}
+
+/** How the answer is read, said as a sentence rather than as four controls. */
+export const successRule = (d) => {
+  const value = String(d.responseValue || '').trim()
+  switch (d.responseCheck) {
+    case 'HTTP_STATUS':
+      return `Delivered when the response status is one of ${String(d.successCodes || '200,202').trim()}.`
+    case 'BODY_STARTS_WITH':
+      return `Delivered when the response body starts with ${value ? `"${value}"` : 'the expected opening'}.`
+    case 'BODY_CONTAINS':
+      return `Delivered when the response body contains ${value ? `"${value}"` : 'the expected text'}.`
+    case 'JSON_PATH_EQUALS':
+      return `Delivered when ${String(d.responsePath || 'the named path').trim()} in the JSON response equals ${value ? `"${value}"` : 'the expected value'}.`
+    default:
+      return 'No detection method is selected, so no response can be judged.'
+  }
+}
+
+/* The handshake, run on demand. It negotiates and authenticates without
+   handing over a message, so it proves reachability and the credential without
+   putting a text on anybody's handset — the same trade the email side makes
+   with its SMTP test. */
+export const connectionTestLog = (d) => {
+  const auth = authType(d.auth)
+  return [
+    { tone: 'dim', text: `resolve gateway ${String(d.code || '').trim() || '(unnamed)'} · ${providerType(d.type).label} engine` },
+    { tone: 'ok', text: `200 endpoint reachable · ${d.method} ${serializerShort(d.serializer)}` },
+    {
+      tone: d.auth === 'NONE' ? 'warn' : 'ok',
+      text: d.auth === 'NONE'
+        ? 'no authentication configured — the gateway is trusted to accept anonymous posts'
+        : `authenticated with ${auth.short} from process.env.${String(d.authEnvRef || '').trim() || '(unset)'}`,
+    },
+    {
+      tone: d.encryptionOn ? 'ok' : 'dim',
+      text: d.encryptionOn
+        ? `payload encrypted with ${encryptionShort(d.encryption)} · sent as text/plain`
+        : 'payload sent in the clear',
+    },
+    { tone: 'dim', text: `success detection · ${d.responseCheck}` },
+    {
+      tone: d.status === 'Active' ? 'ok' : 'bad',
+      text: d.status === 'Active'
+        ? `gateway healthy · round trip 168 ms · timeout ${Number(d.timeout) || 30000} ms, ${Number(d.retries) || 0} retries`
+        : 'provider inactive — nothing is dispatched through this binding',
+    },
+  ]
+}
+
+/* A template's payload is written with placeholders, so the JSON in the field
+   is never the JSON that leaves. Substituting the seeded send shows the shape
+   the gateway sees, and leaves any placeholder the sample cannot fill visible
+   as itself rather than blanking it. */
+export const TEMPLATE_TOKENS = {
+  mobileNumber: SAMPLE_SEND.to,
+  to: SAMPLE_SEND.to,
+  message: SAMPLE_SEND.message,
+  sender: SAMPLE_SEND.sender,
+  otp: '418302',
+}
+
+export const resolveTokens = (text) => String(text || '')
+  .replace(/\{\{\s*([A-Za-z0-9_.]+)\s*\}\}/g, (whole, key) => (
+    TEMPLATE_TOKENS[key] === undefined ? whole : TEMPLATE_TOKENS[key]
+  ))

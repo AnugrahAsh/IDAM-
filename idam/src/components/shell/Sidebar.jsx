@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react'
 import Icon from '../primitives/Icon'
 import Avatar from '../primitives/Avatar'
-import Menu from '../primitives/Menu'
 import NavLink from './NavLink'
+/* The account panel is defined beside the header chip that owns it. The kebab
+   below is the same menu on a second anchor — the sidebar is where the chip is
+   reachable once the header collapses to an avatar — and two copies of an
+   account menu would drift apart within a release. */
 import { NAV, NAV_BADGES, BY_ID, moduleFor } from '../../data/nav'
 import { useApp } from '../../store/AppContext'
 import { useLocalState } from '../../lib/useLocalState'
 import { ME } from '../../data/seed'
 import { useBadges } from '../../lib/useBadges'
 
+
 export default function Sidebar() {
-  const { route, navigate, navMin, setNavMin, toast, can, role } = useApp()
+  const { route, navigate, navMin, setNavMin, toast, can,
+    role, roleId, setRoleId, theme, toggleTheme, signOut } = useApp()
   const [q, setQ] = useState('')
   const [closed, setClosed] = useLocalState('tf-idam-nav-closed', {})
   const [openParents, setOpenParents] = useLocalState('tf-idam-nav-open', {})
-  const [menu, setMenu] = useState(null)
   const badges = useBadges()
 
   // Scroll the active nav item into view — deep groups otherwise leave it
@@ -204,47 +208,15 @@ export default function Sidebar() {
         )}
       </nav>
 
+      {/* Only the collapse handle. The identity chip and its account menu that
+          used to sit here are gone: the navbar carries one account control for
+          the whole console, and the row they occupied is navigation now. */}
       <div className="side-foot">
-        {/* The identity chip opens My Profile; the account menu sits on its own
-            control so the primary target stays unambiguous. */}
-        <NavLink
-          to="profile"
-          className="side-user"
-          data-on={route === 'profile' || undefined}
-          title={`${ME.firstName} ${ME.lastName} — open my profile`}
-        >
-          <Avatar first={ME.firstName} last={ME.lastName} size="lg" />
-          <span className="side-user-meta">
-            <span className="side-user-name">{ME.firstName} {ME.lastName}</span>
-            <span className="side-user-role" title={role.name}>{role.name}</span>
-          </span>
-        </NavLink>
-        <button
-          type="button"
-          className="side-user-menu"
-          aria-label="Account menu"
-          title="Account menu"
-          onClick={(e) => setMenu({
-            anchor: e.currentTarget,
-            items: [
-              { label: role.name, header: true },
-              { id: 'profile', label: 'My profile', icon: 'user', onSelect: () => navigate('profile') },
-              { id: 'pw', label: 'Change password', icon: 'lock', onSelect: () => toast('info', 'Change password', 'Opens the credential change dialog.') },
-              { id: 'settings', label: 'Settings', icon: 'config', onSelect: () => navigate('settings') },
-              { divider: true },
-              { id: 'out', label: 'Log Out', icon: 'power', danger: true, onSelect: () => toast('info', 'Log out', 'Session termination is disabled in the prototype.') },
-            ],
-          })}
-        >
-          <Icon name="kebab" size={15} />
-        </button>
         <button type="button" className="side-min" onClick={() => setNavMin(!navMin)}
           aria-label={navMin ? 'Expand navigation' : 'Collapse navigation'} title={navMin ? 'Expand' : 'Collapse'}>
           <Icon name="chevL" size={15} />
         </button>
       </div>
-
-      {menu && <Menu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}
     </aside>
   )
 }

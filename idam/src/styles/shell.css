@@ -138,32 +138,12 @@
 .nav-sect:not(:has(.nav-sect-n)) .nav-chev{margin-left:auto}
 .app[data-nav="min"] .nav-hidden-hint{display:none}
 
-.side-foot{flex:none;border-top:1px solid var(--line);padding:7px;display:flex;align-items:center;gap:6px}
-.side-user{display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding:5px 7px;border-radius:var(--r-sm);
-  border-left:2.5px solid transparent;
-  cursor:pointer;transition:background var(--dur-1) var(--ease)}
-.side-user:hover{background:var(--surface-3)}
-.side-user[data-on]{background:var(--accent-bg);border-left-color:var(--accent)}
-.side-user[data-on] .side-user-name{color:var(--accent-a)}
-.side-user-menu{
-  width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;
-  border-radius:var(--r-sm);color:var(--mut);
-  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease);
-}
-.side-user-menu:hover{background:var(--surface-3);color:var(--ink)}
-.side-user-menu svg{width:15px;height:15px}
-.app[data-nav="min"] .side-user-menu{display:none}
-.side-user-meta{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
-.side-user-name{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.side-user-role{font-size:var(--t-xs);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app[data-nav="min"] .side-user-meta{display:none}
-.app[data-nav="min"] .side-foot{flex-direction:column;gap:4px;padding:6px 4px}
-.app[data-nav="min"] .side-user{
-  flex:none;width:36px;height:36px;padding:0;justify-content:center;
-  border-left:none;border-radius:var(--r-sm);
-}
-.app[data-nav="min"] .side-user[data-on]{border-left:none;background:var(--accent-bg)}
-.app[data-nav="min"] .side-user .av{width:26px;height:26px;font-size:.59375rem}
+/* The foot holds one control now — the collapse handle — so it is a row that
+   is only as tall as that control, and the navigation above it keeps the rest.
+   The identity chip that used to live here went with the account menu it
+   raised: the navbar carries both for the whole console. */
+.side-foot{flex:none;border-top:1px solid var(--line);padding:6px 7px;display:flex;align-items:center;justify-content:flex-end}
+.app[data-nav="min"] .side-foot{justify-content:center;padding:6px 4px}
 .side-min{width:28px;height:28px;flex:none;display:inline-flex;align-items:center;justify-content:center;
   border-radius:var(--r-sm);color:var(--mut);transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
 .side-min:hover{background:var(--surface-3);color:var(--ink)}
@@ -187,35 +167,93 @@
 /* The signed-in identity in the header.
 
    It was an avatar on its own, so who you were signed in as took a hover to
-   read and the role you were *viewing* as — which changes what the whole
-   navigation offers — could not be read at all without opening the menu.
+   read. It then carried three lines — name, role, username — and the role has
+   since gone: an identity may hold several, this printed exactly one of them,
+   and a truncated role under a truncated name read as a fault rather than a
+   fact. The roles moved into the account panel, where the whole set fits and
+   the one in force is marked.
 
-   The base rule above fixes this control at 34x34. Three lines of text need
-   more than 34px, so the stack was overflowing its own container: the height
-   is released here and the box sizes to its content, which is what actually
-   centres it against the avatar and inside the 50px bar. The type is a step
-   tighter than the body scale for the same reason — three lines have to sit in
-   a header, not fill it. */
-.top-user{display:flex;align-items:center;gap:10px;
-  width:auto;max-width:250px;height:auto;min-height:34px;
-  padding:2px 8px 2px 4px;border-radius:var(--r)}
+   Two lines is a different shape from three, not three with a line deleted.
+   The base rule above fixes this control at 34x34; the height is released here
+   so the box sizes to its own content, and the pair sits a step larger than the
+   old cramped stack now that there is room for it. */
+.top-user{display:flex;align-items:center;gap:9px;
+  width:auto;max-width:216px;height:auto;min-height:34px;
+  padding:3px 8px 3px 4px;border-radius:var(--r)}
 
 .top-user-m{display:none;flex-direction:column;align-items:flex-start;justify-content:center;
   gap:1px;min-width:0;flex:1}
-.top-user-n{font-size:.6875rem;line-height:1.2;font-weight:var(--w-semi);color:var(--shell-ink);
+.top-user-n{font-size:var(--t-xs);line-height:1.25;font-weight:var(--w-semi);color:var(--shell-ink);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.top-user-r{font-size:.59375rem;line-height:1.2;color:#8FB4F0;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.top-user-u{font-family:var(--mono);font-size:.53125rem;line-height:1.2;color:var(--shell-mut);
+.top-user-u{font-family:var(--mono);font-size:var(--t-micro);line-height:1.25;color:var(--shell-mut);
   letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .top-user > svg{color:var(--shell-mut);flex:none;margin-left:-2px}
 
-/* Below this the bar has no room for three lines of text beside the search, so
-   the avatar carries the identity on its own as it did before. */
-@media(max-width:1240px){
+/* Below this the bar has no room for text beside the search, so the avatar
+   carries the identity on its own. One line fewer is also a narrower chip, so
+   the text now survives a smaller window than the three-line stack did. */
+@media(max-width:1119px){
   .top-user{max-width:none;width:34px;height:34px;min-height:0;padding:0;gap:0}
   .top-user > svg{display:none}
 }
-@media(min-width:1241px){
+@media(min-width:1120px){
   .top-user-m{display:flex}
 }
+
+/* The account panel.
+
+   It is the Menu primitive given a wider box and an identity block at the top,
+   not a second popup: everything below that block — the roles, the links, the
+   exit — is an ordinary menu row and answers the arrow keys as one. The rules
+   that are not account-specific live here rather than with the rest of `.menu`
+   in workbench.css only because this is the file the shell work owns; they
+   belong beside it and should move there when that file is next touched. */
+.menu.acct-menu{max-width:calc(100vw - 16px)}
+.menu[data-align="end"]{transform-origin:top right}
+.menu-node{padding:0}
+/* A radio row reserves the tick's width whether or not it carries one, so the
+   labels in a set of choices start on the same vertical. */
+.menu-tick{width:14px;height:14px;flex:none;display:inline-flex;align-items:center;justify-content:center}
+/* Out-specifies `.menu-it svg`, which paints every glyph in a menu row muted
+   and lives in a stylesheet loaded after this one. */
+.menu-it .menu-tick svg{color:var(--accent)}
+.menu-it[data-desc="true"]{align-items:flex-start;padding-top:6px;padding-bottom:6px}
+.menu-t{display:flex;flex-direction:column;flex:1;min-width:0;gap:1px}
+.menu-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-desc{font-size:var(--t-micro);letter-spacing:.01em;color:var(--faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-it[aria-checked="true"]{background:var(--accent-bg);color:var(--accent-a)}
+.menu-it[aria-checked="true"] .menu-desc{color:var(--accent-a)}
+/* In the account panel a second line may be a sentence rather than a two-word
+   scope — "this role cannot reach the module behind this link" is the whole
+   point of the row — so it wraps. A reason clipped at the panel's edge is no
+   more readable than the tooltip it replaced. */
+.acct-menu .menu-desc{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+
+/* `.menu-it[disabled]` takes `pointer-events:none` in workbench.css, which
+   means the browser never hovers a shut row and a `title` written to explain
+   why it is shut can never fire. The row stays inert — a disabled button
+   dispatches no click whatever is hovering it — but it is hit tested, so a
+   reason put there is at least reachable by pointer. Out-specified rather than
+   edited in place because workbench.css is imported after this file.
+
+   The arrow keys still skip disabled rows, so this is a floor and not a fix: a
+   reason that matters belongs in the row's own `desc`, where every reader gets
+   it without having to hover anything. */
+.menu .menu-it[disabled]{pointer-events:auto}
+.menu .menu-it[disabled]:hover{background:transparent;color:inherit}
+
+/* The identity block sits inside the menu's own padding rather than bleeding to
+   its edges, so a panel tall enough to scroll does not drag a half-rounded
+   header past its corners. */
+.acct-id{display:flex;align-items:center;gap:10px;padding:10px;
+  background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-sm)}
+.acct-id-m{display:flex;flex-direction:column;flex:1;min-width:0;gap:1px}
+.acct-name{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct-user{font-size:var(--t-micro);color:var(--mut);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct-mail{font-size:var(--t-xs);color:var(--faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct-seen{padding:6px 9px 0;font-size:var(--t-micro);color:var(--faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../../components/primitives/Button'
 import EmptyState from '../../components/primitives/EmptyState'
 import Icon from '../../components/primitives/Icon'
@@ -12,7 +12,7 @@ import DetailHeader from '../../components/shell/DetailHeader'
 import { useApp } from '../../store/AppContext'
 import SmsPage from './SmsPage'
 import { SMS_CLIENTS, SMS_PROVIDERS, SMS_TEMPLATES } from '../shared/comms/commsData'
-import { ClientForm, ProviderForm, TemplateForm } from './SmsForms'
+import { ProviderForm, TemplateForm, openClientDrawer } from './SmsForms'
 import SmsHealth from './SmsHealth'
 import {
   authType, commitTemplate, encryptionShort, passwordLinkHolder, providerType,
@@ -41,7 +41,7 @@ const TEMPLATE_VIEWS = [
 const statusPill = (r) => <Pill tone={r.status === 'Active' ? 'ok' : 'mut'} dot>{r.status}</Pill>
 
 export default function SmsClientConfiguration({ tab, onTab, messages, onMessagesChange, openId }) {
-  const { toast, confirm, navigate } = useApp()
+  const { toast, confirm, navigate, setDrawer } = useApp()
   const [providers, setProviders] = useState(() => SMS_PROVIDERS.map((p) => ({ ...p })))
   const [templates, setTemplates] = useState(() => SMS_TEMPLATES.map(withTemplateType))
   const [clients, setClients] = useState(() => SMS_CLIENTS.map((c) => ({ ...c })))
@@ -53,13 +53,49 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
 
   const [templateView, setTemplateView] = useState('cards')
 
-  /* Editing is a page now, not a dialog raised over the register. Each of
-     these forms is a screen of fields — a provider carries five sections and a
-     signature builder — and a modal that scrolls its own body inside a page
-     that also scrolls is two scrollbars competing to show one form. */
+  /* A provider and a template are each a screen of fields — a provider carries
+     five groups and a signature builder — and a dialog that scrolls its own
+     body inside a page that also scrolls is two scrollbars competing to show
+     one form. Those two stay pages. */
   const openProvider = (r) => navigate(`/iam/sms/providers/${r ? r.id : 'add'}`)
   const openTemplate = (r) => navigate(`/iam/sms/templates/${r ? r.id : 'add'}`)
-  const openClient = (r) => navigate(`/iam/sms/clients/${r ? r.id : 'add'}`)
+
+  /* A client is three fields and one lookup, which never justified a page:
+     opening one replaced the register being read, and closing it returned to
+     the top of that register. It is a drawer, so the rows stay on screen and a
+     save lands in the row already in front of the operator. */
+  const editClient = useCallback((r) => openClientDrawer({
+    record: r,
+    providers,
+    setDrawer,
+    toast,
+    onSave: (v) => {
+      setClients((cs) => upsertRow(cs, r, v))
+      toast('ok', r ? 'Client saved' : 'Client added', `${v.code} routes through ${v.provider}.`)
+    },
+  }), [providers, setDrawer, toast])
+
+  /* The register used to link to /iam/sms/clients/<id|add>, and those links are
+     in bookmarks and in the address bar of anyone who was mid-edit. They still
+     resolve: the register renders, the address is put back to the register's
+     own — with `replace`, so closing the drawer does not step back into a page
+     that no longer exists — and the record opens in the drawer over it.
+     `navigate` clears any open drawer, so the two calls are in that order. */
+  const clientLink = tab === 'clients' && openId ? String(openId) : null
+  const handledLink = useRef(null)
+
+  useEffect(() => {
+    if (!clientLink) { handledLink.current = null; return }
+    if (handledLink.current === clientLink) return
+    handledLink.current = clientLink
+    const record = clientLink === 'add' ? null : clients.find((c) => String(c.id) === clientLink)
+    navigate('/iam/sms/clients', { replace: true })
+    if (clientLink !== 'add' && !record) {
+      toast('warn', 'Client not found', `No client with id ${clientLink}. It may have been deleted, or the link is stale.`)
+      return
+    }
+    editClient(record)
+  }, [clientLink, clients, navigate, toast, editClient])
 
   const remove = (setter, kind, r, body) => confirm({
     title: `Delete ${r.name}?`,
@@ -176,7 +212,7 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
   ]
 
   /* ------------------------------------------------------------------ *
-   * The record editors, each on its own page.
+   * The provider and template editors, each on its own page.
    * ------------------------------------------------------------------ */
 
   const recordPage = (kind) => {
@@ -190,11 +226,6 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
         list: templates, label: 'Templates', eyebrow: 'SMS template', icon: 'file',
         back: '/iam/sms/templates',
         blankSub: 'The endpoint one event posts to, and the payload it posts.',
-      },
-      clients: {
-        list: clients, label: 'Clients', eyebrow: 'SMS client', icon: 'users',
-        back: '/iam/sms/clients',
-        blankSub: 'Routes one caller\u2019s traffic through a provider.',
       },
     }[kind]
 
@@ -238,6 +269,15 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
             <ProviderForm
               record={record}
               onCancel={done}
+              /* The header above this form carries the stored record's status
+                 pill and is sticky, so the form's Activate/Deactivate commits
+                 at once rather than waiting for Save — otherwise both pills
+                 are on screen disagreeing. Adding has no stored record and no
+                 badge, so there is nothing to keep in step. */
+              onStatusChange={record ? (status) => {
+                setProviders((ps) => ps.map((p) => (p.id === record.id ? { ...p, status } : p)))
+                toast('ok', status === 'Active' ? 'Provider activated' : 'Provider deactivated', record.name)
+              } : undefined}
               onSave={(v) => {
                 setProviders((ps) => upsertRow(ps, record, v))
                 toast('ok', record ? 'Provider saved' : 'Provider added', `${v.code} runs the ${providerType(v.type).label} engine.`)
@@ -261,24 +301,12 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
               }}
             />
           )}
-          {kind === 'clients' && (
-            <ClientForm
-              record={record}
-              providers={providers}
-              onCancel={done}
-              onSave={(v) => {
-                setClients((cs) => upsertRow(cs, record, v))
-                toast('ok', record ? 'Client saved' : 'Client added', `${v.code} routes through ${v.provider}.`)
-                done()
-              }}
-            />
-          )}
         </div>
       </>
     )
   }
 
-  if (openId && ['providers', 'templates', 'clients'].includes(tab)) return recordPage(tab)
+  if (openId && ['providers', 'templates'].includes(tab)) return recordPage(tab)
 
   /* Compact: a template row is a name, a code and one endpoint or subject. At
      the standard card size a screen of them was mostly padding, and the same
@@ -394,12 +422,12 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
           rows={clients}
           columns={clientColumns}
           searchPlaceholder="Search clients by code, name or provider\u2026"
-          toolbar={<Button size="sm" variant="pri" icon="plus" onClick={() => openClient(null)}>Add Client</Button>}
-          onRowClick={(r) => openClient(r)}
+          toolbar={<Button size="sm" variant="pri" icon="plus" onClick={() => editClient(null)}>Add Client</Button>}
+          onRowClick={(r) => editClient(r)}
           actionsLabel="Actions"
           rowActions={(r) => rowMenu(
             r,
-            openClient,
+            editClient,
             (x) => remove(setClients, 'client', x, 'Traffic for this client stops until it is pointed at another provider.'),
             (x) => toggle(setClients, 'Client', x),
           )}

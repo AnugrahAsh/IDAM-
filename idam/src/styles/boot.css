@@ -1,0 +1,97 @@
+/* The boot screen.
+
+   It covers the whole viewport because that is what it is for: on a refresh or
+   a hard refresh the console arrives in pieces, and a branded panel is a better
+   thing to hand the reader than a half-drawn shell. It sits above the toast
+   layer, which is the highest thing the console otherwise raises, because
+   nothing should be able to print over a screen that is still coming up.
+
+   The panel is put into the document by BootLoader before React renders, and it
+   is `visibility:hidden` from that moment until BootLoader decides the wait is
+   real. Hidden rather than transparent: a transparent full-viewport layer still
+   swallows every click, and on the common load — the one where the panel is
+   never revealed at all — it would sit invisibly over a working console.
+
+   Nothing here is themed by hand. The backdrop is the page colour and the panel
+   is a surface, so the same rules read in both themes; the wordmark is the only
+   asset that has to be chosen, and BootLoader picks the one that carries on the
+   backdrop it is about to be drawn on. */
+.boot{
+  position:fixed;inset:0;z-index:calc(var(--z-toast) + 20);
+  display:flex;align-items:center;justify-content:center;
+  padding:var(--sp-6) var(--sp-4);
+  background:var(--bg);
+  visibility:hidden;opacity:0;
+  transition:opacity var(--dur-3) var(--ease);
+}
+.boot[data-visible]{visibility:visible;opacity:1}
+/* Leaving starts on the frame the console painted on, so the console is live
+   underneath the whole time this runs — the dissolve is continuity, not a hold.
+   Opacity is moved by a transition rather than an animation so a panel taken
+   down mid fade-in leaves from wherever it had got to instead of snapping. */
+.boot[data-hiding]{opacity:0;pointer-events:none}
+
+.boot-card{
+  display:flex;flex-direction:column;align-items:center;
+  width:min(320px,100%);
+  padding:var(--sp-8) var(--sp-6) var(--sp-6);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-md);
+  text-align:center;
+}
+/* Sized against the header's own wordmark rather than scaled to the viewport:
+   the mark is an asset with a fixed proportion, not type. */
+.boot-mark{height:26px;width:auto;object-fit:contain;display:block}
+.boot-sub{
+  margin-top:var(--sp-3);
+  font-size:var(--t-xs);font-weight:var(--w-med);color:var(--mut);
+}
+
+/* The track is drawn in the line colour rather than a surface: against a white
+   panel in the light theme a surface tint is invisible, and an empty bar that
+   cannot be seen makes the filled part look like it is floating. */
+.boot-bar{
+  position:relative;overflow:hidden;
+  width:100%;height:4px;margin-top:var(--sp-5);
+  background:var(--line);border-radius:var(--r-pill);
+}
+/* Scaled, not widened. A transform is composited, so the bar keeps moving
+   through the part of the boot that blocks the main thread hardest — React's
+   first render of the shell — where a width driven from a timer would stop
+   dead and read as a hang. The ends are square and the pill shape comes from
+   the track clipping them, so scaling distorts nothing.
+
+   The curve eases towards but never onto a full track: the bar is completed by
+   the handover below, so it never claims to have finished before it has. */
+.boot-fill{
+  display:block;
+  height:100%;width:100%;
+  transform:scaleX(0);transform-origin:left center;
+  background:var(--accent);
+}
+.boot[data-visible] .boot-fill{animation:bootFill 14s cubic-bezier(.12,.72,.22,1) forwards}
+.boot[data-hiding] .boot-fill{animation:none;transform:scaleX(1)}
+@keyframes bootFill{
+  0%{transform:scaleX(.04)}
+  8%{transform:scaleX(.38)}
+  24%{transform:scaleX(.62)}
+  55%{transform:scaleX(.81)}
+  100%{transform:scaleX(.93)}
+}
+
+.boot-note{
+  margin-top:var(--sp-4);
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--faint);
+}
+
+/* A panel that exists to reassure must not be the thing that makes someone
+   unwell. The cross-fade stays — an opacity change is not motion, and cutting
+   it would replace a dissolve with a hard flash — but the bar stops gliding and
+   steps instead, in the few places it is drawn at all. */
+@media(prefers-reduced-motion:reduce){
+  .boot[data-visible] .boot-fill{
+    animation-duration:16s;
+    animation-timing-function:steps(6,end);
+  }
+}

@@ -2,8 +2,10 @@
 @import './base.css';
 @import './layout.css';
 @import './shell.css';
+@import './boot.css';
 @import './components.css';
 @import './workbench.css';
 @import './patterns.css';
 @import './notificationPopup.css';
 @import './horizon.css';
+@import './skeleton.css';

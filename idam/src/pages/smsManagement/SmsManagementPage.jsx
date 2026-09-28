@@ -21,14 +21,17 @@ export default function SmsManagementPage({ segments = [] }) {
     return <SmsPage segments={segments} rows={messages} onRowsChange={setMessages} />
   }
 
-  /* /iam/sms/<tab>/<id|add> opens that record's editor. It is a page, so it
-     owns the whole screen — no page bar above it, because it brings its own
-     header and its own back link. */
+  /* /iam/sms/<tab>/<id|add> opens that record's editor. A provider and a
+     template are pages, so each owns the whole screen — no page bar above it,
+     because it brings its own header and its own back link. A client is a
+     drawer over the register, so the register keeps its page bar and the
+     address is put back to the register's own once the drawer is up. */
   const openId = segments[1]
+  const isRecordPage = !!openId && (head === 'providers' || head === 'templates')
 
   return (
     <>
-      {!openId && (
+      {!isRecordPage && (
         <PageBar
           title="SMS Management"
           sub="One-time-code and alert delivery over SMS — the gateways it leaves through, their message templates, the clients that route through them, and the register of what was carried."

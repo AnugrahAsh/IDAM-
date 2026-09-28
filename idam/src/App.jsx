@@ -1,11 +1,13 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import TopBar from './components/shell/TopBar'
 import Sidebar from './components/shell/Sidebar'
+import BootLoader from './components/shell/BootLoader'
 import Toasts from './components/shell/Toasts'
 import StatusBar from './components/shell/StatusBar'
 import CommandPalette from './components/shell/CommandPalette'
 import NotificationPopup from './components/shell/NotificationPopup'
 import { TITLES, isPublicRoute, isRecertifyLinkPath, moduleFor } from './data/nav'
+import { clearConsentGate, consentGateSettled } from './pages/consentGate/consentGateData'
 import RouteBoundary from './components/shell/RouteBoundary'
 import EmptyState from './components/primitives/EmptyState'
 import Button from './components/primitives/Button'
@@ -61,6 +63,8 @@ const GroupsPage = lazy(() => import('./pages/groups/GroupsPage'))
 const SignOnPolicyPage = lazy(() => import('./pages/signOnPolicies/SignOnPolicyPage'))
 const RecertifyLinkPage = lazy(() => import('./pages/recertification/RecertifyLinkPage'))
 const SelfEnrollmentPage = lazy(() => import('./pages/selfEnrollment/SelfEnrollmentPage'))
+const ConsentInitiatePage = lazy(() => import('./pages/consentGate/ConsentInitiatePage'))
+const ConsentGatePage = lazy(() => import('./pages/consentGate/ConsentGatePage'))
 
 const PAGES = {
   login: LoginPage,
@@ -130,7 +134,7 @@ let demoSessionLive = false
    opened at, so Log Out and the navigation that follows are unaffected. */
 const openedAtSignIn = ['/iam/login', '/iam/login/'].includes(window.location.pathname)
 
-export default function App() {
+function AppShell() {
   const { route, segments, navMin, navOpen, setNavOpen, drawer, setDrawer, modal, setModal,
     closeOverlays, paletteOpen, setPaletteOpen, can, role, navigate,
     signedIn, signIn, greeted, clearGreeting, notifOpen, setNotifOpen } = useApp()
@@ -139,11 +143,23 @@ export default function App() {
      right when the bell was pressed deliberately. */
   const [greetingPopup, setGreetingPopup] = useState(false)
 
+  /* Whether the outstanding consent has been answered in this browsing session.
+     Seeded from session storage so reloading the tab that answered it does not
+     ask again, and cleared on sign-out so the next identity is asked for itself
+     rather than inheriting someone else's answer. */
+  const [consentSettled, setConsentSettled] = useState(consentGateSettled)
+
+  useEffect(() => {
+    if (signedIn) return
+    clearConsentGate()
+    setConsentSettled(false)
+  }, [signedIn])
+
   /* The sign-in greeting. `greeted` is set once by signIn() and cleared here,
      so the popup is raised on entering the console and not again on every
      route change inside it. */
   useEffect(() => {
-    if (!greeted) return
+    if (!greeted || !consentSettled) return
     setGreetingPopup(true)
     setNotifOpen(true)
     clearGreeting()
@@ -213,6 +229,23 @@ export default function App() {
     )
   }
 
+  /* The tokenised registration link is opened from a mailed invitation by
+     someone who holds no session at all and may not be in the directory yet,
+     so like self-enrollment it renders ahead of the gate and without the
+     shell. */
+  if (route === 'consentInitiate') {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <ConsentInitiatePage />
+        </Suspense>
+        <Toasts />
+        {drawer && <Drawer {...drawer} onClose={() => setDrawer(null)} />}
+        {modal && <Modal {...modal} onClose={() => setModal(null)} />}
+      </>
+    )
+  }
+
   /* The gate. Not merely "the login route is showing": a session that has not
      signed in cannot render the console whatever the address bar says. */
   if (!signedIn || route === 'login') {
@@ -220,6 +253,21 @@ export default function App() {
     return (
       <>
         <LoginPage />
+        <Toasts />
+      </>
+    )
+  }
+
+  /* The consent gate. It sits after the sign-in gate and not before it: what is
+     being asked is whether *this identity* accepts, which cannot be asked until
+     there is one. It sits before the shell for the same reason the sign-in gate
+     does — a blocking consent rendered beside the sidebar is not blocking. */
+  if (!consentSettled) {
+    return (
+      <>
+        <Suspense fallback={<PageFallback />}>
+          <ConsentGatePage onAccept={() => setConsentSettled(true)} />
+        </Suspense>
         <Toasts />
       </>
     )
@@ -271,5 +319,17 @@ export default function App() {
         />
       )}
     </div>
+  )
+}
+
+/* The boot screen is mounted outside the shell so it covers every branch below
+   — the console, the sign-in gate and the two pages that render without one —
+   and so it is mounted once, before any of them decide what to draw. */
+export default function App() {
+  return (
+    <>
+      <BootLoader />
+      <AppShell />
+    </>
   )
 }

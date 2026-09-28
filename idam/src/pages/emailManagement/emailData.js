@@ -170,3 +170,112 @@ export const fromProviderDraft = (d) => ({
   timeout: Number(d.timeout) || 30000,
   retries: Number(d.retries) || 0,
 })
+
+// ---------------------------------------------------------------------------
+// Per-client health.
+//
+// A client is the tenant whose mail a binding carries, and each one relays
+// through its own. An operator triaging a bad morning had no way to see any of
+// them from here: the health screen answered for the default relay and nothing
+// else, so the only way to find out whether a tenant was sending was to sign
+// into that tenant.
+//
+// A client carries exactly the four connection facts and the three queue
+// outcomes the default relay reports — nothing extra, so the two readouts
+// cannot drift into different answers to the same question.
+// ---------------------------------------------------------------------------
+
+export const EMAIL_HEALTH_CLIENTS = [
+  {
+    id: 'bescom', code: 'BESCOM', name: 'Bangalore Electricity Supply Company',
+    host: 'smtp.bescom.co.in', port: '587', encryption: 'STARTTLS', auth: 'BASIC',
+    status: 'Active', checkedAt: '2 minutes ago',
+    queue: { Queued: 3, Sent: 1842, Failed: 0 },
+  },
+  {
+    id: 'upcl', code: 'UPCL', name: 'Uttarakhand Power Corporation',
+    host: 'smtp.upcl.org', port: '465', encryption: 'TLS', auth: 'BASIC',
+    status: 'Active', checkedAt: '4 minutes ago',
+    queue: { Queued: 214, Sent: 908, Failed: 6 },
+  },
+  {
+    id: 'bsphcl', code: 'BSPHCL', name: 'Bihar State Power Holding Company',
+    host: 'smtp.bsphcl.co.in', port: '587', encryption: 'STARTTLS', auth: 'BASIC',
+    status: 'Active', checkedAt: 'a minute ago',
+    queue: { Queued: 512, Sent: 60, Failed: 448 },
+  },
+  {
+    id: 're', code: 'RE', name: 'Royal Enfield',
+    host: 'smtp.royalenfield.com', port: '465', encryption: 'TLS', auth: 'API_KEY',
+    status: 'Active', checkedAt: '9 minutes ago',
+    queue: { Queued: 0, Sent: 2604, Failed: 1 },
+  },
+  {
+    id: 'bts', code: 'BTS', name: 'Bitchief Technology Services',
+    host: 'smtp.bitchief.in', port: '587', encryption: '', auth: 'BASIC',
+    status: 'Inactive', checkedAt: '31 minutes ago',
+    queue: { Queued: 77, Sent: 0, Failed: 0 },
+  },
+]
+
+/* The head says what is happening to the mail, not what the socket did: a
+   binding that answers 220 and then rejects four messages in ten is failing,
+   however healthy the handshake looked. `attention` is what the summary counts
+   — a relay somebody switched off is a decision, not an incident, so it reads
+   the way every other inactive record in the console reads and is not counted
+   against the tenant. */
+export const HEALTH_STATES = {
+  ok: { id: 'ok', label: 'Healthy', tone: 'ok', attention: false },
+  warn: { id: 'warn', label: 'Degraded', tone: 'warn', attention: true },
+  bad: { id: 'bad', label: 'Failing', tone: 'bad', attention: true },
+  off: { id: 'off', label: 'Inactive', tone: 'mut', attention: false },
+}
+
+/* The thresholds operations triages on. A binding rejecting a quarter of what
+   it is handed is failing whatever it answered on the wire; one rejection in a
+   hundred is worth a look; and a queue this deep means mail is arriving faster
+   than the binding is clearing it. */
+const FAIL_FAILING = 0.25
+const FAIL_DEGRADED = 0.01
+const BACKLOG_DEGRADED = 50
+
+/* Counting is done here rather than in the seed so the tiles and the head
+   figure are the same arithmetic, and so a client whose queue is edited cannot
+   end up with a total that no longer adds up. */
+export const queueCounts = (queue = {}) => {
+  const Queued = Number(queue.Queued) || 0
+  const Sent = Number(queue.Sent) || 0
+  const Failed = Number(queue.Failed) || 0
+  return { Queued, Sent, Failed, Total: Queued + Sent + Failed }
+}
+
+/* Read from the figures, never stored beside them: a seeded "degraded" flag
+   disagrees with the tiles under it the first time either is touched, and the
+   flag is what an operator would believe.
+
+   `drivers` is why this returns an object rather than a label. Two independent
+   thresholds raise the same amber pill, so the state alone does not say which
+   figure tripped it — a binding rejecting six of eleven hundred is well inside
+   tolerance and amber only because two hundred messages are sitting in its
+   queue. A head showing that six, coloured, tells the operator the opposite of
+   what the arithmetic said. So the keys that actually crossed a threshold come
+   back with the state: the head colours those and leaves every other figure
+   neutral, and the recheck toast names the same cause the head did. They are
+   queue keys, so they index `queueCounts` directly. */
+export const clientHealth = (c) => {
+  const settled = (state) => ({ ...state, drivers: [] })
+  if (!c) return settled(HEALTH_STATES.bad)
+  if (c.status !== 'Active') return settled(HEALTH_STATES.off)
+  // Nothing in the queue explains this one: there is no relay to blame it on.
+  if (!c.host || !c.port) return settled(HEALTH_STATES.bad)
+  const q = queueCounts(c.queue)
+  const rate = q.Total ? q.Failed / q.Total : 0
+  // Both are collected rather than the first to match: a binding can be
+  // rejecting and backed up at once, and the head has room to say so.
+  const drivers = []
+  if (rate >= FAIL_DEGRADED) drivers.push('Failed')
+  if (q.Queued > BACKLOG_DEGRADED) drivers.push('Queued')
+  if (rate >= FAIL_FAILING) return { ...HEALTH_STATES.bad, drivers }
+  if (drivers.length) return { ...HEALTH_STATES.warn, drivers }
+  return { ...HEALTH_STATES.ok, drivers }
+}

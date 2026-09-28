@@ -34,12 +34,18 @@
 }
 
 /* --- Record editors ----------------------------------------------------------
-   Each editor is a page: the page scrolls and the shared action bar closes
-   it, so the form owns nothing but the space between its sections. */
-.sms-form-b {
+   Each editor is a page: the page scrolls and the shared action bar closes it,
+   so the form owns nothing but the space between its cards.
+
+   The groups used to be bare field stacks on the canvas — a column of inputs
+   with nothing around them, which is why the module read as unfinished beside
+   Email Management. Every group is a card now, with the title and the sub-line
+   that say what the group decides, and the rhythm below is only what a card
+   cannot supply for itself. */
+.sms-form {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-5);
+  gap: var(--sp-4);
 }
 
 .sms-fs {
@@ -91,7 +97,7 @@
 /* Two boolean rows that share one frame: the encryption switch and the
    password-link role. Both light up when on, because each grants something
    the operator should be able to see without reading. */
-.sms-enc,
+.sms-sw,
 .sms-tog {
   display: flex;
   align-items: center;
@@ -105,19 +111,38 @@
 
 .sms-tog { gap: var(--sp-3) }
 
-.sms-enc[data-on="true"],
+.sms-sw { align-items: flex-start }
+
+.sms-sw[data-on="true"],
 .sms-tog[data-on="true"] {
   background: var(--accent-bg);
   border-color: var(--accent-line);
 }
 
-.sms-enc-l {
+/* The checkbox carries the name; what follows it is the sentence that says
+   what the setting costs, which is text rather than a second control. */
+.sms-sw .check { margin-top: 1px }
+
+.sms-sw-m {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sms-sw-t {
   font-size: var(--t-sm);
   font-weight: var(--w-med);
   color: var(--ink);
 }
 
-.sms-enc .pill { margin-left: auto }
+.sms-sw-s {
+  font-size: var(--t-xs);
+  color: var(--mut);
+}
+
+.sms-sw .pill { flex: none }
 
 .sms-tog-l {
   min-width: 0;
@@ -145,11 +170,23 @@
 .sig-rows{display:flex;flex-direction:column;gap:7px}
 /* Ordinal, source, field, controls. The ordinal is the point of the list — it
    is the signing order, and without it the rows read as an unordered set. */
-.sig-row{display:grid;grid-template-columns:22px minmax(120px,180px) minmax(0,1fr) auto;
+/* The last track is fixed rather than `auto` so the caption row and the input
+   rows are the same four columns: three small icon buttons and the word
+   "Order" size differently, and an auto track sized by each grid separately
+   put every caption a few pixels off the control it names. 5.5rem holds the
+   three 1.625rem buttons and their gaps, and grows with the reader's text. */
+.sig-row,
+.sig-head{display:grid;grid-template-columns:22px minmax(120px,180px) minmax(0,1fr) 5.5rem;
   gap:8px;align-items:center;min-width:0}
+/* The captions run once above the list rather than on every row: three
+   unlabelled controls in a line are not readable from the controls alone, and
+   a select full of sources does not say it is a source. */
+.sig-head{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--mut)}
+.sig-head-a{text-align:right}
 .sig-row-n{font-size:var(--t-xs);color:var(--faint);text-align:right;
   font-variant-numeric:tabular-nums}
-.sig-row-a{display:inline-flex;align-items:center;gap:2px}
+.sig-row-a{display:inline-flex;align-items:center;justify-content:flex-end;gap:2px}
 .sig-row-del{color:var(--bad)}
 .sig-row-del:hover{background:var(--bad-bg);color:var(--bad)}
 
@@ -160,12 +197,116 @@
   background:var(--surface-2);min-width:0}
 .sig-preview-k{flex:none;font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);
   text-transform:uppercase;color:var(--mut)}
-.sig-preview-v{min-width:0;font-size:var(--t-xs);color:var(--accent-deep);
+/* Plain ink, not the accent: --accent-deep is drawn for a light surface and
+   falls to about 2:1 against the dark theme's --surface-2, so the one line
+   that says what actually gets hashed became the least readable thing in the
+   builder. The mono face and the dashed frame carry the emphasis instead. */
+.sig-preview-v{min-width:0;font-size:var(--t-xs);color:var(--ink);
   overflow-wrap:anywhere}
 
 @media (max-width:760px){
   .sig-row{grid-template-columns:22px minmax(0,1fr);grid-auto-rows:min-content}
   .sig-row-a{grid-column:1 / -1;justify-content:flex-end}
+  /* Captions over a two-column stack would name the wrong cells. */
+  .sig-head{display:none}
+}
+
+/* --- What goes out ------------------------------------------------------------
+   Five groups of controls decide one HTTP call between them, and no group says
+   what the call looks like. These blocks state it back: the request as the
+   gateway receives it, and the message as the handset draws it. All of it is
+   computed from the draft on screen, so it is read, never typed — set in the
+   mono face at the field label's size rather than dressed up as an input. */
+.sms-prev {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: start;
+}
+
+.sms-blk {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.sms-blk-k {
+  font-size: var(--t-micro);
+  letter-spacing: var(--t-micro-ls);
+  text-transform: uppercase;
+  font-weight: var(--w-bold);
+  color: var(--mut);
+}
+
+.sms-code {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  line-height: 1.65;
+  /* A header value or a long body wraps rather than scrolling sideways: the
+     block sits inside a card that must not gain a horizontal scrollbar. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* The seeded send as a handset renders it. A binding is signed off as
+   transport, and it is easy to approve one without ever picturing the text
+   that arrives — or noticing that it is billed as two messages. */
+.sms-phone {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+
+.sms-phone-from {
+  font-size: var(--t-micro);
+  letter-spacing: var(--t-micro-ls);
+  text-transform: uppercase;
+  font-weight: var(--w-bold);
+  color: var(--mut);
+}
+
+.sms-bubble {
+  margin: 0;
+  align-self: flex-start;
+  max-width: 38ch;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  border-bottom-left-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.sms-phone-f {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--sp-4);
+  font-size: var(--t-xs);
+  color: var(--mut);
+}
+
+.sms-phone-f b {
+  color: var(--ink);
+  font-weight: var(--w-semi);
+}
+
+@media (max-width: 900px) {
+  .sms-prev { grid-template-columns: minmax(0, 1fr) }
 }
 
 /* --- Card view: sized to the Reports catalogue cards ---------------------------

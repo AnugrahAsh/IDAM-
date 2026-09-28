@@ -6,7 +6,9 @@ import Icon from '../../components/primitives/Icon'
 import IconButton from '../../components/primitives/IconButton'
 import AppLogo from '../../components/primitives/AppLogo'
 import EmptyState from '../../components/primitives/EmptyState'
+import { Skeleton, SkeletonCardGrid, SkeletonPageBar } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { MY_APPS } from '../../data/seed'
 
 /* My Apps is a showcase, not a configuration screen.
@@ -49,6 +51,12 @@ const AppTile = memo(function AppTile({ app }) {
 export default function MyAppsPage() {
   const { navigate } = useApp()
   const [q, setQ] = useState('')
+  /* The launcher is the console's front door, so it is the first page where a
+     grid that is simply there — already complete, on the frame the route
+     changed — reads as a flicker. It settles once, on arrival; searching does
+     not settle again, because filtering the tiles you can already see is not a
+     round trip and pretending otherwise would just be slow. */
+  const loading = useLoading()
 
   /* One grid, ordered by name. There is no grouping and no sort control: the
      estate is a set of applications an identity opens, not a taxonomy to
@@ -69,11 +77,19 @@ export default function MyAppsPage() {
 
   return (
     <div className="ma-workspace">
-      <PageBar
-        title="My Apps"
-        sub="Every application your identity can reach. Choose one to open it."
-        actions={<Button icon="shield" onClick={() => navigate('/iam/profile')}>My access</Button>}
-      />
+      {/* One announcing region for the page: the grid skeleton below is
+          decoration and stays silent, so the wait is described once. */}
+      {loading ? (
+        <Skeleton label="Loading your applications" className="ma-pagebar-skel">
+          <SkeletonPageBar actions={1} crumbs={1} />
+        </Skeleton>
+      ) : (
+        <PageBar
+          title="My Apps"
+          sub="Every application your identity can reach. Choose one to open it."
+          actions={<Button icon="shield" onClick={() => navigate('/iam/profile')}>My access</Button>}
+        />
+      )}
 
       {/* The register shell the rest of the console uses: a .wb panel with a
           .wb-bar toolbar. The body happens to be tiles rather than rows. */}
@@ -93,7 +109,13 @@ export default function MyAppsPage() {
           </div>
         </div>
 
-        {apps.length === 0 ? (
+        {loading ? (
+          /* Same class as the real grid, so the columns, the gutter and the
+             panel padding are the ones the tiles will land in. Eight is a full
+             row at laptop width and a little more — enough to read as an
+             estate, not so many that the page scrolls on nothing. */
+          <SkeletonCardGrid className="ma-grid" count={8} layout="stacked" lines={2} />
+        ) : apps.length === 0 ? (
           <div className="ma-empty">
             <EmptyState
               icon="apps"

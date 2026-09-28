@@ -8,6 +8,7 @@ import Pill from '../../components/primitives/Pill'
 import Avatar from '../../components/primitives/Avatar'
 import EmptyState from '../../components/primitives/EmptyState'
 import StatCards from '../../components/workbench/StatCards'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
 import Icon from '../../components/primitives/Icon'
 import Tag from '../../components/primitives/Tag'
@@ -17,11 +18,12 @@ import { useApp } from '../../store/AppContext'
 import { useUsers, writeUsers } from './usersStore'
 import { num, statusTone } from '../../lib/format'
 import { useLocalState } from '../../lib/useLocalState'
+import { useLoading } from '../../lib/useLoading'
 import {
   DORMANT_DAYS, RISK_ORDER, dormantDays, isDormant, isPrivileged, lastActive,
   mfaGap, mfaOf, needsAttention, riskOf, sourceOf,
 } from './posture'
-import { ATTRS } from '../../data/seed'
+import { USERS } from '../../data/seed'
 import { columnAttrs, useAttrs } from '../configurations/schemaStore'
 import SelectionSync from './SelectionSync'
 import UploadForm from './UploadForm'
@@ -164,6 +166,12 @@ export default function UsersList() {
   const { toast, confirm, setDrawer, navigate } = useApp()
   const schema = useAttrs()
   const rows = useUsers()
+  /* The directory is the console's heaviest register, and it is the one screen
+     an administrator opens first — so it is the one where arriving at a page
+     that is already complete reads as a jump rather than as speed. It settles
+     as one thing: masthead, headline tiles and rows all resolve on the same
+     tick rather than each appearing as it is ready. */
+  const loading = useLoading()
   const setRows = writeUsers
   /* Generated columns: every visible schema attribute that the hand-built
      columns above do not already carry. */
@@ -565,35 +573,49 @@ export default function UsersList() {
 
   return (
     <>
-      <PageBar
-        title="Users"
-        sub="Every identity the platform governs."
-        crumbs={[{ label: 'Users' }]}
-        actions={
-          <>
-            <Button variant="pri" icon="plus" onClick={() => navigate('/iam/users/add')}>Add User</Button>
-            <Button icon="upload" onClick={() => openUpload('users')}>Import Users</Button>
-            <Button
-              icon="sliders"
-              iconRight="chevD"
-              onClick={(e) => setMenu({ anchor: e.currentTarget, items: moreItems() })}
-            >
-              More Actions
-            </Button>
-          </>
-        }
-      />
+      {/* One announcing region for the whole screen. The register below draws
+          its own body skeleton from the `loading` prop, and that skeleton is
+          decoration — so a reader is told "loading the identity directory"
+          once rather than once per shape. */}
+      {loading ? (
+        <Skeleton label="Loading the identity directory">
+          <SkeletonPageBar actions={3} crumbs={1} />
+          <SkeletonStats count={cards.length} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Users"
+            sub="Every identity the platform governs."
+            crumbs={[{ label: 'Users' }]}
+            actions={
+              <>
+                <Button variant="pri" icon="plus" onClick={() => navigate('/iam/users/add')}>Add User</Button>
+                <Button icon="upload" onClick={() => openUpload('users')}>Import Users</Button>
+                <Button
+                  icon="sliders"
+                  iconRight="chevD"
+                  onClick={(e) => setMenu({ anchor: e.currentTarget, items: moreItems() })}
+                >
+                  More Actions
+                </Button>
+              </>
+            }
+          />
 
-      <StatCards
-        items={cards}
-        value={facet}
-        onChange={setFacet}
-        label="Directory summary and posture filters"
-      />
+          <StatCards
+            items={cards}
+            value={facet}
+            onChange={setFacet}
+            label="Directory summary and posture filters"
+          />
+        </>
+      )}
 
       <DataWorkbench
         id="directory"
         rows={shown}
+        loading={loading}
         columns={columns}
         selectable
         filters={(
