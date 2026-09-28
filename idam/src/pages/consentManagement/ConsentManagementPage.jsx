@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import Tabs from '../../components/primitives/Tabs'
+import { Skeleton, SkeletonPageBar } from '../../components/primitives/Skeleton'
 import ConsentsPage from './ConsentsPage'
 import ConsentPoliciesPage from './ConsentPoliciesPage'
 import ConsentTemplatesPage from './ConsentTemplatesPage'
@@ -8,6 +9,7 @@ import ConsentRecordsPage from './ConsentRecordsPage'
 import { SEED_TEMPLATES } from './consentTemplateData'
 import { CONSENT_DEFS } from '../shared/comms/commsData'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 
 // Three sub-sections on one page — the same shape as Email and SMS
 // Management — rather than three separate sidebar entries. Assignment rules
@@ -33,6 +35,14 @@ export default function ConsentManagementPage({ segments = [] }) {
   const [rows, setRows] = useState(() => CONSENT_DEFS.map((c) => ({ ...c })))
   const [mapped, setMapped] = useState({})
 
+  /* One settle for the whole section, keyed on the address. The page bar and
+     the panel under the tabs are one arrival, so they are held by one flag and
+     released together; a tab, a record or the assignment-rule register is the
+     round trip a real deployment would make, and the key changing is what says
+     so. The tab strip itself is chrome and is never held — an operator who has
+     just clicked a tab should not watch it disappear. */
+  const loading = useLoading(segments.join('/'))
+
   // A leading segment that names a section is the tab; anything else is a
   // record id or "add" belonging to the default section.
   const isTab = SECTIONS.some((s) => s.id === segments[0]) && segments[0] !== 'consent'
@@ -44,19 +54,28 @@ export default function ConsentManagementPage({ segments = [] }) {
   // breadcrumb, title and back link. Keeping the shell around them would stack
   // a second header on top of theirs.
   if (rest.length > 0) {
-    if (tab === 'consent' && rest[0] === 'rules') return <ConsentPoliciesPage />
-    if (tab === 'templates') return <ConsentTemplatesPage segments={rest} templates={templates} setTemplates={setTemplates} />
-    if (tab === 'records') return <ConsentRecordsPage segments={rest} embedded />
-    return <ConsentsPage segments={rest} embedded templates={templates} rows={rows} setRows={setRows} mapped={mapped} setMapped={setMapped} />
+    if (tab === 'consent' && rest[0] === 'rules') return <ConsentPoliciesPage loading={loading} />
+    if (tab === 'templates') return <ConsentTemplatesPage segments={rest} templates={templates} setTemplates={setTemplates} loading={loading} />
+    if (tab === 'records') return <ConsentRecordsPage segments={rest} embedded loading={loading} />
+    return <ConsentsPage segments={rest} embedded templates={templates} rows={rows} setRows={setRows} mapped={mapped} setMapped={setMapped} loading={loading} />
   }
 
   return (
     <>
-      <PageBar
-        title="Consent Management"
-        crumbs={[{ label: 'Consents' }, { label: 'Consent Management' }]}
-        sub="Consent definitions, the wording shown, the rules that assign them, and the evidence retained."
-      />
+      {/* The announcing region for the section: everything under it, including
+          each register's own body skeleton, is decoration, so the wait is
+          described once. */}
+      {loading ? (
+        <Skeleton label="Loading Consent Management">
+          <SkeletonPageBar actions={0} crumbs={2} />
+        </Skeleton>
+      ) : (
+        <PageBar
+          title="Consent Management"
+          crumbs={[{ label: 'Consents' }, { label: 'Consent Management' }]}
+          sub="Consent definitions, the wording shown, the rules that assign them, and the evidence retained."
+        />
+      )}
 
       <div className="stack">
         <Tabs
@@ -64,9 +83,9 @@ export default function ConsentManagementPage({ segments = [] }) {
           onChange={(id) => navigate(id === 'consent' ? '/iam/consent' : `/iam/consent/${id}`)}
           tabs={SECTIONS}
         />
-        {tab === 'consent' && <ConsentsPage segments={rest} embedded templates={templates} rows={rows} setRows={setRows} mapped={mapped} setMapped={setMapped} />}
-        {tab === 'templates' && <ConsentTemplatesPage templates={templates} setTemplates={setTemplates} />}
-        {tab === 'records' && <ConsentRecordsPage segments={rest} embedded />}
+        {tab === 'consent' && <ConsentsPage segments={rest} embedded templates={templates} rows={rows} setRows={setRows} mapped={mapped} setMapped={setMapped} loading={loading} />}
+        {tab === 'templates' && <ConsentTemplatesPage templates={templates} setTemplates={setTemplates} loading={loading} />}
+        {tab === 'records' && <ConsentRecordsPage segments={rest} embedded loading={loading} />}
       </div>
     </>
   )

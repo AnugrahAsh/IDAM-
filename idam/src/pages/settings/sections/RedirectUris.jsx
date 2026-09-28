@@ -10,6 +10,7 @@ import Modal from '../../../components/primitives/Modal'
 import EmptyState from '../../../components/primitives/EmptyState'
 import Banner from '../../../components/primitives/Banner'
 import { useApp } from '../../../store/AppContext'
+import SectionSkeleton, { TableSkeleton } from './SectionSkeleton'
 import { writeSection } from '../settingsStore'
 
 const PAGE_SIZES = ['10', '20', '50', '100']
@@ -22,7 +23,7 @@ const valid = (u) => /^https?:\/\/[^\s]+$/i.test(String(u).trim())
  * it cannot receive an authorization response. It is a register rather than a
  * textarea so each entry carries who added it and when.
  */
-export default function RedirectUris({ value }) {
+export default function RedirectUris({ value, loading = false }) {
   const { toast, confirm } = useApp()
   const [q, setQ] = useState('')
   const [size, setSize] = useState('10')
@@ -77,6 +78,22 @@ export default function RedirectUris({ value }) {
       toast('ok', 'Redirect URI removed', row.uri)
     },
   })
+
+/* Held while Settings settles. This section is a register of stored rows, not
+   a form the operator arrives already typing into: the add row above the table
+   appends to rows that are still on their way, so it holds its place with
+   them. */
+  if (loading) {
+    return (
+      <SectionSkeleton>
+        {/* The row count is not a guess. Tenant configuration is one document
+            and it is already in hand when the settle starts, so the shape is
+            drawn at the count the table lands with — capped by the page size,
+            because that is what the table shows. */}
+        <TableSkeleton rows={Math.min(value.length, per) || 4} cols={6} bar />
+      </SectionSkeleton>
+    )
+  }
 
   return (
     <>

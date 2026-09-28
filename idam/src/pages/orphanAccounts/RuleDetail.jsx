@@ -18,10 +18,18 @@ import { useMemo, useState } from 'react'
 import { ACCOUNT_ATTRIBUTES, BASE, NOW_STAMP, RULES_BASE, SWEEP, ageDays, changeLog, countRules, matchAccounts, modelText, sweepHistory, unresolvedRules } from './orphanedData'
 import AccountsTable from './AccountsTable'
 import ConditionBuilder from './ConditionBuilder'
+import { useLoading } from '../../lib/useLoading'
+import { RuleChangeLogSkeleton, RuleHistoryStripSkeleton, RuleOverviewSkeleton } from './OrphanSkeleton'
 
 export default function RuleDetail({ rule, tab, accounts, setRules, actions }) {
   const { toast, confirm, navigate } = useApp()
   const [pending, setPending] = useState(null)
+  /* One flag for the record, keyed on the rule and the tab it is being read
+     through. The masthead is chrome — it carries the tab strip the reader is
+     steering with — so what settles is the panel beneath it. Conditions is the
+     one panel that does not take part: it is an editor the operator types into,
+     and a rule already in hand has nothing to wait for there. */
+  const loading = useLoading(`${rule.id}:${tab}`)
 
   const model = pending || rule.model
   const registered = useMemo(() => accounts.filter((a) => a.rule === rule.name), [accounts, rule.name])
@@ -121,7 +129,9 @@ export default function RuleDetail({ rule, tab, accounts, setRules, actions }) {
       />
 
       <div className="detail-body">
-        {tab === 'overview' && (
+        {tab === 'overview' && loading && <RuleOverviewSkeleton rule={rule} />}
+
+        {tab === 'overview' && !loading && (
           <div className="detail-cols">
             <div className="stack">
               <div className="stat-strip">
@@ -313,7 +323,10 @@ export default function RuleDetail({ rule, tab, accounts, setRules, actions }) {
 
         {tab === 'accounts' && (
           <div className="stack">
-            {registered.length === 0 ? (
+            {/* "Nothing matched" is a verdict, and it cannot be delivered until
+                the sweep's results are in hand — so while the register settles,
+                the register is what is on screen. */}
+            {!loading && registered.length === 0 ? (
               <EmptyState
                 icon="checkC"
                 title="No account matched this rule"
@@ -324,6 +337,7 @@ export default function RuleDetail({ rule, tab, accounts, setRules, actions }) {
               <AccountsTable
                 id={`orphan-rule-accounts-${rule.id}`}
                 rows={registered}
+                loading={loading}
                 onAssign={actions.openAssign}
                 onDisable={actions.disable}
                 onSuppress={actions.suppress}
@@ -337,16 +351,22 @@ export default function RuleDetail({ rule, tab, accounts, setRules, actions }) {
         {tab === 'history' && (
           <div className="detail-cols">
             <div className="stack">
-              <div className="stat-strip">
-                <div className="stat-cell"><span className="stat-k">Sweeps recorded</span><span className="stat-v">{num(sweeps.length)}</span></div>
-                <div className="stat-cell"><span className="stat-k">Accounts surfaced</span><span className="stat-v">{num(sweeps.reduce((a, s) => a + s.discovered, 0))}</span></div>
-                <div className="stat-cell"><span className="stat-k">Accounts cleared</span><span className="stat-v">{num(sweeps.reduce((a, s) => a + s.cleared, 0))}</span></div>
-                <div className="stat-cell"><span className="stat-k">Failed sweeps</span><span className="stat-v">{num(sweeps.filter((s) => s.status === 'Failed').length)}</span></div>
-              </div>
+              {/* The one announcing region on this panel. The register below
+                  settles its own rows from `loading` and the change log beside
+                  it draws aria-hidden shapes, so the wait is described once. */}
+              {loading ? <RuleHistoryStripSkeleton rule={rule} /> : (
+                <div className="stat-strip">
+                  <div className="stat-cell"><span className="stat-k">Sweeps recorded</span><span className="stat-v">{num(sweeps.length)}</span></div>
+                  <div className="stat-cell"><span className="stat-k">Accounts surfaced</span><span className="stat-v">{num(sweeps.reduce((a, s) => a + s.discovered, 0))}</span></div>
+                  <div className="stat-cell"><span className="stat-k">Accounts cleared</span><span className="stat-v">{num(sweeps.reduce((a, s) => a + s.cleared, 0))}</span></div>
+                  <div className="stat-cell"><span className="stat-k">Failed sweeps</span><span className="stat-v">{num(sweeps.filter((s) => s.status === 'Failed').length)}</span></div>
+                </div>
+              )}
 
               <DataWorkbench
                 id={`orphan-sweeps-${rule.id}`}
                 rows={sweeps}
+                loading={loading}
                 columns={[
                   { key: 'runId', label: 'Sweep', locked: true, cls: 'td-main td-mono' },
                   { key: 'started', label: 'Started', cls: 'td-mono' },
@@ -371,18 +391,22 @@ export default function RuleDetail({ rule, tab, accounts, setRules, actions }) {
             </div>
 
             <div className="stack">
-              <Card title="Change log" sub="Definition and scope changes">
-                <div className="tl">
-                  {changeLog(rule).map((e) => (
-                    <div className="tl-it" key={e.id} data-tone={e.tone}>
-                      <span className="tl-dot"><Icon name={e.icon} size={8} /></span>
-                      <div className="tl-t">{e.title}</div>
-                      <div className="tl-s">{e.body}</div>
-                      <div className="tl-time">{e.ts} · {e.actor}</div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              {/* The log is asked for its length rather than guessed at, so the
+                  rail holds exactly the entries that are coming. */}
+              {loading ? <RuleChangeLogSkeleton rows={changeLog(rule).length} /> : (
+                <Card title="Change log" sub="Definition and scope changes">
+                  <div className="tl">
+                    {changeLog(rule).map((e) => (
+                      <div className="tl-it" key={e.id} data-tone={e.tone}>
+                        <span className="tl-dot"><Icon name={e.icon} size={8} /></span>
+                        <div className="tl-t">{e.title}</div>
+                        <div className="tl-s">{e.body}</div>
+                        <div className="tl-time">{e.ts} · {e.actor}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </div>
           </div>
         )}

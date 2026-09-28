@@ -191,7 +191,7 @@ export function OverviewTab({ org, orgs, members, kids, resolved, onInherit, onT
   )
 }
 
-export function IdentitiesTab({ org, members }) {
+export function IdentitiesTab({ org, members, loading = false }) {
   const { navigate, toast } = useApp()
 
   const columns = [
@@ -219,6 +219,7 @@ export function IdentitiesTab({ org, members }) {
     <DataWorkbench
       id="org-identities"
       rows={members}
+      loading={loading}
       columns={columns}
       selectable
       searchPlaceholder={`Search identities in ${org.name}…`}
@@ -249,10 +250,12 @@ export function IdentitiesTab({ org, members }) {
   )
 }
 
-export function ChildrenTab({ org, kids }) {
+export function ChildrenTab({ org, kids, loading = false }) {
   const { navigate, toast } = useApp()
 
-  if (kids.length === 0) {
+  // An empty state is an answer, and an answer cannot be given before the
+  // question has settled — so the register holds its rows until it has.
+  if (!loading && kids.length === 0) {
     return (
       <EmptyState
         icon="layers"
@@ -287,6 +290,7 @@ export function ChildrenTab({ org, kids }) {
     <DataWorkbench
       id="org-children"
       rows={kids}
+      loading={loading}
       columns={columns}
       search={false}
       onRowClick={(r) => navigate(`/iam/organizations/${r.id}`)}

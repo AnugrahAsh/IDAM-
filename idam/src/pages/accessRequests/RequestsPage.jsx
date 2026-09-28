@@ -22,7 +22,9 @@ import StatCards from '../../components/workbench/StatCards'
 import RecordCard, { CardIcon } from '../../components/workbench/RecordCard'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
 import Tag from '../../components/primitives/Tag'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import { useLocalState } from '../../lib/useLocalState'
+import { useLoading } from '../../lib/useLoading'
 
 // A requester tracks their own asks: what is still moving, what cleared, and
 // what came back refused.
@@ -39,6 +41,9 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
   const { navigate, toast } = useApp()
   const [menu, setMenu] = useState(null)
   const [facet, setFacet] = useState('all')
+  // One flag for the page: the masthead, the tiles and the register are the
+  // same requests counted three ways and settle as one thing.
+  const loading = useLoading()
 
   const visible = useMemo(() => rows.filter(FACETS[facet] || FACETS.all), [rows, facet])
 
@@ -130,33 +135,46 @@ function RequesterList({ rows, stats, onCancel, onDuplicate, onExport }) {
 
   return (
     <>
-      <PageBar
-        title="Access Requests"
-        crumbs={[{ label: 'Access governance' }, { label: 'Access Requests' }]}
-        sub="Everything raised against the directory, from a single group membership to emergency privileged access, with the approval chain each request must clear."
-        actions={
-          <>
-            <Button icon="download" onClick={() => onExport(rows.length)}>Export</Button>
-            <Button variant="pri" icon="plus" iconRight="chevD" onClick={typeMenu}>Add request</Button>
-          </>
-        }
-      />
+      {/* One announcing region for the screen. The register below draws its own
+          body skeleton from the `loading` prop and stays silent. */}
+      {loading ? (
+        <Skeleton label="Loading your access requests">
+          <SkeletonPageBar actions={2} crumbs={2} />
+        </Skeleton>
+      ) : (
+        <PageBar
+          title="Access Requests"
+          crumbs={[{ label: 'Access governance' }, { label: 'Access Requests' }]}
+          sub="Everything raised against the directory, from a single group membership to emergency privileged access, with the approval chain each request must clear."
+          actions={
+            <>
+              <Button icon="download" onClick={() => onExport(rows.length)}>Export</Button>
+              <Button variant="pri" icon="plus" iconRight="chevD" onClick={typeMenu}>Add request</Button>
+            </>
+          }
+        />
+      )}
 
       {/* The four request-type tiles duplicated the "Add request" menu in the
           page bar, which already lists every type — including the ones the row
           of four could not fit. A whole band of the page repeating a control
           beside it earned its place from neither. */}
       <div className="stack">
-        <StatCards
-          items={cards}
-          value={facet}
-          onChange={(id) => setFacet(id === facet && id !== 'all' ? 'all' : id)}
-          label="Filter my requests"
-        />
+        {loading ? (
+          <SkeletonStats count={cards.length} />
+        ) : (
+          <StatCards
+            items={cards}
+            value={facet}
+            onChange={(id) => setFacet(id === facet && id !== 'all' ? 'all' : id)}
+            label="Filter my requests"
+          />
+        )}
 
         <DataWorkbench
           id="requests"
           rows={visible}
+          loading={loading}
           columns={columns}
           selectable
           searchPlaceholder="Search by request id, identity, entitlement or approver…"

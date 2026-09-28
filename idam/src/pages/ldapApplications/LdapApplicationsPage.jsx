@@ -41,17 +41,13 @@ export default function LdapApplicationsPage({ segments = [] }) {
     return <LdapDefaultsForm count={apps.length} directories={directoryNames} onCancel={() => navigate('/iam/ldapapplications')} />
   }
 
+  /* The estate-wide rule register carries its own masthead, the way `LdapList`
+     does. It is read from data like every other register in the module and
+     settles with it, and the flag that decides whether it is settling has to sit
+     below this component's early returns to stay a legal hook — so it lives in
+     the register rather than here. */
   if (first === 'rules') {
-    return (
-      <>
-        <PageBar
-          title="Provisioning rules"
-          sub="Every rule across the estate, and the organizational unit each one writes into. Read-only."
-          crumbs={[{ label: 'LDAP Applications', to: '/iam/ldapapplications' }, { label: 'Provisioning rules' }]}
-        />
-        <LdapRules apps={apps} rules={rules} />
-      </>
-    )
+    return <LdapRules apps={apps} rules={rules} />
   }
 
   if (first === 'add') {

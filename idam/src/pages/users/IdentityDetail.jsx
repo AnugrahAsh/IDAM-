@@ -19,10 +19,12 @@ import Select from '../../components/primitives/Select'
 import SearchSelect from '../../components/primitives/SearchSelect'
 import Check from '../../components/primitives/Check'
 import { openResetPassword } from './ResetPasswordForm'
+import { IdentityPanelSkeleton, IdentityRecordSkeleton } from './IdentitySkeleton'
 import UserConsentPanel from '../consentManagement/UserConsentPanel'
 import { consentsFor } from '../consentManagement/userConsentData'
 import { useApp } from '../../store/AppContext'
 import { num, statusTone } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
 import { APPLICATIONS, GROUPS, SSO_APPS } from '../../data/seed'
 import { useSchema, visibleAttrs } from '../configurations/schemaStore'
 import {
@@ -146,6 +148,27 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
   const recerts = useMemo(() => recertHistoryFor(user), [user])
   const trail = useMemo(() => auditFor(user), [user])
   const [openChange, setOpenChange] = useState(null)
+
+  /* Two scopes off one timer, as the role and group records do. `arriving` is
+     the whole record: masthead, tab strip, the figure strip and the panel under
+     it resolve together, because landing on an identity is one read. `settling`
+     is the panel alone, which is all a tab change asks for — the masthead above
+     it is already in hand, and a tab bar that greyed out under the pointer that
+     had just used it would have been taken away mid-gesture. */
+  const arriving = useLoading(user.id)
+  const settling = useLoading(`${user.id}:${tab}`)
+
+  /* The overview prints one card per schema section. Holding their space needs
+     the field count of each, so the shapes are the size of the cards that land
+     rather than a guess at how many attributes are configured. */
+  const sectionSizes = useMemo(() => {
+    const visible = visibleAttrs(schema.attrs)
+    return schema.sections
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((s) => visible.filter((a) => a.section === s.id).length)
+      .filter((n) => n > 0)
+  }, [schema])
 
   const strongest = factors.slice().sort((a, b) => STRENGTH_RANK[b.strength] - STRENGTH_RANK[a.strength])[0]
   const liveEntitlements = entitlements.filter((e) => !revoked.has(e.id))
@@ -425,6 +448,27 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
     { id: 'audit', label: 'Audit', icon: 'history' },
   ]
 
+  /* The record has its rows in hand before it draws a shape for them, so every
+     count handed to the skeleton is the real one. A shape built on a guess at
+     how many rows are coming is the jump it was added to remove. */
+  const shape = {
+    sections: sectionSizes,
+    entitlements: liveEntitlements.length,
+    accounts: provisioned.length,
+    apps: reachable.length,
+    events: events.length,
+    requests: openRequests.length,
+    factors: factors.length,
+    devices: devices.length,
+    sessions: liveSessions.length,
+    audit: trail.length,
+    recerts: recerts.length,
+    certItems: certItems.length,
+    consents: consents.length,
+  }
+
+  if (arriving) return <IdentityRecordSkeleton tab={tab} shape={shape} />
+
   return (
     <>
       <DetailHeader
@@ -528,7 +572,12 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
           </button>
         </div>
 
-        {tab === 'overview' && (
+        {/* The figure strip above stays live through a tab change: it counts
+            the whole record rather than the panel, so it is not part of what a
+            tab reads. Only what sits under the tab bar is redrawn. */}
+        {settling && <IdentityPanelSkeleton tab={tab} shape={shape} />}
+
+        {!settling && tab === 'overview' && (
           <div className="detail-cols">
             <div className="stack">
               {conflicts.length > 0 && (
@@ -608,7 +657,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
           </div>
         )}
 
-        {tab === 'access' && (
+        {!settling && tab === 'access' && (
           <div className="stack">
             <Card
               title="Entitlements"
@@ -836,7 +885,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
           </div>
         )}
 
-        {tab === 'apps' && (
+        {!settling && tab === 'apps' && (
           <Card
             title="Reachable applications"
             sub={`${reachable.length} applications this identity can sign in to`}
@@ -898,7 +947,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
           </Card>
         )}
 
-        {tab === 'activity' && (
+        {!settling && tab === 'activity' && (
           <div className="detail-cols">
             <Card title="Activity timeline" sub={`${events.length} events recorded against this actor`}>
               {events.length > 0 && (
@@ -972,7 +1021,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
           </div>
         )}
 
-        {tab === 'credentials' && (
+        {!settling && tab === 'credentials' && (
           <div className="stack">
             <Card
               title="Authentication factors"
@@ -1102,7 +1151,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
 
         {/* Consent given on someone's behalf is not consent, so this side of
             the panel reads the record and asks again — it never answers. */}
-        {tab === 'consent' && (
+        {!settling && tab === 'consent' && (
           <div className="stack">
             <Banner tone="info">
               What {user.username} has been asked to consent to, and the answer held for each notice. Consent is given
@@ -1112,7 +1161,7 @@ export default function IdentityDetail({ user, onPatch, onDelete }) {
           </div>
         )}
 
-        {tab === 'audit' && (
+        {!settling && tab === 'audit' && (
           <div className="detail-cols">
             <div className="stack">
               <Card

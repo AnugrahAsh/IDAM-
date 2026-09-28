@@ -173,3 +173,20 @@
 .af-acts{display:flex;align-items:center;gap:6px}
 .af-ok{color:var(--ok);border-color:var(--ok-line)}
 .af-ok:hover{background:var(--ok-bg)}
+
+/* --- The masthead's rail, holding its place ------------------------------ */
+/* `SkeletonPageBar` draws the bar without a rail, so the chips are a sibling
+   underneath it, pulled back up into the bar's own 16px bottom padding and
+   given the 7px the real rail sits on. The result is the same baseline the
+   figures land on, without restating the whole masthead here. */
+.set-skel-rail{margin:-9px 0 16px}
+.set-skel-chip{height:27px;border-radius:var(--r-pill)}
+
+/* --- The read sections, holding their place ------------------------------ */
+/* Bars drawn inside the sections' own containers, which — unlike the kit's —
+   give their children no display of their own, so each one says it here. */
+.set-skel-level-n{flex:none;width:26px;height:26px;border-radius:var(--r-sm)}
+.set-skel-level-b{display:flex;flex-direction:column;gap:5px}
+.set-skel-level-b > .skel{display:block}
+.set-skel-act{width:26px;height:26px;border-radius:var(--r-sm)}
+.set-skel-ctl{height:31px;border-radius:var(--r-sm)}

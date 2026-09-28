@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import Button from '../../components/primitives/Button'
 import Icon from '../../components/primitives/Icon'
 import Pill from '../../components/primitives/Pill'
@@ -11,6 +12,7 @@ import Avatar from '../../components/primitives/Avatar'
 import Menu from '../../components/primitives/Menu'
 import EmptyState from '../../components/primitives/EmptyState'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num, statusTone } from '../../lib/format'
 import { IP_POLICIES, SSO_APPS, USERS } from '../../data/seed'
 import { IP_VALUES, LIST_PATH, dayStr } from './networkData'
@@ -120,6 +122,12 @@ export default function NetworkPolicyPage({ segments = [] }) {
     deny: rows.filter((r) => r.action === 'Deny').length,
     disabled: rows.filter((r) => r.status === 'Disabled').length,
   }), [rows])
+
+  /* One settle for the screen, keyed on the address: the page bar, the tiles
+     and the register are the same arrival, and opening a binding is the round
+     trip a real deployment would make. Searching and faceting are not — the
+     rows being narrowed are already on screen. */
+  const loading = useLoading(segments.join('/'))
 
   const open = (target) => navigate(target.startsWith('/') ? target : `${LIST_PATH}/${target}`)
 
@@ -272,6 +280,7 @@ export default function NetworkPolicyPage({ segments = [] }) {
     return (
       <BindingDetail
         binding={binding}
+        loading={loading}
         onOpen={open}
         onEdit={(r) => navigate(`${LIST_PATH}/${r.id}/edit`)}
         onToggle={(r) => mutate([r.id], { status: r.status === 'Active' ? 'Disabled' : 'Active' }, r.status === 'Active' ? 'Binding deactivated' : 'Binding activated')}
@@ -384,6 +393,13 @@ export default function NetworkPolicyPage({ segments = [] }) {
 
   return (
     <>
+      {/* One announcing region for the page. The register below keeps its own
+          panel and toolbar while the rows settle inside it. */}
+      {loading ? (
+        <Skeleton label="Loading the network access policy set">
+          <SkeletonPageBar actions={2} crumbs={2} />
+        </Skeleton>
+      ) : (
       <PageBar
         title="Network Access Policies"
         sub="Per-identity address bindings evaluated at every authentication attempt, before any application assignment is considered."
@@ -395,9 +411,11 @@ export default function NetworkPolicyPage({ segments = [] }) {
           </>
         }
       />
+      )}
 
       <div className="stack">
 
+        {loading ? <SkeletonStats count={4} /> : (
         <StatCards
           items={[
             { key: 'total', icon: 'noentry', label: 'Bindings', value: stats.total, chip: `${num(stats.identities)} identities`, sub: 'network restrictions in force' },
@@ -407,11 +425,13 @@ export default function NetworkPolicyPage({ segments = [] }) {
           ]}
           label="Network restriction summary"
         />
+        )}
 
         <DataWorkbench
           id="ip-restriction-policy"
           rows={rows}
           columns={columns}
+          loading={loading}
           selectable
           searchPlaceholder="Search by uuid, username, application or address…"
           bulkActions={bulkActions}

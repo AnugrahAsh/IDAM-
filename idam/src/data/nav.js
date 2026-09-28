@@ -63,7 +63,9 @@ export const ROUTES = [
   // (/iam/itdr/alerts), so it is a detail route.
   { id: 'itdr', path: '/iam/itdr', label: 'Identity Threat Detection', icon: 'shieldAlert', detail: true, module: 'Identity Threat Detection' },
   { id: 'licenses', path: '/iam/licenses', label: 'License', icon: 'license', module: 'License' },
-  { id: 'profile', path: '/iam/profile', label: 'My Profile', icon: 'user', module: 'My profile' },
+  // `detail` because the page opens on a named tab — /iam/profile/security is
+  // what the account menu's Change password row follows.
+  { id: 'profile', path: '/iam/profile', label: 'My Profile', icon: 'user', detail: true, module: 'My profile' },
   { id: 'settings', path: '/iam/settings', label: 'Settings', icon: 'config', module: 'Settings' },
   { id: 'addLoginPassword', path: '/iam/additional/login', label: 'Login & Password', icon: 'lock', detail: true },
   { id: 'addOtpLogin', path: '/iam/additional/otpLogin', label: 'Email & Mobile Login', icon: 'phone', detail: true },
@@ -174,6 +176,9 @@ export const LEGACY = {
   '/iam/externaluserfederation': '/iam/externalUserFederation',
   '/iam/userFederation': '/iam/externalUserFederation',
   '/iam/connectorHub': '/iam/externalUserFederation/new',
+  // The address the provider specification prints for this page.
+  '/iam/external/user/federation/add': '/iam/externalUserFederation/new',
+  '/iam/external/user/federation': '/iam/externalUserFederation',
   '/iam/directories': '/iam/ldapapplications',
   '/iam/ldapConfigurations': '/iam/ldapapplications',
   '/iam/sso': '/iam/applications',

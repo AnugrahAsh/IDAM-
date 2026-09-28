@@ -20,9 +20,15 @@ import { num } from '../../lib/format'
 import { BASE, GROUP_TYPES, blankModel, countRules, groupLabel, groupList, groupPhrase, groupRecords, groupsOfType, matchUsers, modelText, parseExpression, resolvable, unresolvedRules } from './policyPageData'
 import ExpressionCode from '../shared/conditions/ExpressionCode'
 import ConditionBuilder from './ConditionBuilder'
+import { useLoading } from '../../lib/useLoading'
+import { PolicyBuilderSkeleton } from './PoliciesSkeleton'
 
 export default function PolicyBuilder({ policy, setRows }) {
   const { toast, navigate } = useApp()
+  /* Only the edit address settles. A new policy opens on a blank condition
+     with nothing to fetch, so the wait is switched off there rather than
+     invented: `ms = 0` is how useLoading is told there is no round trip. */
+  const loading = useLoading(policy ? policy.id : null, policy ? undefined : 0)
   const [draft, setDraft] = useState(() => ({
     name: policy ? policy.name : '',
     description: policy ? policy.description : '',
@@ -79,6 +85,8 @@ export default function PolicyBuilder({ policy, setRows }) {
     toast('ok', 'Policy created', `${draft.name} matches ${num(matched.length)} identities today and assigns ${groupPhrase(draft.groups)}. Simulate before activating.`)
     if (created) navigate(`${BASE}/${created.id}`)
   }
+
+  if (loading) return <PolicyBuilderSkeleton />
 
   return (
     <>

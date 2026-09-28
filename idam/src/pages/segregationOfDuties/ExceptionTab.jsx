@@ -6,6 +6,7 @@ import DataWorkbench from '../../components/workbench/DataWorkbench'
 import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
 import { exceptionColumns, exceptionsFor } from './sodData'
+import { Skeleton } from '../../components/primitives/Skeleton'
 
 /**
  * The identities that do not satisfy the rule, and which half of it they hold.
@@ -18,7 +19,7 @@ import { exceptionColumns, exceptionsFor } from './sodData'
  * Held and not-held are glyphs rather than words. A reader scanning eleven
  * columns is looking for a shape, and eleven repetitions of "TRUE" is not one.
  */
-export default function ExceptionTab({ rule }) {
+export default function ExceptionTab({ rule, loading = false }) {
   const { toast } = useApp()
   const groups = useMemo(() => exceptionColumns(rule), [rule])
   const rows = useMemo(() => exceptionsFor(rule), [rule])
@@ -39,17 +40,29 @@ export default function ExceptionTab({ rule }) {
 
   return (
     <div className="stack">
-      <Banner tone={rows.length ? 'bad' : 'ok'}>
-        {rows.length === 0
-          ? <>No identity currently breaches <b>{rule.name}</b>. The {num(groups.length)} entitlements it grades are the columns below.</>
-          : rule.type === 'Affinity'
-            ? <><b>{num(rows.length)}</b> {rows.length === 1 ? 'identity holds' : 'identities hold'} part of this combination without holding the rest.</>
-            : <><b>{num(rows.length)}</b> {rows.length === 1 ? 'identity holds' : 'identities hold'} more than one entitlement from this combination.</>}
-      </Banner>
+      {/* Whether the rule is clean is the banner's whole content, so it cannot
+          be written until the exceptions have resolved. The register below
+          draws its own body skeleton and stays silent; this is the one region. */}
+      {loading ? (
+        <Skeleton label={`Loading exceptions for ${rule.name}`}>
+          {/* A one-line `.banner`: 10px of padding either side of an 18px line
+              box, inside a hairline border. */}
+          <span className="skel" style={{ display: 'block', height: 40 }} aria-hidden="true" />
+        </Skeleton>
+      ) : (
+        <Banner tone={rows.length ? 'bad' : 'ok'}>
+          {rows.length === 0
+            ? <>No identity currently breaches <b>{rule.name}</b>. The {num(groups.length)} entitlements it grades are the columns below.</>
+            : rule.type === 'Affinity'
+              ? <><b>{num(rows.length)}</b> {rows.length === 1 ? 'identity holds' : 'identities hold'} part of this combination without holding the rest.</>
+              : <><b>{num(rows.length)}</b> {rows.length === 1 ? 'identity holds' : 'identities hold'} more than one entitlement from this combination.</>}
+        </Banner>
+      )}
 
       <DataWorkbench
         id={`sod-exceptions-${rule.id}`}
         rows={rows}
+        loading={loading}
         columns={columns}
         getRowId={(r) => r.id}
         searchPlaceholder="Search exceptions by username…"

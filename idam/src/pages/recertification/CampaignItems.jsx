@@ -14,6 +14,7 @@ import { num } from '../../lib/format'
 import { downloadCsv, slugify, toCsv } from '../reports/exportCsv'
 import { levelNames } from './data'
 import { STATE_META, levelKey, levelLabel, summariseUser } from './campaignUsers'
+import { CampaignItemsSkeleton } from './RecertificationSkeleton'
 
 const STATUS_FILTERS = [
   { value: '', label: 'Any status' },
@@ -62,7 +63,7 @@ function LevelCell({ user, index, chain }) {
  * fixed list. There is no row selection: a user is reviewed one at a time, by
  * opening them.
  */
-export function ItemsTab({ c, users }) {
+export function ItemsTab({ c, users, loading = false }) {
   const { navigate, toast } = useApp()
   const chain = levelNames(c.levels)
   const keys = chain.map(levelKey)
@@ -160,39 +161,47 @@ export function ItemsTab({ c, users }) {
 
   return (
     <div className="stack">
-      <StatCards
-        items={[
-          { id: 'all', icon: 'users', label: 'Users', value: rows.length, chip: `${progress}% complete`, sub: 'in this campaign' },
-          { id: 'certified', icon: 'checkC', label: 'Fully certified', value: fully, chipTone: 'ok', chip: `all ${keys.length} levels`, sub: 'every level signed off' },
-          { id: 'review', icon: 'clock', label: 'In review', value: inReview, chipTone: inReview ? 'warn' : undefined, chip: inReview ? 'pending a level' : 'none', sub: 'waiting on a level' },
-          { id: 'notCertified', icon: 'ban', label: 'Not certified', value: notCertified, chipTone: notCertified ? 'bad' : undefined, chip: notCertified ? 'closed unreviewed' : 'none', sub: 'campaign closed first' },
-        ]}
-        value={facet}
-        onChange={setFacet}
-        label="Filter campaign users"
-      />
+      {/* The tiles and the level meters are the same users counted two ways, so
+          they settle together; the register below keeps its filters and search
+          and settles its own rows. This is the panel's one announcing region. */}
+      {loading ? <CampaignItemsSkeleton levels={keys.length} /> : (
+        <>
+          <StatCards
+            items={[
+              { id: 'all', icon: 'users', label: 'Users', value: rows.length, chip: `${progress}% complete`, sub: 'in this campaign' },
+              { id: 'certified', icon: 'checkC', label: 'Fully certified', value: fully, chipTone: 'ok', chip: `all ${keys.length} levels`, sub: 'every level signed off' },
+              { id: 'review', icon: 'clock', label: 'In review', value: inReview, chipTone: inReview ? 'warn' : undefined, chip: inReview ? 'pending a level' : 'none', sub: 'waiting on a level' },
+              { id: 'notCertified', icon: 'ban', label: 'Not certified', value: notCertified, chipTone: notCertified ? 'bad' : undefined, chip: notCertified ? 'closed unreviewed' : 'none', sub: 'campaign closed first' },
+            ]}
+            value={facet}
+            onChange={setFacet}
+            label="Filter campaign users"
+          />
 
-      <Card title="Level progress" sub={`Users certified at each approval level · ${chain.map(levelLabel).join(' → ')}`}>
-        <div className="rc-level-progress" style={{ '--rc-cols': keys.length }}>
-          {chain.map((name, i) => {
-            const done = rows.filter((r) => r.states[i] === 'certified').length
-            const pct = rows.length ? Math.round((done / rows.length) * 100) : 0
-            return (
-              <div key={name} className="rc-level-progress-it">
-                <div className="row-between">
-                  <span className="t-sm"><b>{i + 1}</b> · {levelLabel(name)}</span>
-                  <span className="t-xs t-mut num">{num(done)} / {num(rows.length)}</span>
-                </div>
-                <Meter value={pct} tone={pct === 100 ? 'ok' : undefined} height={6} />
-              </div>
-            )
-          })}
-        </div>
-      </Card>
+          <Card title="Level progress" sub={`Users certified at each approval level · ${chain.map(levelLabel).join(' → ')}`}>
+            <div className="rc-level-progress" style={{ '--rc-cols': keys.length }}>
+              {chain.map((name, i) => {
+                const done = rows.filter((r) => r.states[i] === 'certified').length
+                const pct = rows.length ? Math.round((done / rows.length) * 100) : 0
+                return (
+                  <div key={name} className="rc-level-progress-it">
+                    <div className="row-between">
+                      <span className="t-sm"><b>{i + 1}</b> · {levelLabel(name)}</span>
+                      <span className="t-xs t-mut num">{num(done)} / {num(rows.length)}</span>
+                    </div>
+                    <Meter value={pct} tone={pct === 100 ? 'ok' : undefined} height={6} />
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+        </>
+      )}
 
       <DataWorkbench
         id={`recert-items-${c.id}`}
         rows={filtered}
+        loading={loading}
         columns={columns}
         searchPlaceholder="Search by name, username, email or department…"
         onRowClick={open}

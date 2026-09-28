@@ -6,7 +6,9 @@ import Tag from '../../components/primitives/Tag'
 import Avatar from '../../components/primitives/Avatar'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
 import EmptyState from '../../components/primitives/EmptyState'
+import { Skeleton, SkeletonCard, SkeletonDetailHeader } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { OPEN, nameOf, statusTone } from '../accessRequests/data'
 import ApprovalWorkflow, { useWorkflow } from './ApprovalWorkflow'
 import { durationText } from './workflow'
@@ -27,6 +29,28 @@ export default function WorkflowRecord({ id, rows }) {
   // Hooks run before the early return, so the model is derived against a
   // placeholder when the id is stale rather than conditionally.
   const view = useWorkflow(row || { id, level: 1, levels: 1, status: 'Pending', raised: '', target: '', type: '' })
+  const loading = useLoading(id)
+
+  /* Before the not-found check: a deep link to a workflow is the one route
+     into this page, and a stale id is only stale once the chain has resolved. */
+  if (loading) {
+    return (
+      <Skeleton label="Loading the approval workflow">
+        <SkeletonDetailHeader facts={6} actions={2} />
+        <div className="detail-body">
+          <div className="stack">
+            {/* The chain: a summary panel, then one panel per level, then the
+                short legend that closes the page. */}
+            <SkeletonCard lines={4} />
+            <SkeletonCard lines={5} foot />
+            <SkeletonCard lines={5} foot />
+            <SkeletonCard lines={5} foot />
+            <SkeletonCard lines={2} />
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
 
   if (!row) {
     return (

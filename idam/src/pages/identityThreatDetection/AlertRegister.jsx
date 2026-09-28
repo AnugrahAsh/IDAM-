@@ -26,7 +26,7 @@ const SEV_BANNER = { critical: 'bad', high: 'bad', medium: 'warn', low: 'info' }
  * the second kept distinct because a rule that keeps producing them needs
  * tuning, not more responders.
  */
-export default function AlertRegister({ alerts, setAlerts, rules, blocks, onBlockIp }) {
+export default function AlertRegister({ alerts, setAlerts, rules, blocks, onBlockIp, loading = false }) {
   const { toast, setDrawer } = useApp()
   const [status, setStatus] = useState('Open')
 
@@ -187,6 +187,7 @@ export default function AlertRegister({ alerts, setAlerts, rules, blocks, onBloc
   return (
     <DataWorkbench
       id="itdr-alerts"
+      loading={loading}
       rows={visible}
       columns={columns}
       selectable

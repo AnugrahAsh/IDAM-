@@ -79,6 +79,17 @@ export function accountMenuItems({ role, roleId, setRoleId, can, theme, toggleTh
       desc: ownProfile ? undefined : `${role.name} holds no permission for this module — switch role above to reach it.`,
       onSelect: () => navigate('profile'),
     },
+    /* The one thing an operator opens their own profile to do, one row earlier.
+       It lands on the tab that holds the form rather than on the profile's
+       front page, because "change password" that arrives somewhere you then
+       have to go looking is not the shortcut it claims to be. */
+    {
+      id: 'password',
+      label: 'Change password',
+      icon: 'lock',
+      desc: ownProfile ? undefined : `${role.name} holds no permission for this module — switch role above to reach it.`,
+      onSelect: () => navigate('/iam/profile/security'),
+    },
     {
       id: 'theme',
       label: theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme',

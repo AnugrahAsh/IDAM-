@@ -8,6 +8,9 @@ import Tag from '../../components/primitives/Tag'
 import Banner from '../../components/primitives/Banner'
 import PageBar from '../../components/shell/PageBar'
 import StickyActions from '../../components/shell/StickyActions'
+import {
+  Skeleton, SkeletonCard, SkeletonPageBar, SkeletonText,
+} from '../../components/primitives/Skeleton'
 import { useLocalState } from '../../lib/useLocalState'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
@@ -26,6 +29,167 @@ const SPEC = {
 const same = (a, b) => a.on === b.on
   && a.allowed.length === b.allowed.length && a.allowed.every((id) => b.allowed.includes(id))
 
+/* The line boxes the real type prints. A bar has no text in it to set one, and
+   this screen is a fixed shell rather than a scroll — a banner that comes up
+   short here does not push content down, it changes where the two panes start. */
+const LINE_H1 = 'calc(var(--t-h1) * 1.25)'
+const LINE_BODY = 'calc(var(--t-body) * var(--t-body-lh))'
+const LINE_SM = 'calc(var(--t-sm) * var(--t-body-lh))'
+const LINE_XS = 'calc(var(--t-xs) * var(--t-xs-lh))'
+/* `.sticky-msg` sets the line height for everything inside the save bar, so the
+   bold first line of the message prints --t-sm on --t-xs-lh rather than on the
+   body leading the rest of this page uses. */
+const LINE_SAVE = 'calc(var(--t-sm) * var(--t-xs-lh))'
+
+const bar = { display: 'block' }
+
+/**
+ * The shape the enforcement screen holds its space with.
+ *
+ * Drawn with the page's own rules — `.mfa-enf`, `.mfa-method`, `.mfa-readout` —
+ * rather than with boxes that approximate them, so the icon wells, the
+ * hairlines between factor rows and the two-pane split are the real ones and
+ * the page does not re-lay itself out when the policy lands.
+ */
+function EnforcementSkeleton({ rows = 5 }) {
+  return (
+    <>
+      <SkeletonPageBar actions={1} crumbs={2} />
+
+      <section className="mfa-enf" aria-hidden="true">
+        {/* The icon wells are given their size here rather than by borrowing
+            the page's own class: those rules set `background`, which would
+            fight `.skel` for the shimmer and be settled by stylesheet order
+            rather than by intent. */}
+        <span className="skel" style={{ ...bar, width: 52, height: 52, borderRadius: 'var(--r-lg)', flex: 'none' }} />
+        <div className="mfa-enf-m">
+          <span className="mfa-enf-t" style={{ minHeight: LINE_H1 }}>
+            <span className="skel" style={{ ...bar, width: 268, height: 18 }} />
+            <span className="skel skel-chip" style={{ ...bar, width: 112 }} />
+          </span>
+          <span className="mfa-enf-s" style={{ minHeight: LINE_BODY, display: 'block' }}>
+            <span className="skel" style={{ ...bar, width: '62%', height: 9 }} />
+          </span>
+        </div>
+        <div className="mfa-enf-tog">
+          <span className="mfa-enf-k" style={{ minHeight: LINE_XS }}>
+            <span className="skel" style={{ ...bar, width: 72, height: 7 }} />
+          </span>
+          <span className="mfa-enf-v">
+            <span className="skel" style={{ ...bar, width: 30, height: 14 }} />
+            <span className="skel" style={{ ...bar, width: 32, height: 19, borderRadius: 'var(--r-pill)' }} />
+          </span>
+        </div>
+      </section>
+
+      <div className="mfa-shell">
+        {/* Both panels the real screen builds here are flush cards, so the
+            frame is stated directly rather than through `SkeletonCard`: its
+            body carries the padding a flush card gives up, and an inset factor
+            row would shift sideways the moment the real one arrived. */}
+        <section className="skel-card" aria-hidden="true">
+          <div className="skel-card-h">
+            <span className="skel" style={{ ...bar, width: '32%', height: 11 }} />
+            <span className="skel" style={{ ...bar, width: '58%', height: 9 }} />
+          </div>
+          <div className="mfa-grid">
+            {Array.from({ length: rows }, (_, i) => (
+              <div className="mfa-method" key={i}>
+                <span className="skel" style={{ ...bar, width: 34, height: 34, borderRadius: 'var(--r)', flex: 'none' }} />
+                <span className="mfa-method-m">
+                  <span className="mfa-method-n" style={{ minHeight: LINE_SM, display: 'flex', alignItems: 'center' }}>
+                    <span className="skel" style={{ ...bar, width: 104 + (i % 3) * 22, height: 9 }} />
+                  </span>
+                  <span className="mfa-method-f" style={{ minHeight: LINE_XS }}>
+                    <span className="skel skel-chip" style={{ ...bar, width: 96 }} />
+                    <span className="skel" style={{ ...bar, width: 118, height: 8 }} />
+                  </span>
+                </span>
+                <span className="skel" style={{ ...bar, width: 32, height: 19, borderRadius: 'var(--r-pill)' }} />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="mfa-side">
+          <SkeletonCard>
+            {/* `.mfa-how` carries the 12px tail margin the real paragraph does,
+                so the fact rows under it start where they will start. */}
+            <div className="mfa-how"><SkeletonText lines={3} /></div>
+            {/* Both halves of a fact row state their line box: the row is as
+                tall as the taller of the two, and a caption-height bar on the
+                value side would make all three rows shorter than they land. */}
+            <div className="mfa-facts">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i}>
+                  <span style={{ minHeight: LINE_XS, display: 'flex', alignItems: 'center' }}>
+                    <span className="skel" style={{ ...bar, width: 78, height: 8 }} />
+                  </span>
+                  <span style={{ minHeight: LINE_SM, display: 'flex', alignItems: 'center' }}>
+                    <span className="skel" style={{ ...bar, width: 62, height: 9 }} />
+                  </span>
+                </div>
+              ))}
+            </div>
+          </SkeletonCard>
+
+          {/* The coverage readout is a headerless flush card whose rows carry
+              their own padding and hairlines, so the frame is all it needs. */}
+          <section className="skel-card mfa-readout" aria-hidden="true">
+            {/* The two rows are not the same shape, so they are not drawn the
+                same: coverage is a label, a meter and a figure; phishing
+                resistance is a label and a pill. */}
+            <div className="mfa-readout-row">
+              <span style={{ minHeight: LINE_XS, display: 'flex', alignItems: 'center' }}>
+                <span className="skel" style={{ ...bar, width: 72, height: 8 }} />
+              </span>
+              <span className="skel" style={{ ...bar, flex: 1, height: 5, borderRadius: 'var(--r-pill)' }} />
+              <span className="skel" style={{ ...bar, width: 34, height: 9 }} />
+            </div>
+            <div className="mfa-readout-row">
+              <span style={{ minHeight: LINE_XS, display: 'flex', alignItems: 'center' }}>
+                <span className="skel" style={{ ...bar, width: 104, height: 8 }} />
+              </span>
+              <span className="skel skel-chip" style={{ ...bar, width: 86 }} />
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {/* The bar the real screen closes with, held as a shape rather than left
+          out. Two things depend on it being here. It is a 60-odd pixel box with
+          20px above it and 24px below, none of which a skeleton that stops at
+          the panes reserves — so the page grew by a whole bar as the policy
+          landed. And `.canvas-inner:has(.sticky-actions[data-flow])` only
+          matches once a bar is in the document: without one the canvas falls
+          back to its own `padding-bottom`, so the page's bottom margin changed
+          on the same frame as its height. The real classes are used rather than
+          approximated, so both of those follow from the same rules that will
+          still be in force a frame later. No `data-dirty`: nothing has been
+          edited yet, and the dirty bar is a different colour. */}
+      <div className="sticky-actions" data-flow="true" aria-hidden="true">
+        <span className="sticky-msg">
+          <span className="sticky-dot" />
+          <span className="mfa-save">
+            <span className="skel" style={{ ...bar, width: 14, height: 14, flex: 'none' }} />
+            <span>
+              <span style={{ minHeight: LINE_SAVE, display: 'flex', alignItems: 'center' }}>
+                <span className="skel" style={{ ...bar, width: 124, height: 9 }} />
+              </span>
+              <span style={{ minHeight: LINE_XS, display: 'flex', alignItems: 'center' }}>
+                <span className="skel" style={{ ...bar, width: 244, height: 8 }} />
+              </span>
+            </span>
+          </span>
+        </span>
+        <span className="spacer" />
+        <span className="skel skel-btn" style={{ ...bar, width: 62 }} />
+        <span className="skel skel-btn" style={{ ...bar, width: 116 }} />
+      </div>
+    </>
+  )
+}
+
 /**
  * MFA enforcement.
  *
@@ -35,7 +199,7 @@ const same = (a, b) => a.on === b.on
  * together: "a second factor is required, and a passkey satisfies it" is a
  * single sentence, and it used to be spread over three screens of scrolling.
  */
-export default function MfaEnforcement({ methods }) {
+export default function MfaEnforcement({ methods, loading = false }) {
   const { navigate, toast } = useApp()
   const [saved, setSaved] = useLocalState('tf-idam-mfa-policy', {
     on: false,
@@ -96,6 +260,19 @@ export default function MfaEnforcement({ methods }) {
   }, [selected])
 
   const resistant = selected.some((m) => m.strength === 'strongest')
+
+  /* The settle arrives from the console above rather than starting here: this
+     screen is one of that component's routes, and a second timer of its own
+     would land the masthead a frame away from the panes under it. The save bar
+     is held back with the rest — offering Save while the policy it would write
+     is still a row of grey bars is worse than not offering it. */
+  if (loading) {
+    return (
+      <Skeleton label="Loading MFA enforcement">
+        <EnforcementSkeleton rows={methods.length} />
+      </Skeleton>
+    )
+  }
 
   return (
     <>

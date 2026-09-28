@@ -14,6 +14,7 @@ import Tag from '../../components/primitives/Tag'
 import TextInput from '../../components/primitives/TextInput'
 import { BASE } from '../../data/nav'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import wordmarkDark from '../../assets/tanflow-wordmark-dark.png'
 import wordmarkWhite from '../../assets/tanflow-wordmark-white.png'
 import { SEED_CAMPAIGNS, levelNames } from './data'
@@ -23,6 +24,7 @@ import {
 import { applyEmailSubmissions, parseReviewLink, reviewerFor, saveEmailSubmission } from './emailLink'
 import GroupPickerForm from './GroupPickerForm'
 import UserDetailsForm, { missingRequired, sectionsForReview } from './UserDetailsForm'
+import { ReviewLinkSkeleton } from './RecertificationSkeleton'
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 const show = (v) => (v == null || String(v).trim() === '' ? 'N/A' : String(v))
@@ -193,6 +195,22 @@ export default function RecertifyLinkPage() {
   const [remarks, setRemarks] = useState('')
   const [attempted, setAttempted] = useState(false)
   const [done, setDone] = useState(null)
+  /* The one load on this page, and the whole page waits on it. Everything
+     below — the identity, the level tabs, and the four outcomes this link can
+     resolve to — is one reading of one review, so none of it can be drawn
+     until that reading is in hand. */
+  const loading = useLoading()
+
+  /* Ahead of every outcome on purpose. Whether the link is valid, expired or
+     still open is the answer this page exists to give, and giving the wrong one
+     for a beat is worse than a wait. */
+  if (loading) {
+    return (
+      <Shell sub={c ? `${c.name} · recertification request` : undefined}>
+        <ReviewLinkSkeleton levels={chain.length || 3} />
+      </Shell>
+    )
+  }
 
   if (!c || !user || linkIndex === -1) {
     return (

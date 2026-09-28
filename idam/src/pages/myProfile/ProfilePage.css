@@ -11,6 +11,12 @@
 
 /* --- Identity card: avatar, name row, fact strip, actions ---------------- */
 .pf-id{margin-top:2px}
+/* The picture and the controls that change it, as one column. These two rules
+   were left behind in src/styles when the page took its own stylesheet, so
+   they were loaded by nothing and the avatar sat hard against the buttons
+   under it. */
+.pf-av{display:flex;flex-direction:column;align-items:center;gap:9px;flex:none}
+.pf-av-acts{display:flex;align-items:center;gap:5px}
 .pf-hero{display:flex;align-items:flex-start;gap:var(--sp-4);flex-wrap:wrap}
 .pf-hero-meta{flex:1;min-width:260px;display:flex;flex-direction:column;gap:10px}
 .pf-hero-name{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
@@ -35,3 +41,95 @@
 .pf-sec-row:last-child{border-bottom:none}
 .pf-sec-row > span{color:var(--mut)}
 .pf-sec-row > b{color:var(--ink);font-weight:var(--w-semi);text-align:right}
+
+/* --- While the profile is settling ---------------------------------------
+ *
+ * The shapes are in ProfilePage.jsx and are built from the classes above and
+ * from the shared rules in components.css and patterns.css, so the grids, the
+ * padding and the hairlines are already the real ones. What a class cannot
+ * give a grey bar is the line box of the text it is standing in for: a bar is
+ * exactly as tall as it is drawn, so every row below states the height the
+ * real row takes and puts the bar inside it. Without that the profile lands
+ * around a fifth taller than the space it was holding and the whole page jumps
+ * at the end of the wait — which is the fault a skeleton exists to prevent.
+ *
+ * Each height is the rule it was taken from, in the same terms: font size
+ * times line height, control heights as the control states them.
+ */
+
+/* Any line of text: a box at the text's own height with a bar centred in it. */
+.pf-skel-line,.pf-skel-fact,.pf-skel-feed-t,.pf-skel-feed-s,
+.pf-skel-tl-t,.pf-skel-tl-s,.pf-skel-tl-time{display:flex;align-items:center}
+
+/* .field — 5px between rows, .field-label and .field-hint at --t-xs, .inp at
+   its stated 1.9375rem. */
+.pf-skel-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.pf-skel-field > .skel{display:block}
+.pf-skel-line{height:calc(var(--t-xs) * var(--t-xs-lh))}
+
+/* .card-h prints a title over a sub-line and so runs past its own 42px floor;
+   the kit's two bars are a flat 11px and 9px, and their heights are inline
+   styles in the kit, so the gap between them is what has to carry the
+   difference. Neither .card-h-title nor .card-h-sub states a line height, so
+   both take the body's: --t-h3 at --t-body-lh over --t-xs at --t-body-lh with
+   the sub-line's 1px lead, less the 20px the two bars already occupy. At the
+   default root that is 20.79 + 1 + 17.33 - 20 = 19.1px; it is written from the
+   tokens rather than as that number because the header's Text size control
+   scales the root and the bars do not follow it. */
+.pf-skel-card .skel-card-h{
+  gap:calc(var(--t-h3) * var(--t-body-lh) + 1px + var(--t-xs) * var(--t-body-lh) - 20px);
+}
+
+/* .kpi — .k-label and .k-foot inherit the body line height at --t-xs, .k-val
+   is 1.25rem at 1.1. The tiles are not buttons here, so they do not offer a
+   pointer. */
+.pf-skel-kpi .kpi{cursor:default}
+.pf-skel-kpi .k-label,.pf-skel-kpi .k-foot{height:calc(var(--t-xs) * var(--t-body-lh))}
+.pf-skel-kpi .k-val{align-items:center;height:1.375rem}
+
+/* .pf-hero-name — the name is 1.25rem of --t-body line height, and it is the
+   tallest thing in the row. */
+.pf-skel-name{min-height:calc(1.25rem * var(--t-body-lh))}
+/* .detail-fact */
+.pf-skel-fact{height:calc(var(--t-xs) * var(--t-body-lh))}
+
+/* .feed-t states its own 1.45; .feed-s is --t-xs at the body line height with
+   a 2px lead, and carries a Pill on the rows that have one — but a Pill is
+   19.6px against the line's 17.3px, so the difference is under a pixel a row
+   and is not worth a second rule. */
+.pf-skel-feed-t{height:calc(var(--t-sm) * 1.45)}
+.pf-skel-feed-s{margin-top:2px;height:calc(var(--t-xs) * var(--t-body-lh))}
+
+/* .tl-t, .tl-s and .tl-time, in that order down the entry. */
+.pf-skel-tl-t{height:calc(var(--t-sm) * var(--t-body-lh))}
+.pf-skel-tl-s{margin-top:2px;height:calc(var(--t-xs) * 1.5)}
+.pf-skel-tl-time{margin-top:3px;height:calc(var(--t-xs) * var(--t-xs-lh))}
+
+/* .pf-sec-row is 8px of padding around whatever it holds, and what it holds is
+   usually a Pill. */
+.pf-skel-sec-row{min-height:calc(1.25rem + 16px)}
+
+/* .pref-toggle: a title over a body line, with the Switch opposite. */
+.pf-skel-toggle-m{display:flex;flex-direction:column;min-width:0;flex:1}
+
+/* The privacy tab's stat tiles. The kit's SkeletonStats always draws the chip
+   row, and the consent summary's six tiles carry neither a chip nor a caption,
+   so the real .scard-f prints nothing and collapses — the kit's shape stood
+   19px too tall on every tile. These borrow .scards and .scard themselves, so
+   the grid, the padding, the border and the 5px gap are the real ones, and
+   only the two line boxes a bar cannot supply are stated here: .scard-k is
+   --t-micro at the inherited body line height, .scard-v states its own 1.1.
+   The empty .scard-f is drawn too, because it is the third flex child and so
+   the second 5px gap is real even though the row itself is 0 high. */
+.pf-skel-stats{margin-bottom:0}
+.pf-skel-stat{cursor:default}
+.pf-skel-stat-k,.pf-skel-stat-v{display:flex;align-items:center;min-width:0}
+.pf-skel-stat-k{height:calc(var(--t-micro) * var(--t-body-lh))}
+.pf-skel-stat-v{height:calc(1.625rem * 1.1)}
+
+/* The consent panel is another page's, so this stands in for it rather than
+   borrowing its classes: .cns-list is a 10px column and .cns-card is padded
+   13px by 14px around a row of pills and a line of facts. */
+.pf-skel-consent{display:flex;flex-direction:column;gap:10px}
+.pf-skel-consent .skel-tile{padding:13px 14px}
+.pf-skel-consent .skel-tile-title{height:1.25rem}

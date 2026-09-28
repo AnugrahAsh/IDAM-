@@ -6,7 +6,11 @@ import Icon from '../../components/primitives/Icon'
 import Menu from '../../components/primitives/Menu'
 import Pill from '../../components/primitives/Pill'
 import Tabs from '../../components/primitives/Tabs'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue, SkeletonTable,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num, statusTone } from '../../lib/format'
 import { BASE, isOrphan, plural, policyPath } from './signOnPolicyData'
 import { policyByKey, usePolicies } from './signOnPolicyStore'
@@ -18,6 +22,60 @@ import RulesTab from './RulesTab'
 import ApplicationsTab from './ApplicationsTab'
 
 const TABS = ['information', 'rules', 'applications']
+
+/* The tab row a record masthead lands with. `SkeletonDetailHeader` stops at the
+   facts, and a header that will carry tabs is a row taller than one that will
+   not — enough to move the body under it when the policy arrives. */
+function SkeletonTabRow({ count = 3 }) {
+  return (
+    <div className="tabs sop-skel-tabs" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <span className="tab" key={i}>
+          <span className="skel" style={{ width: 82 + (i % 3) * 24, height: 'calc(var(--t-body) * var(--t-body-lh))' }} />
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/* What each tab lands as, so the body is the height it will be rather than the
+   height of whichever tab was drawn for all three. Information is two columns
+   of read-only facts; Rules is the priority ladder; Applications is the
+   attachment register. */
+function BodySkeleton({ tab, policy }) {
+  if (tab === 'rules') {
+    /* The ladder's card is `flush` — the table runs to the card's own edge, and
+       `.skel-row` already carries the gutter `.tbl td` does — so the waiting
+       card gives up its body padding through the class in the page stylesheet.
+       It also carries a footer whenever the policy holds more than one rule,
+       which is another row of height the panel would gain on arrival.
+
+       The rule count is not a guess: the policy is in hand before the settle
+       starts. A policy with no rules lands as an `EmptyState` instead of a
+       table, which is about four rows tall. */
+    const rules = policy.rules.length
+    return (
+      <SkeletonCard className="sop-skel-flush" foot={rules > 1}>
+        <SkeletonTable rows={rules || 4} cols={8} />
+      </SkeletonCard>
+    )
+  }
+  if (tab === 'applications') {
+    return <SkeletonCard><SkeletonTable rows={4} cols={4} /></SkeletonCard>
+  }
+  return (
+    <div className="detail-cols">
+      <div className="stack">
+        <SkeletonCard><SkeletonKeyValue rows={6} cols={2} /></SkeletonCard>
+        <SkeletonCard lines={5} />
+      </div>
+      <div className="stack">
+        <SkeletonCard lines={4} />
+        <SkeletonCard lines={3} />
+      </div>
+    </div>
+  )
+}
 
 /**
  * One policy's record. Each tab has its own address, so a link — or the rule
@@ -34,8 +92,27 @@ function PolicyRecord({ policy, tab }) {
   const access = usePolicyAccess()
   const { changeStatus, removePolicies } = usePolicyActions()
   const [menu, setMenu] = useState(null)
+  /* The record settles as one thing, keyed on which policy is being read:
+     moving between two policies is the round trip a deployment would make. The
+     tab is not part of the key — all three panels are built from the policy
+     already in hand, so switching between them fetches nothing. */
+  const loading = useLoading(policy.id)
   const active = policy.status === 'Active'
   const go = (t) => navigate(t === 'information' ? policyPath(policy.id) : policyPath(policy.id, t))
+
+  if (loading) {
+    return (
+      <Skeleton label="Loading the sign-on policy">
+        <SkeletonDetailHeader facts={4} actions={3} />
+        <SkeletonTabRow count={3} />
+        <div className="detail-body">
+          <div className="stack">
+            <BodySkeleton tab={tab} policy={policy} />
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
 
   const openMenu = (e) => setMenu({
     anchor: e.currentTarget,

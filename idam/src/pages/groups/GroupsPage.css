@@ -1,5 +1,22 @@
 /* Page-owned styles for GroupsPage (unified Groups register). Shared primitives remain in src/styles. */
 
+/* --- The register headline, holding its place -------------------------------
+   GroupListSkeleton draws the band with quickLinks/SummarySkeleton, which says
+   what it can in inline styles. What is left is what an inline style cannot
+   say: a panel holding space must not lift under the cursor the way the anchor
+   it stands in for does, and a segment cell needs the geometry `.rsum-seg`
+   hands only to a `button` — including the column-to-row flip it does at phone
+   width. The same four rules are in UsefulLinksPage.css; they are repeated
+   rather than shared because a page stylesheet ships with its own route chunk,
+   and the quick-links chunk is not loaded on this route. */
+.rsum-anchor[data-skel]:hover{border-color:var(--line);box-shadow:none}
+.rsum-seg > [data-skel]{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;padding:12px 16px}
+.rsum-seg > [data-skel] + [data-skel]{border-left:1px solid var(--hair)}
+@media(max-width:560px){
+  .rsum-seg > [data-skel]{flex-direction:row;align-items:baseline;justify-content:space-between}
+  .rsum-seg > [data-skel] + [data-skel]{border-left:0;border-top:1px solid var(--hair)}
+}
+
 /* KPI strip */
 .gp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)}
 .gp-kpi{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--surface);
@@ -48,3 +65,19 @@
 
 /* Import result */
 .gp-import-done{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+
+/* --- A panel header, holding the height it will print -----------------------
+   `.card-h` stacks `.card-h-title` over `.card-h-sub`, so it runs past its own
+   42px floor; the kit's `.skel-card-h` draws a flat 11px bar over a flat 9px
+   one and lands about 13px short of it. The kit is shared and frozen, and its
+   bar heights are inline styles, so the gap between them is the only thing a
+   page can move. Neither title nor sub states a line height, so both take the
+   body's: --t-h3 at --t-body-lh over --t-xs at --t-body-lh with the sub-line's
+   1px lead, less the 20px the two bars already occupy. Written from the tokens
+   rather than as that number, because the header's Text size control scales the
+   root and the bars do not follow it. The skeletons in this folder mark their
+   announcing region with the class; ProfilePage.css carries the same rule for
+   its own. */
+.skel-head-type .skel-card-h{
+  gap:calc(var(--t-h3) * var(--t-body-lh) + 1px + var(--t-xs) * var(--t-body-lh) - 20px);
+}

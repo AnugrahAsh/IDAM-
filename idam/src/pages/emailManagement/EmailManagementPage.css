@@ -112,6 +112,50 @@
   white-space: nowrap;
 }
 
+/* --- The form, holding its place ----------------------------------------------
+   The waiting SMTP panel is drawn with the form's own classes — `.em-form`,
+   `.em-fs`, `.field`, `.em-sw` — so the 20px between sections, the 12px inside
+   one and the 5px between a label and its control are the rules above rather
+   than numbers copied out of them. Only the boxes a bar cannot take a height
+   from are stated here, and each is the box of the control it stands in for. */
+
+/* `.inp` / `.sel`: one control. */
+.em-skel-inp {
+  display: block;
+  height: 1.9375rem;
+  border-radius: var(--r-sm);
+}
+
+/* A `Banner`. It is not optional chrome on this form: the seeded relay
+   authenticates, so the warning under Auth Type is part of the height the card
+   lands at. 10px of padding either side of one line of `--t-sm` at the banner's
+   own 1.5 line-height, plus its hairline. */
+.em-skel-banner {
+  display: block;
+  height: calc(20px + 2px + var(--t-sm) * 1.5);
+  border-radius: var(--r);
+}
+
+/* The section heading's mark, at the size `.em-fs-h svg` draws it. */
+.em-skel-fs-ic {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--r-xs);
+}
+
+/* A `SwitchRow`: the box at `.check`'s size, including the 1px `.em-sw .check`
+   nudges it down by, with the two lines beside it laid out by `.em-sw-m`. */
+.em-skel-check {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  border-radius: var(--r-xs);
+}
+
+.em-skel-sw .em-sw-m > .skel { display: block }
+
 /* --- Client health accordions -------------------------------------------------
    One row per tenant relay, inside the card that names the set — rows rather
    than cards, because a card of cards is two frames around one thing. The head
@@ -309,4 +353,29 @@
   font-size: var(--t-xs);
   padding-top: 8px;
   border-top: 1px solid var(--hair);
+}
+
+/* The card the accordion rows sit in is `flush` — the row runs to the card's
+   own edge — and `SkeletonCard` has no such option, so its body padding is
+   given up here. Without it the waiting card is 32px taller than the card that
+   replaces it and every row is inset a gutter further than the row it holds
+   space for. */
+.em-skel-flush .skel-card-b { padding: 0 }
+
+/* The waiting head: the same row, the same padding, with bars where the name
+   and the figures will be. The chevron is a square of the icon's own size so
+   the name starts at the x it will start at once the rows land. */
+.em-acc-skel .em-acc-h { cursor: default }
+
+.em-acc-skel-chev {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-xs);
+}
+
+.em-acc-skel .em-acc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }

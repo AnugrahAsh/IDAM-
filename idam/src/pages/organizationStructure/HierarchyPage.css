@@ -107,3 +107,72 @@
 .hy-stats dd{margin:0;font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--ink);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hy-stats dd.num{font-variant-numeric:tabular-nums}
+
+/* --- Skeleton --------------------------------------------------------------
+   The page is a tree beside a record, and a tree is the one thing a table of
+   grey rows reads nothing like. So the skeleton is built from `.otree`'s own
+   classes: the indent rails, the connector ticks and the row padding are the
+   real ones, and only the name, the share bar and the count are replaced. What
+   settles then looks like a structure arriving rather than a list. */
+
+/* The masthead carries a reading rail under its title here, so the bar hands
+   its closing space to the rail instead of leaving a gap between the two. */
+.hy-skel-bar{padding-bottom:0}
+.hy-skel-rail{display:flex;align-items:center;flex-wrap:wrap;gap:4px var(--sp-5);
+  padding:7px var(--canvas-px) 16px;margin:0 calc(var(--canvas-px) * -1)}
+.hy-skel-rail > span{display:inline-flex;align-items:center;gap:6px;
+  min-height:calc(var(--t-xs) * var(--t-xs-lh))}
+
+/* A row prints a name over a sub-line. Bars set no line box, so the height the
+   real row settles at is stated — otherwise every level comes up short and the
+   whole tree lifts when the units land. */
+.hy-skel-tree .otree-row{cursor:default;
+  min-height:calc(6px + var(--t-sm) * var(--t-sm-lh) + 1px + var(--t-micro) * var(--t-body-lh))}
+.hy-skel-tree .otree-row:hover{background:none}
+.hy-skel-tree .ot-id > .skel{display:block}
+.hy-skel-ic{width:20px;height:20px;border-radius:var(--r-xs);flex:none}
+.hy-skel-share{width:56px;height:4px;border-radius:var(--r-pill);flex:none}
+.hy-skel-count{width:42px;height:18px;border-radius:var(--r-pill);flex:none}
+@media(max-width:700px){.hy-skel-share{display:none}}
+
+/* The tree toolbar: a search field, then the level control and Collapse. */
+.hy-skel-toolbar{gap:var(--sp-3)}
+.hy-skel-toolbar .skel{display:block;height:1.8125rem;border-radius:var(--r-sm)}
+
+/* Three of the four panels are `flush` on the real page — the toolbar, the
+   tree, the relationship rail and the link list all carry their own padding.
+   The skeleton card has to give up its body padding to match, or every one of
+   them sits a gutter further in than the thing it is holding space for. */
+.hy-skel-flush .skel-card-b{padding:0}
+
+/* A relationship box at `.hier-rel-row button`'s geometry, without the accent
+   fill `.hier-rel-self` carries — while the panel is a skeleton, nothing in it
+   is the unit being read. */
+.hy-skel-relbox{display:flex;align-items:center;gap:8px;min-width:0;width:100%;
+  padding:6px 9px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface)}
+.hy-skel-relbox > .skel{display:block}
+
+/* "Open from here" — `.hier-cfg-links button` geometry, without the button. */
+.hy-skel-links{display:flex;flex-direction:column}
+.hy-skel-link{display:flex;align-items:center;gap:11px;width:100%;
+  padding:11px var(--sp-4);border-bottom:1px solid var(--hair)}
+.hy-skel-link:last-child{border-bottom:0}
+.hy-skel-link > .skel:first-child{width:1.75rem;height:1.75rem;border-radius:var(--r);flex:none}
+.hy-skel-link-m{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.hy-skel-link-m > .skel{display:block}
+
+/* --- A panel header, holding the height it will print -----------------------
+   `.card-h` stacks `.card-h-title` over `.card-h-sub`, so it runs past its own
+   42px floor; the kit's `.skel-card-h` draws a flat 11px bar over a flat 9px
+   one and lands about 13px short of it. The kit is shared and frozen, and its
+   bar heights are inline styles, so the gap between them is the only thing a
+   page can move. Neither title nor sub states a line height, so both take the
+   body's: --t-h3 at --t-body-lh over --t-xs at --t-body-lh with the sub-line's
+   1px lead, less the 20px the two bars already occupy. Written from the tokens
+   rather than as that number, because the header's Text size control scales the
+   root and the bars do not follow it. The skeletons in this folder mark their
+   announcing region with the class; ProfilePage.css carries the same rule for
+   its own. */
+.skel-head-type .skel-card-h{
+  gap:calc(var(--t-h3) * var(--t-body-lh) + 1px + var(--t-xs) * var(--t-body-lh) - 20px);
+}

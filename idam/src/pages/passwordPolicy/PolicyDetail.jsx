@@ -10,6 +10,9 @@ import Tabs from '../../components/primitives/Tabs'
 import Tag from '../../components/primitives/Tag'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue, SkeletonTable,
+} from '../../components/primitives/Skeleton'
 import { DICTIONARY_WORDS } from '../../data/dictionary'
 import { USERS } from '../../data/seed'
 import { num, statusTone } from '../../lib/format'
@@ -17,7 +20,24 @@ import { useMemo, useState } from 'react'
 import { LIST_PATH, entropyBits, expiryLabel, historyFor, seatsFor, strengthBand } from './passwordData'
 import StrengthPreview from './StrengthPreview'
 
-export default function PolicyDetail({ policy, onEdit, onDelete, onNavigate }) {
+/* The tab row a record masthead lands with. `SkeletonDetailHeader` stops at the
+   facts, and a header that will carry tabs is a row taller than one that will
+   not — enough to move the body under it when the policy arrives. */
+function SkeletonTabRow({ count = 4 }) {
+  return (
+    <div className="tabs" style={{ borderBottom: 'none' }} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <span className="tab" key={i}>
+          <span className="skel" style={{ width: 70 + (i % 3) * 22, height: 'calc(var(--t-body) * var(--t-body-lh))' }} />
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/* `loading` is Password Policy's own flag, not a second one: the record settles
+   as one thing with the section it was opened from. */
+export default function PolicyDetail({ policy, onEdit, onDelete, onNavigate, loading = false }) {
   const [tab, setTab] = useState('rules')
   const covered = useMemo(() => USERS.filter((u) => policy.orgs.includes(u.organization)), [policy.orgs])
   const trail = useMemo(() => historyFor(policy), [policy])
@@ -32,6 +52,30 @@ export default function PolicyDetail({ policy, onEdit, onDelete, onNavigate }) {
       expiresIn: policy.expiryDays === 0 ? null : policy.expiryDays - age,
     }
   }), [covered, policy.expiryDays])
+
+  if (loading) {
+    return (
+      <Skeleton label="Loading the password policy">
+        <SkeletonDetailHeader facts={4} actions={2} />
+        <SkeletonTabRow count={4} />
+        <div className="detail-body">
+          <div className="detail-cols">
+            {/* Rules is the tab a policy opens on: composition, expiry and
+                lockout on the left, the strength preview on the right. */}
+            <div className="stack">
+              <SkeletonCard><SkeletonKeyValue rows={8} cols={2} /></SkeletonCard>
+              <SkeletonCard><SkeletonKeyValue rows={4} cols={2} /></SkeletonCard>
+              <SkeletonCard><SkeletonTable rows={3} cols={3} /></SkeletonCard>
+            </div>
+            <div className="stack">
+              <SkeletonCard lines={6} />
+              <SkeletonCard lines={4} />
+            </div>
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
 
   return (
     <>

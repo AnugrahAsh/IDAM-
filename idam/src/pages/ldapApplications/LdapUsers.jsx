@@ -6,6 +6,7 @@ import Field from '../../components/primitives/Field'
 import Select from '../../components/primitives/Select'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
 import { USERS } from '../../data/seed'
@@ -109,7 +110,10 @@ function AddUsersForm({ app, provisionedIds, onChange }) {
   )
 }
 
-export default function LdapUsers({ app }) {
+// `loading` is the record's own settling flag, handed down rather than started
+// again here: the panel is one of the directory's tabs, and a register that ran
+// its own timer would land at a different moment from the masthead above it.
+export default function LdapUsers({ app, loading = false }) {
   const { toast, confirm, setDrawer } = useApp()
   const [extra, setExtra] = useState([])
   const [removed, setRemoved] = useState([])
@@ -194,20 +198,23 @@ export default function LdapUsers({ app }) {
 
   return (
     <div className="stack">
-      <StatCards
-        items={[
-          { key: 'total', icon: 'users', label: 'Provisioned identities', value: rows.length, chip: `${Object.keys(byOu).length} units`, sub: `held under ${app.baseDn}` },
-          { key: 'entries', icon: 'directory', label: 'Directory entries', value: app.entries, chip: 'read at last sync', sub: 'everything below the base DN' },
-          { key: 'unmanaged', icon: 'orphan', label: 'Not provisioned', value: USERS.length - rows.length, chip: 'in the identity store', chipTone: 'warn', sub: 'no entry in this directory' },
-          { key: 'sync', icon: 'refresh', label: 'Last synchronized', value: String(app.lastSync).slice(0, 10), chip: String(app.lastSync).slice(11) || '—', sub: 'most recent full read' },
-        ]}
-        label="Provisioned identity summary"
-      />
+      {loading ? <SkeletonStats count={4} /> : (
+        <StatCards
+          items={[
+            { key: 'total', icon: 'users', label: 'Provisioned identities', value: rows.length, chip: `${Object.keys(byOu).length} units`, sub: `held under ${app.baseDn}` },
+            { key: 'entries', icon: 'directory', label: 'Directory entries', value: app.entries, chip: 'read at last sync', sub: 'everything below the base DN' },
+            { key: 'unmanaged', icon: 'orphan', label: 'Not provisioned', value: USERS.length - rows.length, chip: 'in the identity store', chipTone: 'warn', sub: 'no entry in this directory' },
+            { key: 'sync', icon: 'refresh', label: 'Last synchronized', value: String(app.lastSync).slice(0, 10), chip: String(app.lastSync).slice(11) || '—', sub: 'most recent full read' },
+          ]}
+          label="Provisioned identity summary"
+        />
+      )}
 
       <DataWorkbench
         id={`ldap-users-${app.id}`}
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by identity, email or organizational unit…"
         toolbar={(

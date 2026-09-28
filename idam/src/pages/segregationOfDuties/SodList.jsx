@@ -9,12 +9,16 @@ import { useMemo } from 'react'
 import { BASE, metaFor, ruleLabel } from './sodData'
 import { sodSeverityBadge, useSodSeverities } from '../settings/settingsStore'
 import StatCards from '../../components/workbench/StatCards'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
+import { useLoading } from '../../lib/useLoading'
 
 export default function SodList({ rules, violations, onDelete }) {
   const { toast, navigate } = useApp()
   // Subscribed so a severity renamed in Settings recolours this register on the
   // same render rather than at the next navigation.
   useSodSeverities()
+  // One flag: the summary tiles count the same rules the register lists.
+  const loading = useLoading()
 
   const open = violations.filter((v) => v.status === 'Open')
   const critical = open.filter((v) => v.severity === 'critical')
@@ -62,32 +66,44 @@ export default function SodList({ rules, violations, onDelete }) {
 
   return (
     <>
-      <PageBar
-        title="Segregation of Duties"
-        sub="Toxic entitlement combinations, the rules that detect them, and the identities currently in breach."
-        crumbs={[{ label: 'Groups' }, { label: 'Segregation of Duties' }]}
-        actions={
-          <>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Conflict register is being generated for audit.')}>Export register</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/add`)}>Add Rule</Button>
-          </>
-        }
-      />
+      {/* One region for the page. The register's own body skeleton is
+          decoration, so the wait is described once. */}
+      {loading ? (
+        <Skeleton label="Loading the segregation-of-duties register">
+          <SkeletonPageBar actions={2} crumbs={2} />
+          <SkeletonStats count={4} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Segregation of Duties"
+            sub="Toxic entitlement combinations, the rules that detect them, and the identities currently in breach."
+            crumbs={[{ label: 'Groups' }, { label: 'Segregation of Duties' }]}
+            actions={
+              <>
+                <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Conflict register is being generated for audit.')}>Export register</Button>
+                <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/add`)}>Add Rule</Button>
+              </>
+            }
+          />
 
-      <StatCards
-        items={[
-          { key: 'rules', icon: 'policy', label: 'Rules', value: rules.length, chip: 'enforced', sub: 'anti-affinity and affinity' },
-          { key: 'open', icon: 'sod', label: 'Open conflicts', value: open.length, chip: `${num(violations.length)} total`, chipTone: open.length ? 'warn' : 'ok', sub: 'identities holding both sides' },
-          { key: 'critical', icon: 'warn', label: 'Open critical', value: critical.length, chip: `${num(allCritical.length)} total`, chipTone: critical.length ? 'bad' : undefined, sub: 'highest severity, not yet cleared' },
-          { key: 'clean', icon: 'checkC', label: 'Clean rules', value: clean, chip: clean === rules.length ? 'all clear' : 'no open breach', chipTone: clean === rules.length ? 'ok' : undefined, sub: 'nothing outstanding today' },
-        ]}
-        label="Segregation of duties summary"
-      />
+          <StatCards
+            items={[
+              { key: 'rules', icon: 'policy', label: 'Rules', value: rules.length, chip: 'enforced', sub: 'anti-affinity and affinity' },
+              { key: 'open', icon: 'sod', label: 'Open conflicts', value: open.length, chip: `${num(violations.length)} total`, chipTone: open.length ? 'warn' : 'ok', sub: 'identities holding both sides' },
+              { key: 'critical', icon: 'warn', label: 'Open critical', value: critical.length, chip: `${num(allCritical.length)} total`, chipTone: critical.length ? 'bad' : undefined, sub: 'highest severity, not yet cleared' },
+              { key: 'clean', icon: 'checkC', label: 'Clean rules', value: clean, chip: clean === rules.length ? 'all clear' : 'no open breach', chipTone: clean === rules.length ? 'ok' : undefined, sub: 'nothing outstanding today' },
+            ]}
+            label="Segregation of duties summary"
+          />
+        </>
+      )}
 
       <div className="stack">
         <DataWorkbench
           id="sod-rules"
           rows={ruleRows}
+          loading={loading}
           columns={ruleColumns}
           selectable
           searchPlaceholder="Search rules by name or entitlement…"

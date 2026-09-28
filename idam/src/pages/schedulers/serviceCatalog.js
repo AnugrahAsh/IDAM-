@@ -20,11 +20,45 @@
  *   producesItemLogs     — per-record rows land in the execution log
  *
  * Field types in use: string · integer · boolean · date · enum · multi-enum ·
- * string-list · remote-enum. Conditional visibility is `visibleWhen`, a single
- * predicate against another key in the same service's config.
+ * string-list · remote-enum · multi-remote-enum. Conditional visibility is
+ * `visibleWhen`, a single predicate against another key in the same service's
+ * config — `equals`, `in`, or `contains` when the controlling field is itself a
+ * multi-select.
+ *
+ * A field whose options come from a register the deployment owns —
+ * applications, organisations, email templates, date attributes — declares a
+ * `source` and lets `remote-enum` fetch it, rather than asking an operator to
+ * type a name that only fails when the scheduler runs.
  */
 
+import { NOW_MS } from '../../lib/clock'
+
 const min = (m) => m * 60000
+
+/* The approval services read the same request register, so they offer the same
+   types. Two copies of this list is how one service ends up escalating a kind
+   of request the other never reminds anybody about. */
+const REQUEST_TYPES = [
+  { value: 'ACCESS', label: 'Access requests' },
+  { value: 'ROLE', label: 'Role requests' },
+  { value: 'GROUP', label: 'Group requests' },
+  { value: 'USER', label: 'Add user requests' },
+  { value: 'OTHER', label: 'Other requests' },
+]
+
+/* The period a campaign opened now would cover, as it appears in the campaign's
+   name. Presentation only — the server derives the real name — but the name is
+   what an auditor searches for afterwards, so the form shows it while there is
+   still time to change it. */
+const campaignPeriodToken = (period, ms = NOW_MS) => {
+  const d = new Date(ms)
+  const year = d.getUTCFullYear()
+  const month = d.getUTCMonth()
+  if (period === 'MONTHLY') return `${year}-${String(month + 1).padStart(2, '0')}`
+  if (period === 'HALF_YEARLY') return `${year}-H${month < 6 ? 1 : 2}`
+  if (period === 'ANNUAL') return `${year}`
+  return `${year}-Q${Math.floor(month / 3) + 1}`
+}
 
 /* Shared verbatim by the services that report back. Repeating the fields per
    service is how a notification block ends up meaning something slightly
@@ -52,14 +86,14 @@ const notificationGroup = (label = 'Notification') => ({
     },
     {
       key: 'notificationTemplate',
-      label: 'Email Template Name',
-      type: 'string',
+      label: 'Email Template',
+      type: 'remote-enum',
       required: true,
       default: '',
-      maxLength: 128,
-      placeholder: 'Enter template name',
+      source: 'emailTemplates',
+      placeholder: 'Select an email template',
       visibleWhen: { key: 'notificationEnabled', equals: true },
-      help: 'Name of an existing email template under Email Management. Enter the exact template name.',
+      help: 'The template this run is reported with, from Email Management → Templates. A template marked disabled or without content is listed but never delivered.',
     },
   ],
 })
@@ -517,11 +551,12 @@ export const CATALOG = [
           {
             key: 'lastActivityAttribute',
             label: 'Last Activity Attribute',
-            type: 'string',
+            type: 'remote-enum',
             required: true,
             default: 'last_login',
-            pattern: '^[a-zA-Z][a-zA-Z0-9_]*$',
-            help: 'The user attribute that stores the date of last activity. Must be an existing date attribute, e.g. last_login.',
+            source: 'dateAttributes',
+            placeholder: 'Select a date attribute',
+            help: 'The user attribute that stores the date of last activity. Only attributes that hold a date are offered — an attribute of any other type parses to nothing and the run fails.',
           },
           {
             key: 'dormancyDays',
@@ -573,13 +608,13 @@ export const CATALOG = [
           {
             key: 'warningTemplate',
             label: 'Warning Email Template',
-            type: 'string',
+            type: 'remote-enum',
             required: true,
             default: '',
-            maxLength: 128,
-            placeholder: 'Enter template name',
+            source: 'emailTemplates',
+            placeholder: 'Select an email template',
             visibleWhen: { key: 'notifyDormantUsers', equals: true },
-            help: 'Name of an existing email template (under Email Management) used for the warning. Enter the exact template name.',
+            help: 'The template the warning is sent with, from Email Management → Templates. A template marked disabled or without content is listed but never delivered.',
           },
           {
             key: 'warningDaysBefore',
@@ -694,11 +729,12 @@ export const CATALOG = [
           {
             key: 'lastActivityAttribute',
             label: 'Last Activity Attribute',
-            type: 'string',
+            type: 'remote-enum',
             required: true,
             default: 'last_login',
-            pattern: '^[a-zA-Z][a-zA-Z0-9_]*$',
-            help: 'The user attribute that stores last activity. Must be an existing date attribute, e.g. last_login.',
+            source: 'dateAttributes',
+            placeholder: 'Select a date attribute',
+            help: 'The user attribute that stores last activity. Only attributes that hold a date are offered — an attribute of any other type parses to nothing and the run fails.',
           },
           {
             key: 'includeNeverActive',
@@ -738,13 +774,13 @@ export const CATALOG = [
           {
             key: 'userNotificationTemplate',
             label: 'User Notification Template',
-            type: 'string',
+            type: 'remote-enum',
             required: true,
             default: '',
-            maxLength: 128,
-            placeholder: 'Enter template name',
+            source: 'emailTemplates',
+            placeholder: 'Select an email template',
             visibleWhen: { key: 'action', in: ['NOTIFY', 'NOTIFY_AND_DISABLE'] },
-            help: 'Name of the existing email template sent to affected users. This is separate from the admin summary template.',
+            help: 'The template sent to each affected user, from Email Management → Templates. Separate from the administrator summary below.',
           },
           {
             key: 'syncAccessManager',
@@ -1280,11 +1316,12 @@ export const CATALOG = [
           {
             key: 'endDateAttribute',
             label: 'End Date Attribute',
-            type: 'string',
+            type: 'remote-enum',
             required: true,
             default: 'dor',
-            pattern: '^[a-zA-Z][a-zA-Z0-9_]*$',
-            help: 'The user attribute that holds the last working day or date of retirement. Must be an existing date attribute, e.g. dor.',
+            source: 'dateAttributes',
+            placeholder: 'Select a date attribute',
+            help: 'The user attribute that holds the last working day or date of retirement. Only attributes that hold a date are offered — an attribute of any other type parses to nothing and the run fails.',
           },
           {
             key: 'graceDays',
@@ -1352,11 +1389,12 @@ export const CATALOG = [
           {
             key: 'joiningDateAttribute',
             label: 'Joining Date Attribute',
-            type: 'string',
+            type: 'remote-enum',
             required: true,
             default: 'doj',
-            pattern: '^[a-zA-Z][a-zA-Z0-9_]*$',
-            help: 'The user attribute that holds the joining date. Must be an existing date attribute, e.g. doj.',
+            source: 'dateAttributes',
+            placeholder: 'Select a date attribute',
+            help: 'The user attribute that holds the joining date. Only attributes that hold a date are offered — an attribute of any other type parses to nothing and the run fails.',
           },
           {
             key: 'graceDays',
@@ -1405,18 +1443,16 @@ export const CATALOG = [
     defaultTimeoutMs: min(240),
     metadata: {
       retryable: true,
-      requiresApplication: true,
+      /* The binding moved into the configuration when one scheduler started
+         reconciling several applications: a single `application_id` column
+         cannot hold a list. The top-level picker is gone with it. */
+      requiresApplication: false,
       idempotent: false,
       supportsBatch: true,
       producesItemLogs: true,
-      applicationField: {
-        label: 'Provision Application',
-        source: 'provisionApplications',
-        placeholder: 'Select a provisioned application',
-        help: 'The provisioning application whose user accounts will be compared with IDAM. Select one configured application.',
-        // Reconciling every active application needs no single application.
-        optionalWhen: { key: 'applicationScope', equals: 'ALL_ACTIVE' },
-      },
+      /* Where a scheduler saved under the old single-application shape finds
+         its binding again. Read by the form when it hydrates a record. */
+      migratesApplicationTo: 'applicationIds',
     },
     configSchema: [
       {
@@ -1424,15 +1460,27 @@ export const CATALOG = [
         fields: [
           {
             key: 'applicationScope',
-            label: 'Applications',
+            label: 'Applications to Reconcile',
             type: 'enum',
             required: true,
             default: 'SELECTED',
             options: [
-              { value: 'SELECTED', label: 'The application selected for this scheduler' },
+              { value: 'SELECTED', label: 'Selected provisioning applications' },
               { value: 'ALL_ACTIVE', label: 'Every active configured application' },
             ],
-            help: 'Which applications to reconcile. One application per scheduler is recommended, so logs, retries and locks stay separate.',
+            help: 'Which applications this scheduler reconciles. Each one is processed in turn within a single run and reports its own statistics.',
+          },
+          {
+            key: 'applicationIds',
+            label: 'Provision Applications',
+            type: 'multi-remote-enum',
+            required: true,
+            default: [],
+            source: 'provisionApplications',
+            placeholder: 'Select provisioning applications',
+            searchPlaceholder: 'Search applications…',
+            visibleWhen: { key: 'applicationScope', equals: 'SELECTED' },
+            help: 'The provisioning applications whose user accounts are compared with IDAM. Select as many as this scheduler should cover; each appears as a chip and can be removed on its own.',
           },
           {
             key: 'applicationTypes',
@@ -1543,101 +1591,179 @@ export const CATALOG = [
     },
     configSchema: [
       {
+        group: 'Eligibility',
+        fields: [
+          {
+            key: 'pendingHours',
+            label: 'Escalate After (hours pending)',
+            type: 'integer',
+            required: true,
+            default: 72,
+            min: 1,
+            max: 8760,
+            help: 'How long a request may sit with its current approver before it moves, e.g. 72 = three days. Counted from when it reached that approver, not from when it was raised.',
+          },
+          {
+            key: 'maxEscalations',
+            label: 'Maximum Escalations',
+            type: 'integer',
+            required: true,
+            default: 3,
+            min: 1,
+            max: 10,
+            help: 'How many times one request may be escalated, 1–10. A request at the limit is reported rather than moved again, so it cannot circulate indefinitely.',
+          },
+          {
+            key: 'stopEscalatingAfterDays',
+            label: 'Stop Escalating After (days)',
+            type: 'integer',
+            default: 180,
+            min: 1,
+            max: 3650,
+            help: 'A request older than this is left alone entirely. Without a stop, one nobody ever answers is escalated for as long as it exists.',
+          },
+        ],
+      },
+      {
         group: 'Scope',
         fields: [
           {
             key: 'requestTypes',
             label: 'Request Types',
             type: 'multi-enum',
-            required: true,
-            default: ['ACCESS', 'ROLE', 'GROUP'],
-            options: [
-              { value: 'ACCESS', label: 'Access requests' },
-              { value: 'ROLE', label: 'Role requests' },
-              { value: 'GROUP', label: 'Group requests' },
-              { value: 'USER', label: 'Add user requests' },
-              { value: 'OTHER', label: 'Other requests' },
-            ],
-            help: 'Which pending approvals this scheduler may escalate. Types left unticked are never moved, however long they wait.',
+            default: [],
+            options: REQUEST_TYPES,
+            placeholder: 'Every request type',
+            help: 'Which pending approvals this scheduler may escalate. Leave empty for every type; a type left unticked is never moved, however long it waits.',
           },
           {
-            key: 'includeOnHold',
-            label: 'Include Requests On Hold',
-            type: 'boolean',
-            default: false,
-            help: 'OFF leaves a request an approver has deliberately put on hold where it is. ON treats the hold as waiting time like any other.',
+            key: 'organizationIds',
+            label: 'Organisations',
+            type: 'multi-remote-enum',
+            default: [],
+            source: 'organizations',
+            placeholder: 'Every organisation',
+            searchPlaceholder: 'Search organisations…',
+            help: 'Escalate only requests raised in these organisations. Empty means every organisation. Inactive organisations stay in the list, labelled, so a selection already saved never disappears.',
           },
         ],
       },
       {
-        group: 'Escalation',
+        group: 'Escalation Path',
         fields: [
           {
-            key: 'pendingHours',
-            label: 'Escalate After (hours)',
-            type: 'integer',
+            key: 'escalationPath',
+            label: 'Escalation Path',
+            type: 'multi-enum',
             required: true,
-            default: 48,
-            min: 1,
-            max: 720,
-            help: 'How long an approval may sit with its current approver before it moves, e.g. 48 = two days. Counted from when it reached that approver, not from when the request was raised.',
-          },
-          {
-            key: 'escalateTo',
-            label: 'Escalate To',
-            type: 'enum',
-            required: true,
-            default: 'NEXT_LEVEL',
+            default: ['NEXT_LEVEL', 'MANAGER', 'ADMINISTRATOR'],
             options: [
-              { value: 'NEXT_LEVEL', label: 'Next approval level' },
-              { value: 'APPROVER_MANAGER', label: 'The approver’s manager' },
-              { value: 'NAMED', label: 'Named approvers' },
+              { value: 'NEXT_LEVEL', label: 'The next approval level' },
+              { value: 'MANAGER', label: 'The approver’s manager' },
+              { value: 'ORG_CERTIFIER', label: 'The organisation certifier' },
+              { value: 'ESCALATION_ROLE', label: 'The escalation role' },
+              { value: 'ADMINISTRATOR', label: 'An administrator' },
             ],
-            help: 'Where the approval goes next. Next approval level follows the level rules configured under Settings; the last level escalates to the named approvers below.',
+            help: 'The rules tried, in this order, until one produces an approver. The rule that wins is named against each request in the run log, so a path of several rules stays readable afterwards.',
           },
           {
-            key: 'namedApprovers',
-            label: 'Named Approvers',
+            key: 'escalationRole',
+            label: 'Escalation Role',
+            type: 'string',
+            default: '',
+            maxLength: 128,
+            placeholder: 'Access Approver',
+            visibleWhen: { key: 'escalationPath', contains: 'ESCALATION_ROLE' },
+            help: 'The IDAM role whose holders receive the request when the escalation role rule is reached, e.g. Access Approver.',
+          },
+          {
+            key: 'fallbackAdministrators',
+            label: 'Fallback Administrators',
             type: 'string-list',
-            required: true,
             default: [],
             maxItems: 20,
             placeholder: 'security_team, it_ops',
-            visibleWhen: { key: 'escalateTo', equals: 'NAMED' },
-            help: 'IDAM usernames that receive the escalated approval. Separate multiple values with commas, e.g. security_team, it_ops.',
+            help: 'IDAM usernames used when no rule in the path produces an approver. Without them such a request is reported as having no escalation target and stays where it is.',
           },
           {
-            key: 'maxEscalations',
-            label: 'Maximum Escalations Per Request',
-            type: 'integer',
-            required: true,
-            default: 2,
-            min: 1,
-            max: 10,
-            help: 'How many times one request may be escalated, 1–10. A request at the limit stays where it is and is reported instead.',
-          },
-          {
-            key: 'businessHoursOnly',
-            label: 'Count Business Hours Only',
+            key: 'skipWhenApproverActive',
+            label: 'Skip When the Current Approver Is Reachable',
             type: 'boolean',
-            default: true,
-            help: 'ON leaves weekends and published holidays out of the waiting time, so a Friday afternoon approval is not escalated over the weekend.',
+            default: false,
+            help: 'ON leaves a request where it is while its current approver is still active and signing in, so escalation only moves the ones nobody is in a position to answer.',
           },
         ],
       },
       {
-        group: 'Behaviour',
+        group: 'Notification',
         fields: [
           {
-            key: 'reportOnly',
-            label: 'Report Only (dry run)',
+            key: 'notifyNewApprover',
+            label: 'Notify the New Approver',
+            type: 'boolean',
+            default: true,
+            help: 'ON emails whoever the request moves to. OFF means a request arrives in their queue with nothing to announce it.',
+          },
+          {
+            key: 'newApproverTemplate',
+            label: 'New Approver Template',
+            type: 'remote-enum',
+            default: '',
+            source: 'emailTemplates',
+            placeholder: 'Select an email template',
+            visibleWhen: { key: 'notifyNewApprover', equals: true },
+            help: 'The template sent to the approver the request moved to. A template marked disabled or without content is listed but never delivered.',
+          },
+          {
+            key: 'notifyPreviousApprover',
+            label: 'Notify the Previous Approver',
             type: 'boolean',
             default: false,
-            help: 'ON records every approval that would be escalated without moving any of them. Recommended for the first run.',
+            help: 'ON tells the approver it was taken from that it has moved on, which matters when they were merely slow rather than absent.',
+          },
+          {
+            key: 'previousApproverTemplate',
+            label: 'Previous Approver Template',
+            type: 'remote-enum',
+            default: '',
+            source: 'emailTemplates',
+            placeholder: 'Select an email template',
+            visibleWhen: { key: 'notifyPreviousApprover', equals: true },
+            help: 'The template sent to the approver the request was taken from.',
           },
         ],
       },
-      notificationGroup('Escalation Notification'),
+      {
+        group: 'Performance',
+        fields: [
+          {
+            key: 'batchSize',
+            label: 'Batch Size',
+            type: 'integer',
+            default: 50,
+            min: 1,
+            max: 1000,
+            help: 'Requests read and escalated per batch, 1–1,000. This overrides the Batch Size under Execution.',
+          },
+          {
+            key: 'maxRequestsPerRun',
+            label: 'Maximum Requests per Run',
+            type: 'integer',
+            default: 500,
+            min: 1,
+            max: 100000,
+            help: 'Safety limit per run, 1–100,000. Anything left over is escalated on the next run.',
+          },
+          {
+            key: 'dryRun',
+            label: 'Dry Run',
+            type: 'boolean',
+            default: true,
+            help: 'ON records every request that would be escalated and moves none of them. It starts ON deliberately: escalation changes who can act on real approval requests, so the first run should be a rehearsal you can read before it is one you cannot undo.',
+          },
+        ],
+      },
+      notificationGroup('Summary Notification'),
     ],
   },
 
@@ -1658,103 +1784,168 @@ export const CATALOG = [
     },
     configSchema: [
       {
+        group: 'Eligibility',
+        fields: [
+          {
+            key: 'remindAfterHours',
+            label: 'Remind After (hours pending)',
+            type: 'integer',
+            required: true,
+            default: 24,
+            min: 1,
+            max: 8760,
+            help: 'How long a request waits before its first reminder, e.g. 24 = one day after it reached the approver.',
+          },
+          {
+            key: 'reminderIntervalHours',
+            label: 'Reminder Interval (hours)',
+            type: 'integer',
+            required: true,
+            default: 24,
+            min: 1,
+            max: 8760,
+            help: 'The gap between reminders about the same request, e.g. 24 = daily until it is answered or one of the limits below is reached.',
+          },
+          {
+            key: 'maxReminders',
+            label: 'Maximum Reminders',
+            type: 'integer',
+            default: 3,
+            min: 1,
+            max: 20,
+            help: 'How many reminders one request may generate, 1–20. Past the limit it is left to Approval Escalation rather than chased again.',
+          },
+          {
+            key: 'stopChasingAfterDays',
+            label: 'Stop Chasing After (days)',
+            type: 'integer',
+            default: 90,
+            min: 1,
+            max: 3650,
+            help: 'A request older than this is no longer reminded about. A reminder nobody has acted on in three months is not going to be read on the ninetieth.',
+          },
+        ],
+      },
+      {
         group: 'Scope',
         fields: [
           {
             key: 'requestTypes',
             label: 'Request Types',
             type: 'multi-enum',
-            required: true,
-            default: ['ACCESS', 'ROLE', 'GROUP', 'USER'],
-            options: [
-              { value: 'ACCESS', label: 'Access requests' },
-              { value: 'ROLE', label: 'Role requests' },
-              { value: 'GROUP', label: 'Group requests' },
-              { value: 'USER', label: 'Add user requests' },
-              { value: 'OTHER', label: 'Other requests' },
-            ],
-            help: 'Which pending approvals are worth a reminder. Types left unticked are never included.',
+            default: [],
+            options: REQUEST_TYPES,
+            placeholder: 'Every request type',
+            help: 'Which pending approvals are worth a reminder. Leave empty for every type; a type left unticked is never included.',
           },
           {
-            key: 'breachedOnly',
-            label: 'Only Approvals Past Their SLA',
-            type: 'boolean',
-            default: false,
-            help: 'ON reminds only about approvals that have already missed their service level. OFF reminds about everything still pending.',
-          },
-        ],
-      },
-      {
-        group: 'Cadence',
-        fields: [
-          {
-            key: 'firstReminderHours',
-            label: 'First Reminder After (hours)',
-            type: 'integer',
-            required: true,
-            default: 24,
-            min: 1,
-            max: 336,
-            help: 'How long an approval waits before its first reminder, e.g. 24 = one day after it reached the approver.',
+            key: 'organizationIds',
+            label: 'Organisations',
+            type: 'multi-remote-enum',
+            default: [],
+            source: 'organizations',
+            placeholder: 'Every organisation',
+            searchPlaceholder: 'Search organisations…',
+            help: 'Remind only about requests raised in these organisations. Empty means every organisation. Inactive organisations stay in the list, labelled, so a selection already saved never disappears.',
           },
           {
-            key: 'repeatEveryHours',
-            label: 'Repeat Every (hours)',
-            type: 'integer',
-            required: true,
-            default: 24,
-            min: 1,
-            max: 336,
-            help: 'The gap between reminders about the same approval, e.g. 24 = daily until it is answered or the limit below is reached.',
-          },
-          {
-            key: 'maxReminders',
-            label: 'Maximum Reminders Per Approval',
-            type: 'integer',
-            required: true,
-            default: 3,
-            min: 1,
-            max: 20,
-            help: 'How many reminders one approval may generate, 1–20. Past the limit it is left to Approval Escalation.',
-          },
-          {
-            key: 'digest',
-            label: 'One Email Per Approver',
+            key: 'sameOrganizationOnly',
+            label: 'Only Notify Approvers in the Request’s Organisation',
             type: 'boolean',
             default: true,
-            help: 'ON sends each approver a single email listing everything waiting on them. OFF sends one email per approval, which is louder but easier to forward.',
+            help: 'ON reminds only the approvers who belong to the organisation the request came from. OFF reminds every approver the request is assigned to, wherever they sit.',
           },
         ],
       },
       {
-        group: 'Message',
+        group: 'Notification',
         fields: [
           {
-            key: 'reminderTemplate',
-            label: 'Email Template Name',
-            type: 'string',
+            key: 'approverTemplate',
+            label: 'Approver Notification Template',
+            type: 'remote-enum',
             required: true,
             default: '',
-            maxLength: 128,
-            placeholder: 'approval_reminder',
-            help: 'The template used for the reminder, from Email Management → Templates. Enter the template name exactly, e.g. approval_reminder.',
+            source: 'emailTemplates',
+            placeholder: 'Select an email template',
+            help: 'The template the reminder is sent with, from Email Management → Templates. A template marked disabled or without content is listed but never delivered.',
           },
           {
-            key: 'includeRequestLink',
-            label: 'Include A Link To The Approval',
-            type: 'boolean',
-            default: true,
-            help: 'ON puts a direct link to the approval in the email, so the approver lands on the record rather than the queue.',
-          },
-          {
-            key: 'copyRequester',
-            label: 'Copy The Requester',
+            key: 'notifyRequester',
+            label: 'Also Notify the Requester',
             type: 'boolean',
             default: false,
-            help: 'ON copies the person who raised the request, so they can see it is still waiting and on whom.',
+            help: 'ON copies whoever raised the request, so they can see it is still waiting and on whom.',
+          },
+          {
+            key: 'requesterTemplate',
+            label: 'Requester Notification Template',
+            type: 'remote-enum',
+            default: '',
+            source: 'emailTemplates',
+            placeholder: 'Select an email template',
+            visibleWhen: { key: 'notifyRequester', equals: true },
+            help: 'The template the requester’s copy is sent with. It is a different message from the approver’s: one is a nudge, the other is a status.',
+          },
+          {
+            key: 'notifyAdminsWhenNoApprover',
+            label: 'Notify Administrators When No Approver Exists',
+            type: 'boolean',
+            default: true,
+            help: 'ON reports requests that have no approver at all. Nobody can act on one of those and nobody is being reminded about it, so it is invisible until somebody is told.',
+          },
+          {
+            key: 'noApproverTemplate',
+            label: 'No-Approver Report Template',
+            type: 'remote-enum',
+            default: '',
+            source: 'emailTemplates',
+            placeholder: 'Select an email template',
+            visibleWhen: { key: 'notifyAdminsWhenNoApprover', equals: true },
+            help: 'The template the no-approver report is sent with.',
+          },
+          {
+            key: 'fallbackAdministrators',
+            label: 'Fallback Administrators',
+            type: 'string-list',
+            default: [],
+            maxItems: 20,
+            placeholder: 'security_team, it_ops',
+            help: 'IDAM usernames that receive the no-approver report. Without them the report has nowhere to go.',
           },
         ],
       },
+      {
+        group: 'Performance',
+        fields: [
+          {
+            key: 'batchSize',
+            label: 'Batch Size',
+            type: 'integer',
+            default: 100,
+            min: 1,
+            max: 1000,
+            help: 'Requests read and reminded about per batch, 1–1,000. This overrides the Batch Size under Execution.',
+          },
+          {
+            key: 'maxRequestsPerRun',
+            label: 'Maximum Requests per Run',
+            type: 'integer',
+            default: 1000,
+            min: 1,
+            max: 100000,
+            help: 'Safety limit per run, 1–100,000. Anything left over is reminded about on the next run.',
+          },
+          {
+            key: 'dryRun',
+            label: 'Dry Run',
+            type: 'boolean',
+            default: false,
+            help: 'ON records who would be reminded and sends nothing.',
+          },
+        ],
+      },
+      notificationGroup('Summary Notification'),
     ],
   },
 
@@ -1764,113 +1955,94 @@ export const CATALOG = [
     family: 'addon',
     legacyQueueName: null,
     permissionCode: null,
-    description: 'Removes audit records past their retention period, optionally writing them to an archive first.',
+    description: 'Runs the retention policies configured under Log Retention, archiving and removing audit records past their retention period.',
     defaultTimeoutMs: min(120),
     metadata: {
       retryable: true,
       requiresApplication: false,
       idempotent: true,
       supportsBatch: true,
-      producesItemLogs: false,
+      producesItemLogs: true,
     },
     configSchema: [
       {
-        group: 'Retention',
+        group: 'Scope',
         fields: [
           {
-            key: 'logTypes',
-            label: 'Records To Clean',
-            type: 'multi-enum',
-            required: true,
-            default: ['SECURITY_EVENTS', 'ADMIN_AUDIT'],
-            options: [
-              { value: 'SECURITY_EVENTS', label: 'Security events' },
-              { value: 'ADMIN_AUDIT', label: 'Admin audit trail' },
-              { value: 'LOGIN_ACTIVITY', label: 'Login activity' },
-              { value: 'REQUEST_HISTORY', label: 'Request and approval history' },
-              { value: 'NOTIFICATION_LOG', label: 'Notification delivery log' },
-            ],
-            help: 'Which record sets this scheduler may prune. A set left unticked is never touched, whatever the retention period says.',
-          },
-          {
-            key: 'retentionDays',
-            label: 'Keep Records For (days)',
-            type: 'integer',
-            required: true,
-            default: 365,
-            min: 30,
-            max: 3650,
-            help: 'Records older than this are removed, e.g. 365 = one year. The floor is 30 days; check the retention your own regulator requires before lowering it.',
-          },
-          {
-            key: 'keepFailedEvents',
-            label: 'Keep Failed And Denied Events',
-            type: 'boolean',
-            default: true,
-            help: 'ON keeps failed sign-ins, denials and errors past the retention period, since those are the records an investigation asks for.',
-          },
-        ],
-      },
-      {
-        group: 'Archive',
-        fields: [
-          {
-            key: 'archiveBeforeDelete',
-            label: 'Archive Before Deleting',
-            type: 'boolean',
-            default: true,
-            help: 'ON writes the records to a file before they are removed. OFF deletes them outright, which cannot be undone.',
-          },
-          {
-            key: 'archiveFormat',
-            label: 'Archive Format',
+            key: 'policyScope',
+            label: 'Policies to Run',
             type: 'enum',
             required: true,
-            default: 'CSV_GZ',
+            default: 'AUTOMATIC',
             options: [
-              { value: 'CSV_GZ', label: 'CSV (gzipped)' },
-              { value: 'JSONL_GZ', label: 'JSON lines (gzipped)' },
-              { value: 'PARQUET', label: 'Parquet' },
+              { value: 'AUTOMATIC', label: 'Every policy with automatic cleanup enabled' },
+              { value: 'NAMED', label: 'Only the log types named below' },
             ],
-            visibleWhen: { key: 'archiveBeforeDelete', equals: true },
-            help: 'The format of the archive file. Gzipped CSV opens anywhere; Parquet is smaller for a warehouse to read.',
+            help: 'Which retention policies this scheduler runs. The policies themselves — what is kept, for how long, and whether it is archived — are configured on the Log Retention screen, not here.',
           },
           {
-            key: 'archivePath',
-            label: 'Archive Location',
-            type: 'string',
+            key: 'logTypes',
+            label: 'Log Types',
+            type: 'string-list',
             required: true,
-            default: '',
-            maxLength: 256,
-            placeholder: '/var/idam/archive/audit',
-            visibleWhen: { key: 'archiveBeforeDelete', equals: true },
-            help: 'Server-side directory the archive is written to, e.g. /var/idam/archive/audit. The service account must be able to write there.',
+            default: [],
+            maxItems: 50,
+            placeholder: 'security_events, login_activity',
+            visibleWhen: { key: 'policyScope', equals: 'NAMED' },
+            help: 'The log types whose policies this scheduler runs, named exactly as the Log Retention screen lists them.',
+          },
+          {
+            key: 'excludedLogTypes',
+            label: 'Excluded Log Types',
+            type: 'string-list',
+            default: [],
+            maxItems: 50,
+            placeholder: 'admin_audit, request_history',
+            help: 'Log types this scheduler never touches, whatever their policy says. An exclusion outranks the scope above.',
+          },
+          {
+            key: 'skipComplianceLocked',
+            label: 'Skip Compliance-Locked Policies',
+            type: 'boolean',
+            default: false,
+            help: 'ON passes over a policy under a compliance lock without reporting it as a refusal. OFF surfaces the lock, which is usually what you want to see.',
           },
         ],
       },
       {
-        group: 'Behaviour',
+        group: 'Execution',
         fields: [
           {
-            key: 'batchSize',
-            label: 'Rows Per Batch',
-            type: 'integer',
+            key: 'mode',
+            label: 'Mode',
+            type: 'enum',
             required: true,
-            default: 5000,
-            min: 100,
-            max: 100000,
-            help: 'How many rows are removed per transaction, 100–100,000. Smaller batches take longer but hold shorter locks on a busy database.',
+            default: 'DRY_RUN',
+            options: [
+              { value: 'DRY_RUN', label: 'Dry run — report what would be removed, change nothing' },
+              { value: 'APPLY', label: 'Apply — archive and delete as each policy requires' },
+            ],
+            help: 'This service deletes audit records, and a deleted audit record is not recoverable. It starts in dry run so the first run is a report you can read before it is a deletion you cannot undo.',
           },
           {
-            key: 'reportOnly',
-            label: 'Report Only (dry run)',
+            key: 'maxPoliciesPerRun',
+            label: 'Maximum Policies per Run',
+            type: 'integer',
+            default: 20,
+            min: 1,
+            max: 500,
+            help: 'Safety limit on how many retention policies one run processes, 1–500. Any remaining policies are handled next run.',
+          },
+          {
+            key: 'continueOnPolicyFailure',
+            label: 'Continue After a Policy Fails',
             type: 'boolean',
-            default: false,
-            help: 'ON counts what would be removed and writes nothing. Recommended before the first real run.',
+            default: true,
+            help: 'ON carries on with the remaining policies when one fails, and reports the failure against that policy alone. OFF stops the whole run at the first failure.',
           },
         ],
       },
-      notificationGroup('Cleanup Summary'),
+      notificationGroup('Summary Notification'),
     ],
   },
 
@@ -1880,7 +2052,7 @@ export const CATALOG = [
     family: 'addon',
     legacyQueueName: null,
     permissionCode: null,
-    description: 'Opens a recertification campaign on a schedule, assigns its reviewers and closes it when the review window ends.',
+    description: 'Opens a recertification campaign on a schedule, assigns its reviewers and guards against opening a second one for a period already covered.',
     defaultTimeoutMs: min(60),
     metadata: {
       retryable: true,
@@ -1900,115 +2072,117 @@ export const CATALOG = [
             required: true,
             default: '',
             maxLength: 128,
-            placeholder: 'Quarterly access review',
-            help: 'The name each campaign is opened under. The run date is appended, e.g. Quarterly access review — 2026-10-01.',
+            placeholder: 'Quarterly review',
+            /* The name an auditor searches for months later is assembled from
+               two fields sitting in different rows. Showing it here is four
+               lines of presentation against the alternative of finding out what
+               it was by reading the first run. */
+            preview: (config) => {
+              const name = String(config.campaignName || '').trim()
+              return name ? `Opens as ${name.toUpperCase()} ${campaignPeriodToken(config.campaignPeriod)}` : null
+            },
+            help: 'The name each campaign is opened under. The period is appended to it, so one name covers every campaign this scheduler ever creates.',
           },
           {
-            key: 'scope',
-            label: 'What Is Reviewed',
+            key: 'campaignDescription',
+            label: 'Campaign Description',
+            type: 'string',
+            default: 'Created automatically by the recertification scheduler.',
+            maxLength: 256,
+            help: 'Shown to reviewers on the campaign itself. Say why the review exists; the reviewer has no other context for the mail they just received.',
+          },
+          {
+            key: 'campaignPeriod',
+            label: 'Campaign Period',
             type: 'enum',
             required: true,
-            default: 'APPLICATION_ACCESS',
+            default: 'QUARTERLY',
             options: [
-              { value: 'APPLICATION_ACCESS', label: 'Application access' },
-              { value: 'ROLE_MEMBERSHIP', label: 'Role membership' },
-              { value: 'GROUP_MEMBERSHIP', label: 'Group membership' },
-              { value: 'PRIVILEGED_ACCESS', label: 'Privileged access only' },
+              { value: 'MONTHLY', label: 'Monthly' },
+              { value: 'QUARTERLY', label: 'Quarterly' },
+              { value: 'HALF_YEARLY', label: 'Half-yearly' },
+              { value: 'ANNUAL', label: 'Yearly' },
             ],
-            help: 'The entitlements the campaign puts in front of a reviewer. One kind per campaign keeps the review answerable.',
+            help: 'The period one campaign covers. It names the campaign and it is what the duplicate check below compares, so a quarterly campaign cannot be opened twice for the same quarter.',
           },
           {
             key: 'population',
-            label: 'Who Is Reviewed',
+            label: 'Population',
             type: 'enum',
             required: true,
-            default: 'ALL_ACTIVE',
+            default: 'ALL_USERS',
             options: [
-              { value: 'ALL_ACTIVE', label: 'Every active identity' },
-              { value: 'ORGANIZATION', label: 'One organization' },
-              { value: 'EMPLOYEE_TYPE', label: 'One employee type' },
-              { value: 'DORMANT', label: 'Dormant identities only' },
+              { value: 'ALL_USERS', label: 'All users' },
+              { value: 'CONDITION', label: 'Users matching a condition' },
             ],
-            help: 'The identities in scope. Organization and employee type read the value below.',
+            help: 'The identities the campaign puts in front of a reviewer.',
           },
           {
-            key: 'populationValue',
-            label: 'Organization Or Employee Type',
+            key: 'condition',
+            label: 'Condition',
+            type: 'string',
+            required: true,
+            default: '',
+            maxLength: 256,
+            placeholder: 'organization = Tanflow · Finance',
+            visibleWhen: { key: 'population', equals: 'CONDITION' },
+            help: 'The attribute condition identities must match to be included, e.g. organization = Tanflow · Finance.',
+          },
+          {
+            key: 'auditor',
+            label: 'Auditor',
             type: 'string',
             required: true,
             default: '',
             maxLength: 128,
-            placeholder: 'Tanflow · Finance',
-            visibleWhen: { key: 'population', in: ['ORGANIZATION', 'EMPLOYEE_TYPE'] },
-            help: 'The organization or employee type to review, written exactly as it appears in the console, e.g. Tanflow · Finance.',
-          },
-        ],
-      },
-      {
-        group: 'Reviewers',
-        fields: [
-          {
-            key: 'reviewerSource',
-            label: 'Reviewer',
-            type: 'enum',
-            required: true,
-            default: 'MANAGER',
-            options: [
-              { value: 'MANAGER', label: 'The identity’s manager' },
-              { value: 'APPLICATION_OWNER', label: 'The application owner' },
-              { value: 'NAMED', label: 'Named reviewers' },
-            ],
-            help: 'Who answers for each line of the campaign. An identity with no manager falls back to the named reviewers below.',
+            placeholder: 'grc_team',
+            help: 'The IDAM username that signs the campaign off once the reviewers have answered. Nothing is revoked until they do.',
           },
           {
-            key: 'namedReviewers',
-            label: 'Named Reviewers',
+            key: 'reviewLevels',
+            label: 'Review Levels',
             type: 'string-list',
             required: true,
-            default: [],
-            maxItems: 20,
-            placeholder: 'compliance_team, it_ops',
-            visibleWhen: { key: 'reviewerSource', equals: 'NAMED' },
-            help: 'IDAM usernames that review every line. Separate multiple values with commas, e.g. compliance_team, it_ops.',
-          },
-          {
-            key: 'durationDays',
-            label: 'Review Window (days)',
-            type: 'integer',
-            required: true,
-            default: 14,
-            min: 1,
-            max: 180,
-            help: 'How long reviewers have before the campaign closes, e.g. 14 = two weeks from the day it opens.',
+            default: ['user', 'manager', 'auditor'],
+            maxItems: 10,
+            placeholder: 'user, manager, auditor',
+            help: 'The levels each line passes through, in order. Removing a level removes a signature from the record the campaign produces.',
           },
         ],
       },
       {
-        group: 'On Expiry',
+        group: 'Idempotency',
         fields: [
           {
-            key: 'onExpiry',
-            label: 'Lines Left Unanswered',
+            key: 'duplicateCheck',
+            label: 'Duplicate Check',
             type: 'enum',
             required: true,
-            default: 'KEEP_AND_REPORT',
+            default: 'PERIOD_AND_POPULATION',
             options: [
-              { value: 'KEEP_AND_REPORT', label: 'Keep the access and report it' },
-              { value: 'REVOKE', label: 'Revoke the access' },
-              { value: 'ESCALATE', label: 'Escalate to the reviewer’s manager' },
+              { value: 'PERIOD_AND_POPULATION', label: 'Same period and same population' },
+              { value: 'PERIOD', label: 'Same period, whatever the population' },
+              { value: 'NONE', label: 'No duplicate check' },
             ],
-            help: 'What happens to a line no reviewer answered by the closing date. Revoke removes access without a decision, so it belongs to campaigns whose scope is well understood.',
+            help: 'What counts as a campaign that already covers this period. A scheduler that retries, or two schedulers that overlap, must not open the same review twice — reviewers would be asked to answer it twice.',
           },
           {
-            key: 'autoCloseOnComplete',
-            label: 'Close Early When Every Line Is Answered',
+            key: 'countClosedCampaigns',
+            label: 'Count Closed Campaigns as Covering the Period',
             type: 'boolean',
             default: true,
-            help: 'ON closes the campaign as soon as the last reviewer answers, rather than waiting out the window.',
+            help: 'ON treats a campaign that has already finished as covering its period. OFF opens a fresh one, which is what a re-review after remediation needs.',
+          },
+          {
+            key: 'dryRun',
+            label: 'Dry Run',
+            type: 'boolean',
+            default: false,
+            help: 'ON reports the campaign that would be created and creates nothing.',
           },
         ],
       },
-      notificationGroup('Campaign Notification'),
+      notificationGroup('Summary Notification'),
     ],
   },
 ]
@@ -2046,12 +2220,24 @@ export const fieldFor = (code, key) => fieldsOf(code).find((f) => f.key === key)
 /**
  * The visibility rule the schema uses.
  *
- * `visibleWhen: { key, equals }` or `{ key, in: [...] }` — against another key
- * in the same service's config.
+ * `visibleWhen: { key, equals }`, `{ key, in: [...] }` or `{ key, contains }` —
+ * against another key in the same service's config.
+ *
+ * `contains` is what a multi-select controller needs. Neither of the other two
+ * can express "shown when this option is among the ones ticked": both compare
+ * the whole value, and the whole value there is a list — an escalation path of
+ * three rules stringifies to `NEXT_LEVEL,MANAGER,ADMINISTRATOR`, which equals
+ * nothing anyone would write in a rule.
  */
 export const matchesRule = (rule, config = {}) => {
   if (!rule) return true
-  const v = String(config[rule.key])
+  const raw = config[rule.key]
+  if (rule.contains != null) {
+    return Array.isArray(raw)
+      ? raw.map(String).includes(String(rule.contains))
+      : String(raw) === String(rule.contains)
+  }
+  const v = String(raw)
   if (Array.isArray(rule.in)) return rule.in.map(String).includes(v)
   return v === String(rule.equals)
 }

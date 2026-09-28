@@ -15,9 +15,11 @@ import KeyValue from '../../components/primitives/KeyValue'
 import Field from '../../components/primitives/Field'
 import TextInput from '../../components/primitives/TextInput'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num } from '../../lib/format'
 import { APPLICATIONS, LICENCES, LICENSE, ORGANIZATIONS, USERS } from '../../data/seed'
 import { RingGauge } from '../../components/viz/Charts'
+import LicenseSkeleton from './LicenseSkeleton'
 
 const MONTHS = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
 
@@ -123,6 +125,12 @@ export default function LicensePage() {
   const utilization = Math.round((lic.seatsUsed / lic.seats) * 100)
   const expiring = lic.daysRemaining < 60
 
+  /* One flag for the page, keyed on the licence being read. Every figure on
+     screen is read off the same licence file, so they arrive together —
+     picking a superseded licence from the menu fetches that file and the whole
+     page settles again, which is what choosing it means. */
+  const loading = useLoading(licKey)
+
   const totalDays = Math.round(
     (Date.parse(lic.expires) - Date.parse(lic.issued)) / 86400000,
   )
@@ -204,6 +212,8 @@ export default function LicensePage() {
       ),
     })
   }
+
+  if (loading) return <LicenseSkeleton banner={!current || expiring} />
 
   return (
     <>

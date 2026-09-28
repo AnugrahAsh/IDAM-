@@ -13,7 +13,11 @@ import TextInput from '../../components/primitives/TextInput'
 import Select from '../../components/primitives/Select'
 import Banner from '../../components/primitives/Banner'
 import Switch from '../../components/primitives/Switch'
+import {
+  Skeleton, SkeletonCard, SkeletonForm, SkeletonKeyValue, SkeletonList, SkeletonTable,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import AuthTestForm from './LdapAuthTest'
 import LdapDirectory from './LdapDirectory'
 import LdapProvisioning from './LdapProvisioning'
@@ -27,6 +31,121 @@ import {
   fetchDns, healthNote, healthTiles, latencySeries, schemaFacts, syncHistory,
 } from './ldapModel'
 
+/* The tabs whose panel is cards and fields, and so has a shape of its own to
+   hold. The three that are not listed hold their own space — see PanelSkeleton
+   below for why. */
+const PANEL_SHAPES = ['general', 'connection', 'authentication', 'options', 'attributes']
+
+/* The joined figure strip a directory opens with — `Tiles` is `.stat-strip`
+   geometry, not the tile grid the kit's `SkeletonStats` draws, so the shape is
+   built from the real rule's own classes. Each bar states the line box its type
+   prints: a bar carries no text of its own to set one, and a strip that comes
+   up short moves everything under it when the figures arrive. */
+function StatStripSkeleton({ cells = 6 }) {
+  return (
+    <div className="stat-strip ldap-skel-strip" aria-hidden="true">
+      {Array.from({ length: cells }, (_, i) => (
+        <div className="stat-cell" key={i}>
+          <span className="stat-k"><span className="skel" style={{ width: 76 + (i % 3) * 18, height: 8 }} /></span>
+          <span className="stat-v"><span className="skel" style={{ width: 54 + (i % 2) * 22, height: 15 }} /></span>
+          <span className="skel" style={{ width: `${58 + (i % 3) * 12}%`, height: 8, marginTop: 6 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* Each tab is a different read of the directory, so each waits behind the shape
+   of what it is actually waiting for rather than behind one generic body.
+   Magnitude is what matters: a panel that resolves into something much taller
+   than the shape that held its place scrolls the page out from under the
+   reader.
+
+   Three tabs are deliberately absent. Directory has read nothing on arrival —
+   it opens on its own "nothing read yet" state and fetches a level at a time
+   when asked — so a skeleton there would promise a tree that is not coming.
+   Users and Provisioning rules are registers, and a register settles its own
+   rows from a `loading` prop, which leaves the search box the operator is about
+   to type into alive rather than replacing it with a grey rectangle. */
+function PanelSkeleton({ tab }) {
+  if (tab === 'connection') {
+    return (
+      <div className="detail-cols">
+        <div className="stack">
+          <SkeletonCard><SkeletonForm fields={4} actions={false} /></SkeletonCard>
+          <SkeletonCard><SkeletonForm fields={3} actions={false} /></SkeletonCard>
+        </div>
+        <div className="stack">
+          <SkeletonCard><SkeletonKeyValue cols={1} rows={5} /></SkeletonCard>
+          <SkeletonCard><SkeletonKeyValue cols={1} rows={5} /></SkeletonCard>
+        </div>
+      </div>
+    )
+  }
+
+  if (tab === 'options') {
+    return (
+      <div className="detail-cols">
+        <SkeletonCard><SkeletonForm fields={5} actions={false} /></SkeletonCard>
+        <SkeletonCard><SkeletonKeyValue cols={1} rows={4} /></SkeletonCard>
+      </div>
+    )
+  }
+
+  /* Authentication: the credential the test is run with is typed rather than
+     read, and would get no skeleton on a screen of its own. It gets one here
+     because it is one card of a panel that arrives whole — greying the activity
+     beside it and leaving the card next to it crisp would land the panel in two
+     pieces, which is the flicker this is meant to remove. */
+  if (tab === 'authentication') {
+    return (
+      <div className="detail-cols">
+        <SkeletonCard><SkeletonForm fields={2} cols={1} actions={false} /></SkeletonCard>
+        <SkeletonCard><SkeletonKeyValue cols={1} rows={4} /></SkeletonCard>
+      </div>
+    )
+  }
+
+  /* Attribute mapping and the table of downstream consumers under it are both
+     `flush` cards — a table brings its own row gutters, so the shape holding
+     one carries no body padding either. The card between them holds prose and
+     keeps its. */
+  if (tab === 'attributes') {
+    return (
+      <div className="stack">
+        <SkeletonCard className="dtl-skel-flush" foot><SkeletonTable rows={8} cols={5} /></SkeletonCard>
+        <SkeletonCard lines={2} />
+        <SkeletonCard className="dtl-skel-flush" foot><SkeletonTable rows={5} cols={4} /></SkeletonCard>
+      </div>
+    )
+  }
+
+  /* General: the record and its quick links, then the figure strip again over
+     the synchronization history and the narrow column of health, run activity
+     and server capabilities. */
+  return (
+    <div className="stack">
+      <StatStripSkeleton cells={6} />
+      <div className="detail-cols">
+        <SkeletonCard><SkeletonKeyValue cols={2} rows={10} /></SkeletonCard>
+        {/* Linked records is a `flush` card of rows, and the synchronization
+            history below is a `flush` card of table rows: both bodies bring
+            their own gutters, so the shapes holding them bring none. */}
+        <SkeletonCard className="dtl-skel-flush"><SkeletonList rows={4} media="square" trailing={false} /></SkeletonCard>
+      </div>
+      <StatStripSkeleton cells={6} />
+      <div className="detail-cols">
+        <SkeletonCard className="dtl-skel-flush" foot><SkeletonTable rows={6} cols={6} /></SkeletonCard>
+        <div className="stack">
+          <SkeletonCard><SkeletonKeyValue cols={1} rows={4} /></SkeletonCard>
+          <SkeletonCard><SkeletonList rows={5} media={false} trailing={false} /></SkeletonCard>
+          <SkeletonCard><SkeletonKeyValue cols={1} rows={5} /></SkeletonCard>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function LdapDetail({
   app, tab, onTab, onPatch, onDelete, maps, setMaps, rules = [], setRules,
 }) {
@@ -38,6 +157,16 @@ export default function LdapDetail({
   // Base DNs are read from the directory rather than typed, so a mistyped
   // container cannot be saved. The list is empty until the host has answered.
   const [dns, setDns] = useState(null)
+
+  /* One flag for the record, keyed on the directory and the tab together, so
+     the record settles as one thing: arriving at a directory is a read, and so
+     is opening a different tab, because each tab is a separate read of that
+     directory rather than another slice of one already in hand.
+
+     The tab bar itself never greys — it is passed to the masthead outside the
+     conditionals below — since a control that disappears under the pointer that
+     just used it has been taken away mid-gesture. */
+  const loading = useLoading(`${app.id}:${tab}`)
 
   const connDirty = JSON.stringify(conn) !== JSON.stringify(connInitial)
   const connTls = conn.tls
@@ -156,26 +285,48 @@ export default function LdapDetail({
 
   return (
     <>
+      {/* The masthead is the real `DetailHeader` while it settles rather than an
+          imitation of one: the crumb row, the gutters, the tab row and every gap
+          between them are the component's own, so the directory lands in exactly
+          the box that was holding its place. Only the record's own content is
+          grey — the tab bar is chrome and stays live throughout. */}
       <DetailHeader
         backTo="/iam/ldapapplications"
         backLabel="LDAP Applications"
         eyebrow="Directory connection"
-        title={app.displayName}
-        sub={`${app.description} The platform binds as ${app.bindDn} and reads ${num(app.entries)} entries under ${app.baseDn}.`}
-        media={
+        title={loading ? <span className="skel dtl-skel-title" aria-hidden="true" /> : app.displayName}
+        sub={loading ? (
+          /* Two bars, because the sentence below wraps to two lines inside the
+             100ch `.detail-sub` is capped at — for every directory in the
+             estate. One bar held one line and the tab strip stepped down when
+             the sentence landed. */
+          <span className="dtl-skel-sub" aria-hidden="true">
+            <span className="skel" />
+            <span className="skel" />
+          </span>
+        ) : `${app.description} The platform binds as ${app.bindDn} and reads ${num(app.entries)} entries under ${app.baseDn}.`}
+        media={loading ? <span className="skel dtl-skel-media" aria-hidden="true" /> : (
           <span className="feed-ic" data-tone={tone === 'ok' ? 'acc' : tone} style={{ width: 56, height: 56, borderRadius: 'var(--r-lg)' }}>
             <Icon name="directory" size={26} />
           </span>
-        }
-        badges={
+        )}
+        badges={loading ? <span className="skel skel-chip" style={{ width: 76 }} aria-hidden="true" /> : (
           <>
             <Pill tone={statusTone(app.status)} dot>{app.status}</Pill>
             <Tag tone={app.tls ? 'acc' : undefined}>{app.protocol}</Tag>
             {!app.tls && <Pill tone="warn" icon="warn">No transport encryption</Pill>}
             {app.failedBinds > 100 && <Pill tone="bad" icon="ban">{num(app.failedBinds)} failed binds</Pill>}
           </>
-        }
-        meta={
+        )}
+        meta={loading ? (
+          <>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span className="dtl-skel-fact" key={i} aria-hidden="true">
+                <span className="skel" style={{ width: 96 + (i % 3) * 26, height: 9 }} />
+              </span>
+            ))}
+          </>
+        ) : (
           <>
             <Fact icon="tag" label="Name" value={<span className="mono">{app.name}</span>} />
             <Fact icon="globe" label="URL" value={<span className="mono">{app.url}</span>} />
@@ -183,8 +334,14 @@ export default function LdapDetail({
             <Fact icon="building" label="Owner" value={app.owner} />
             <Fact icon="clock" label="Last sync" value={app.lastSync} />
           </>
-        }
-        actions={
+        )}
+        actions={loading ? (
+          <>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span className="skel skel-btn" key={i} style={{ width: 84 + (i % 3) * 22 }} aria-hidden="true" />
+            ))}
+          </>
+        ) : (
           <>
             <Button icon="play" onClick={testConnection}>Test connection</Button>
             <Button icon="user" onClick={() => onTab('authentication')}>Test authentication</Button>
@@ -192,7 +349,7 @@ export default function LdapDetail({
             <Button icon="edit" onClick={() => navigate(`/iam/ldapapplications/${app.id}/edit`)}>Edit</Button>
             <Button variant="danger" icon="trash" onClick={remove}>Delete</Button>
           </>
-        }
+        )}
         tabs={
           <Tabs
             value={tab}
@@ -212,7 +369,18 @@ export default function LdapDetail({
       />
 
       <div className="detail-body">
-        {tab === 'general' && (
+        {/* The screen's one announcing region, so the record says once that it
+            is on its way. Every shape is decoration — the bars in the masthead
+            above and the rows a register draws for itself below — and the
+            region is rendered even for the tabs that have no panel shape of
+            their own, because the masthead is still grey while they settle. */}
+        {loading && (
+          <Skeleton label={`Loading ${app.displayName}`}>
+            {PANEL_SHAPES.includes(tab) ? <PanelSkeleton tab={tab} /> : null}
+          </Skeleton>
+        )}
+
+        {!loading && tab === 'general' && (
           <div className="stack">
             {app.status !== 'Healthy' && (
               <Banner tone={app.status === 'Failed' ? 'bad' : 'warn'}>
@@ -334,7 +502,7 @@ export default function LdapDetail({
           </div>
         )}
 
-        {tab === 'connection' && (
+        {!loading && tab === 'connection' && (
           <>
             <div className="detail-cols">
               <div className="stack">
@@ -460,7 +628,7 @@ export default function LdapDetail({
           </>
         )}
 
-        {tab === 'authentication' && (
+        {!loading && tab === 'authentication' && (
           <>
             <div className="detail-cols">
               <div className="stack">
@@ -489,7 +657,7 @@ export default function LdapDetail({
           </>
         )}
 
-        {tab === 'options' && (
+        {!loading && tab === 'options' && (
           <>
             <div className="detail-cols">
               <div className="stack">
@@ -534,7 +702,7 @@ export default function LdapDetail({
           </>
         )}
 
-        {tab === 'general' && (
+        {!loading && tab === 'general' && (
           <div className="stack">
             <Tiles items={healthTiles(app)} />
 
@@ -594,25 +762,30 @@ export default function LdapDetail({
           </div>
         )}
 
+        {/* The tree has read nothing yet — it opens on its own "nothing read
+            yet" panel and fetches a level when asked — so it has nothing to
+            wait for and is drawn whole from the first frame. */}
         {tab === 'directory' && (
           <div className="stack">
             <LdapDirectory app={app} />
           </div>
         )}
 
+        {/* Registers settle their own rows. Handing the flag down leaves the
+            toolbar and the search box alive while the rows arrive. */}
         {tab === 'users' && (
           <div className="stack">
-            <LdapUsers app={app} />
+            <LdapUsers app={app} loading={loading} />
           </div>
         )}
 
         {tab === 'provisioning' && (
           <div className="stack">
-            <LdapProvisioning app={app} rules={rules} setRules={setRules} mappings={mine} />
+            <LdapProvisioning app={app} rules={rules} setRules={setRules} mappings={mine} loading={loading} />
           </div>
         )}
 
-        {tab === 'attributes' && (
+        {!loading && tab === 'attributes' && (
           <div className="stack">
             <Card
               title="Attribute mapping"

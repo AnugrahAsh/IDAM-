@@ -15,9 +15,11 @@ import TextInput from '../../components/primitives/TextInput'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
 import PageBar from '../../components/shell/PageBar'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { levelNames } from './data'
 import GroupPickerForm from './GroupPickerForm'
 import { reviewLinkPath, reviewerFor } from './emailLink'
+import { UserReviewAllSkeleton, UserReviewLevelSkeleton } from './RecertificationSkeleton'
 import {
   ATTRIBUTE_META, GROUP_TYPES, STATE_META, computeLevelDiff, dataAt, levelKey, levelLabel, summariseUser,
 } from './campaignUsers'
@@ -361,6 +363,11 @@ export default function CampaignUserReview({ c, users, userId, levelParam, decid
   const [draft, setDraft] = useState(null)
   const [remarks, setRemarks] = useState('')
   const [attempted, setAttempted] = useState(false)
+  /* One flag, keyed on the user and the level being read. Stepping to the next
+     user with the header buttons, or to another level with the tabs, is a new
+     reading and settles again the way a fetch would. The masthead carries the
+     tab strip, so it is chrome; the panel under it is what settles. */
+  const loading = useLoading(`${userId}:${tab}`)
 
   if (!user) {
     return (
@@ -478,7 +485,11 @@ export default function CampaignUserReview({ c, users, userId, levelParam, decid
       />
 
       <div className="detail-body">
-        {tab === 'all' ? (
+        {loading ? (
+          tab === 'all'
+            ? <UserReviewAllSkeleton user={user} levels={keys.length} />
+            : <UserReviewLevelSkeleton user={user} groups={GROUP_TYPES.length} />
+        ) : tab === 'all' ? (
           <AllChanges user={user} chain={chain} keys={keys} />
         ) : (
           <div className="stack">

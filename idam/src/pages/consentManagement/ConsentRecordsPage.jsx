@@ -12,6 +12,10 @@ import Avatar from '../../components/primitives/Avatar'
 import KeyValue from '../../components/primitives/KeyValue'
 import Banner from '../../components/primitives/Banner'
 import EmptyState from '../../components/primitives/EmptyState'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue, SkeletonPageBar,
+  SkeletonStats, SkeletonText,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import './ConsentRecordsPage.css'
 import { num, serialColumn } from '../../lib/format'
@@ -20,7 +24,9 @@ import { USERS } from '../../data/seed'
 
 const actionTone = (a) => (a === 'Accepted' ? 'ok' : a === 'Withdrawn' || a === 'Declined' ? 'bad' : 'mut')
 
-export default function ConsentRecordsPage({ segments = [], embedded }) {
+/* `loading` is Consent Management's flag: the evidence register lands with the
+   page bar and the tab strip, and opening a record re-keys that same flag. */
+export default function ConsentRecordsPage({ segments = [], embedded, loading = false }) {
   const { navigate, toast } = useApp()
   const rows = CONSENT_RECORDS
 
@@ -30,6 +36,30 @@ export default function ConsentRecordsPage({ segments = [], embedded }) {
   )
 
   if (segments[0]) {
+    /* An acceptance record is a record page: the masthead lands first, so it is
+       held first. The body is the wording shown beside the forensic detail on
+       the left, and integrity above the identity's other records on the
+       right — four boxes, at the heights they land at. */
+    if (loading) {
+      return (
+        <Skeleton label="Loading the consent record">
+          <SkeletonDetailHeader facts={4} actions={2} />
+          <div className="detail-body">
+            <div className="detail-cols">
+              <div className="stack">
+                <SkeletonCard><SkeletonText lines={6} /></SkeletonCard>
+                <SkeletonCard><SkeletonKeyValue rows={10} cols={2} /></SkeletonCard>
+              </div>
+              <div className="stack">
+                <SkeletonCard><SkeletonKeyValue rows={4} cols={1} /></SkeletonCard>
+                <SkeletonCard lines={4} />
+              </div>
+            </div>
+          </div>
+        </Skeleton>
+      )
+    }
+
     if (!record) {
       return (
         <>
@@ -174,7 +204,13 @@ export default function ConsentRecordsPage({ segments = [], embedded }) {
 
   return (
     <>
-      {!embedded && (
+      {!embedded && loading && (
+        <Skeleton label="Loading the consent records">
+          <SkeletonPageBar actions={2} crumbs={1} />
+        </Skeleton>
+      )}
+
+      {!embedded && !loading && (
       <PageBar
         title="Consent Records"
         sub="The append-only evidence trail of every consent decision, retained for seven years."
@@ -188,6 +224,7 @@ export default function ConsentRecordsPage({ segments = [], embedded }) {
       />
       )}
 
+      {loading ? <SkeletonStats count={4} /> : (
       <StatCards
         items={[
           { key: 'total', icon: 'file', label: 'Records', value: rows.length, chip: '7-year retention', sub: 'evidence of every decision' },
@@ -197,9 +234,11 @@ export default function ConsentRecordsPage({ segments = [], embedded }) {
         ]}
         label="Consent record summary"
       />
+      )}
 
       <DataWorkbench
         id="consent-records"
+        loading={loading}
         toolbar={embedded
           ? <Button size="sm" icon="download" onClick={() => toast('ok', 'Export queued', 'Filtered records exported as CSV.')}>Export</Button>
           : undefined}

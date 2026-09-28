@@ -11,10 +11,12 @@ import Tag from '../../components/primitives/Tag'
 import Tabs from '../../components/primitives/Tabs'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
 import { WRITE_PERMS, permCount as countGranted, permTotal } from '../../lib/permissions'
 import { PERM_CATALOG } from '../../data/seed'
 import { countPerms, headTone, membersFor, normalize, riskTag, rulesFor, usePermDraft } from './roleModel'
 import { ActivityTab, MembersTab, RulesTab } from './RoleTabs'
+import { RolePanelSkeleton, RoleRecordSkeleton } from './RolesSkeleton'
 
 export default function RoleDetail({ role, onPatch, onDuplicate, onDelete }) {
   const { navigate, toast } = useApp()
@@ -27,6 +29,13 @@ export default function RoleDetail({ role, onPatch, onDuplicate, onDelete }) {
     Array.isArray(role.memberIds) ? role.memberIds : membersFor(role).map((u) => u.id)
   ))
   const matrix = usePermDraft(role.perms)
+  /* Two scopes off one timer, as the organization record does. `arriving` is
+     the whole record — masthead, tab strip and panel resolve together, so
+     landing on a role settles as one thing. `settling` is the panel alone,
+     which is all a tab change fetches: the tab bar is chrome and stays where
+     the pointer left it. */
+  const arriving = useLoading(role.id)
+  const settling = useLoading(`${role.id}:${tab}`)
   const memberCount = memberIds.length
   const rules = rulesFor(role, memberCount)
 
@@ -61,6 +70,8 @@ export default function RoleDetail({ role, onPatch, onDuplicate, onDelete }) {
     applyMembers(memberIds.filter((id) => !set.has(id)))
     toast('ok', 'Members removed', `${ids.length} ${ids.length === 1 ? 'identity loses' : 'identities lose'} ${role.name} at the next provisioning run.`)
   }
+
+  if (arriving) return <RoleRecordSkeleton tab={tab} />
 
   return (
     <>
@@ -131,7 +142,11 @@ export default function RoleDetail({ role, onPatch, onDuplicate, onDelete }) {
       />
 
       <div className="detail-body">
-        {tab === 'permissions' && (
+        {/* The card and picker tabs are redrawn as shapes while they settle;
+            Members keeps its own toolbar and settles its rows instead. */}
+        {settling && tab !== 'members' && <RolePanelSkeleton tab={tab} />}
+
+        {tab === 'permissions' && !settling && (
           <div className="stack">
             <div className="stat-strip">
               <div className="stat-cell">
@@ -192,12 +207,12 @@ export default function RoleDetail({ role, onPatch, onDuplicate, onDelete }) {
         )}
 
         {tab === 'members' && (
-          <MembersTab role={role} memberIds={memberIds} onAdd={addMembers} onRemove={removeMembers} />
+          <MembersTab role={role} memberIds={memberIds} onAdd={addMembers} onRemove={removeMembers} loading={settling} />
         )}
 
-        {tab === 'rules' && <RulesTab role={role} rules={rules} memberCount={memberCount} />}
+        {tab === 'rules' && !settling && <RulesTab role={role} rules={rules} memberCount={memberCount} />}
 
-        {tab === 'activity' && <ActivityTab role={role} memberCount={memberCount} />}
+        {tab === 'activity' && !settling && <ActivityTab role={role} memberCount={memberCount} />}
       </div>
 
       {menu && <Menu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}

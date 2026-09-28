@@ -15,6 +15,9 @@ import Tag from '../../components/primitives/Tag'
 import TextInput from '../../components/primitives/TextInput'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
 import StickyActions from '../../components/shell/StickyActions'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonForm, SkeletonText,
+} from '../../components/primitives/Skeleton'
 import { USERS } from '../../data/seed'
 import { stampText } from '../../lib/clock'
 import { num } from '../../lib/format'
@@ -33,7 +36,27 @@ const RIGHTS = [
   { key: 'allowViewConsent', label: 'Allow view consent', hint: 'The identity can view the full consent in the portal.' },
 ]
 
-export default function ConsentDetail({ record, templates = [], onSave, onCancel, onDelete, onInitiateMenu }) {
+/* The tab row a record masthead lands with. `SkeletonDetailHeader` stops at the
+   facts, and a header that will carry tabs is a row taller than one that will
+   not — enough to move the body under it when the record arrives. The hairline
+   sits above the row here rather than below it, which is the one thing this
+   cannot borrow from the real header. */
+function SkeletonTabRow({ count = 5 }) {
+  return (
+    <div className="tabs" style={{ borderBottom: 'none' }} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <span className="tab" key={i}>
+          <span className="skel" style={{ width: 78 + (i % 3) * 22, height: 'calc(var(--t-body) * var(--t-body-lh))' }} />
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/* `loading` is Consent Management's own flag, not a second one: the record
+   settles as one thing with the screen it was opened from. A new consent is
+   never held — the form starts blank, so there is nothing on its way. */
+export default function ConsentDetail({ record, templates = [], onSave, onCancel, onDelete, onInitiateMenu, loading = false }) {
   const { toast, navigate } = useApp()
   // A consent authored before the multi-language editor, or the DPDP
   // compliance fields, existed still opens here — every addition since then
@@ -124,6 +147,26 @@ export default function ConsentDetail({ record, templates = [], onSave, onCancel
   const total = (record.accepted || 0) + (record.pending || 0)
   const rate = total ? Math.round((record.accepted / total) * 100) : 0
   const pendingUsers = USERS.filter((_, i) => i % 5 === 0).slice(0, 12)
+
+  if (loading) {
+    return (
+      <Skeleton label="Loading the consent">
+        <SkeletonDetailHeader media={false} facts={4} actions={2} />
+        <SkeletonTabRow count={5} />
+        <div className="detail-body">
+          <div className="detail-cols">
+            {/* Definition is the tab a consent opens on: the wording and the
+                compliance fields on the left, publication on the right. */}
+            <div className="stack">
+              <SkeletonCard><SkeletonText lines={6} /></SkeletonCard>
+              <SkeletonCard><SkeletonForm fields={6} cols={2} actions={false} /></SkeletonCard>
+            </div>
+            <SkeletonCard><SkeletonForm fields={4} cols={1} actions={false} /></SkeletonCard>
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
 
   return (
     <>

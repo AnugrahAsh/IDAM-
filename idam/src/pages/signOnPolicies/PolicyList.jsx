@@ -8,7 +8,9 @@ import EmptyState from '../../components/primitives/EmptyState'
 import Icon from '../../components/primitives/Icon'
 import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
+import { Skeleton, SkeletonPageBar } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { serialColumn, statusTone } from '../../lib/format'
 import { BASE, appById, isOrphan, plural, policyPath } from './signOnPolicyData'
 import { usePolicies } from './signOnPolicyStore'
@@ -31,6 +33,36 @@ const EMPTY = {
 
 const appNames = (p) => p.applications.map((m) => appById(m.appId)).filter(Boolean).map((a) => a.displayName)
 
+/* The register header is not chrome: it is the facets a reader picks from and
+   the totals that give them scale, so it is data as much as the rows under it
+   and settles with them rather than landing first with numbers the rows cannot
+   yet corroborate.
+
+   Built from the real rule's own classes — `.reg` gives the surface and the
+   hairline under it, `.reg-f` the tab's padding and the 2px baseline it
+   reserves for the selected state. Only the bars inside are ours. */
+function RegisterHeaderSkeleton({ tabs = 4, summary = 2 }) {
+  return (
+    <div className="reg" aria-hidden="true">
+      <div className="reg-row">
+        <div className="reg-tabs">
+          {Array.from({ length: tabs }, (_, i) => (
+            <span className="reg-f sop-reg-skel-f" key={i}>
+              <span className="skel" style={{ width: 26 + (i % 3) * 10 }} />
+              <span className="skel" style={{ width: 64 + (i % 3) * 22, height: 9 }} />
+            </span>
+          ))}
+        </div>
+        <div className="reg-sum">
+          {Array.from({ length: summary }, (_, i) => (
+            <span className="skel" key={i} style={{ width: 92 + (i % 3) * 26, height: 9 }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /**
  * The sign-on policy register.
  *
@@ -46,6 +78,11 @@ export default function PolicyList() {
   const { changeStatus, removePolicies } = usePolicyActions()
   const [facet, setFacet] = useState('all')
   const [mutedAlert, setMutedAlert] = useState(null)
+  /* One flag for the register. It settles on arrival — including on the way
+     back from a policy's record, which is a route away and back rather than a
+     filter — and faceting does not settle again, because the rows being
+     narrowed are already on screen. */
+  const loading = useLoading()
 
   const counts = useMemo(() => ({
     active: policies.filter(FACETS.active).length,
@@ -154,12 +191,20 @@ export default function PolicyList() {
 
   return (
     <>
+      {/* One announcing region for the page. The register below keeps its own
+          panel and toolbar while the header and the rows settle inside it. */}
+      {loading ? (
+        <Skeleton label="Loading the sign-on policy register">
+          <SkeletonPageBar actions={access.add ? 1 : 0} crumbs={2} />
+        </Skeleton>
+      ) : (
       <PageBar
         title="Sign-On Policies"
         sub="Named, ordered rule sets evaluated at sign-in. Rules run top to bottom and the first match decides; a policy only takes effect on the applications attached to it."
         crumbs={[{ label: 'Groups' }, { label: 'Sign-On Policies' }]}
         actions={addButton}
       />
+      )}
 
       {policies.length === 0 ? (
         <Card>
@@ -175,7 +220,8 @@ export default function PolicyList() {
           id="sign-on-policies"
           rows={rows}
           columns={columns}
-          header={(
+          loading={loading}
+          header={loading ? <RegisterHeaderSkeleton tabs={headerItems.length} /> : (
             <RegisterHeader
               items={headerItems}
               value={facet}

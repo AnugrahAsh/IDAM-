@@ -311,3 +311,52 @@
 .rep-list-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .rep-list-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);overflow-wrap:anywhere}
 .rep-list-s{font-size:var(--t-xs);color:var(--mut)}
+
+/* --- Waiting ----------------------------------------------------------------
+   A card, a row or a tile holding its own space. Every rule here does one of
+   two things: it takes back the affordances of a control that is not one while
+   it is grey, or it states the line box the real type prints — a bar has no
+   text in it to set one, so a block of them comes up short and the page drops
+   when the words arrive. */
+
+.rep-card[data-skel],.rep-row[data-skel],.rep-quick-it[data-skel]{cursor:default}
+.rep-card[data-skel]:hover{border-color:var(--line);box-shadow:none;transform:none}
+.rep-row[data-skel]:hover{background:none}
+.rep-quick-it[data-skel]:hover{border-color:var(--line)}
+
+/* The marks: .rep-card's 2.25rem tile and .rep-row's 2rem one. */
+.rep-skel-mark{width:2.25rem;height:2.25rem;border-radius:var(--r);flex:none}
+.rep-skel-mark[data-sm="true"]{width:2rem;height:2rem}
+.rep-skel-pin{width:14px;height:14px;border-radius:var(--r-xs);flex:none}
+.rep-skel-go{width:13px;height:13px;border-radius:var(--r-xs);flex:none}
+.rep-skel-quick-ic{width:1.25rem;height:1.25rem;border-radius:50%;flex:none}
+
+/* .rep-card-desc's two-line floor, and the line boxes .rep-row-m stacks. */
+.rep-skel-desc{display:flex;flex-direction:column;justify-content:center;
+  min-height:calc(var(--t-sm) * var(--t-sm-lh) * 2)}
+.rep-row[data-skel] .rep-row-name,
+.rep-row[data-skel] .rep-row-desc,
+.rep-row[data-skel] .rep-row-cat,
+.rep-row[data-skel] .rep-row-when{display:flex;align-items:center}
+.rep-row[data-skel] .rep-row-name{min-height:calc(var(--t-sm) * var(--t-sm-lh))}
+.rep-row[data-skel] .rep-row-desc,
+.rep-row[data-skel] .rep-row-cat,
+.rep-row[data-skel] .rep-row-when{min-height:calc(var(--t-xs) * var(--t-xs-lh))}
+/* .rep-card-foot and .rep-active-k print one line of type beside their bars. */
+.rep-card[data-skel] .rep-card-foot{min-height:calc(12px + var(--t-sm) * var(--t-sm-lh))}
+.rep-active[data-skel] .rep-active-k,
+.rep-active[data-skel] .rep-active-n{min-height:calc(var(--t-xs) * var(--t-xs-lh));align-items:center}
+
+/* .tile-v prints 1.375rem at the inherited line height; the bar says so. */
+.tile[data-skel] .tile-v{min-height:calc(1.375rem * 1.2)}
+.rep-skel-fig{display:block;width:62px;height:calc(1.375rem * .78);border-radius:var(--r-sm)}
+
+/* The table reading of the catalogue: the head stays, the cells wait. The
+   two-line first cell is what sets the row's height, so both of its bars are
+   given the line box their type prints. */
+.rep-tr[data-skel]{cursor:default}
+.rep-tr[data-skel]:hover{background:none}
+.rep-skel-mark[data-tbl="true"]{width:1.75rem;height:1.75rem;border-radius:var(--r-sm)}
+.rep-skel-stack{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--cell-gap)}
+.rep-skel-l1{display:flex;align-items:center;min-height:calc(var(--t-sm) * var(--t-sm-lh))}
+.rep-tr[data-skel] .cell-sub{display:flex;align-items:center;min-height:calc(var(--t-xs) * var(--t-xs-lh))}

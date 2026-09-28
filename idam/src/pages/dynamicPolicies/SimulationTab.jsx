@@ -11,8 +11,9 @@ import Tag from '../../components/primitives/Tag'
 import { ORGS, USERS } from '../../data/seed'
 import { num } from '../../lib/format'
 import { NOW_MS, assignedIds, fmtStamp, groupLabel, groupList, matchUsers, ruleText, unresolvedRules } from './policyPageData'
+import { SkeletonStatStrip } from './PoliciesSkeleton'
 
-export default function SimulationTab({ policy, model }) {
+export default function SimulationTab({ policy, model, loading = false }) {
   const { navigate } = useApp()
   const names = groupList(policy)
   const label = groupLabel(policy)
@@ -84,12 +85,17 @@ export default function SimulationTab({ policy, model }) {
             </div>
           </div>
 
-          <div className="stat-strip">
-            <div className="stat-cell"><span className="stat-k">Identities evaluated</span><span className="stat-v">{num(pool.length)}</span></div>
-            <div className="stat-cell"><span className="stat-k">Matching</span><span className="stat-v">{num(matched.length)}</span></div>
-            <div className="stat-cell"><span className="stat-k">Would gain</span><span className="stat-v" style={{ color: grants.length ? 'var(--ok)' : undefined }}>{num(grants.length)}</span></div>
-            <div className="stat-cell"><span className="stat-k">No change</span><span className="stat-v">{num(matched.length - grants.length)}</span></div>
-          </div>
+          {/* The controls above stay live — they are what the operator sets
+              before a run, not a result. The figures are the result, so they
+              settle with the rows below them. */}
+          {loading ? <SkeletonStatStrip cells={4} /> : (
+            <div className="stat-strip">
+              <div className="stat-cell"><span className="stat-k">Identities evaluated</span><span className="stat-v">{num(pool.length)}</span></div>
+              <div className="stat-cell"><span className="stat-k">Matching</span><span className="stat-v">{num(matched.length)}</span></div>
+              <div className="stat-cell"><span className="stat-k">Would gain</span><span className="stat-v" style={{ color: grants.length ? 'var(--ok)' : undefined }}>{num(grants.length)}</span></div>
+              <div className="stat-cell"><span className="stat-k">No change</span><span className="stat-v">{num(matched.length - grants.length)}</span></div>
+            </div>
+          )}
 
           {unresolved.length > 0 && (
             <div className="t-xs t-mut">
@@ -104,6 +110,7 @@ export default function SimulationTab({ policy, model }) {
       <DataWorkbench
         id="policy-sim"
         rows={simRows}
+        loading={loading}
         columns={columns}
         getRowId={(r) => r.key}
         searchPlaceholder="Search the simulated result set…"

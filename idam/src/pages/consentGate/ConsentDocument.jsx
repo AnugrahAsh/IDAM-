@@ -15,6 +15,10 @@ import './ConsentGate.css'
  * The header carries the three facts a consent screen is legally obliged to
  * carry — who is asking, which document, and which version of it — because an
  * acceptance is worthless if the record cannot name the text that was read.
+ * They are laid out the way the console lays out a detail header: an eyebrow
+ * naming the kind of thing, the thing's own name at display size, and the
+ * publisher as a fact under it. The reference filled a solid band instead, and
+ * a band is not a shape this console has anywhere else.
  */
 export default function ConsentDocument({
   doc, lang, onLang, footer, titleAs = 'h1', className = '',
@@ -27,12 +31,17 @@ export default function ConsentDocument({
   return (
     <section className={`cdoc ${className}`.trim()}>
       <header className="cdoc-h">
-        <span className="cdoc-brand">{doc.tenant}</span>
-        <span className="cdoc-hm">
+        <div className="cdoc-h-top">
           <span className="cdoc-eyebrow">Consent &amp; privacy policy</span>
-          <Title className="cdoc-title" id={titleId}>{doc.title}</Title>
+          {/* The one fact the record is worthless without, so it keeps a chip
+              of its own rather than joining the line below. */}
+          <span className="cdoc-ver">Version {doc.version}</span>
+        </div>
+        <Title className="cdoc-title" id={titleId}>{doc.title}</Title>
+        <span className="cdoc-brand">
+          <Icon name="building" size={13} />
+          Published by <b>{doc.tenant}</b>
         </span>
-        <span className="cdoc-ver">Version {doc.version}</span>
       </header>
 
       <div className="cdoc-notice">

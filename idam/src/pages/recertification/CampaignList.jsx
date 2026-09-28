@@ -14,10 +14,17 @@ import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
 import { daysIdle, levelCount, nameOf, projectionFor } from './data'
 import StatCards from '../../components/workbench/StatCards'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
+import { useLoading } from '../../lib/useLoading'
+import { CampaignProgressSkeleton } from './RecertificationSkeleton'
 
 export default function CampaignList({ campaigns, items, onResend, onClose, onDelete }) {
   const { toast, navigate } = useApp()
   const [tab, setTab] = useState('campaigns')
+  /* One flag for the page. The masthead, the four tiles, the register and the
+     progress cards are the same campaigns counted four ways, so they settle as
+     one thing; the tab bar between them is chrome and stays put. */
+  const loading = useLoading()
 
   const stats = useMemo(() => ({
     active: campaigns.filter((c) => c.status === 'Active').length,
@@ -101,26 +108,38 @@ export default function CampaignList({ campaigns, items, onResend, onClose, onDe
 
   return (
     <>
-      <PageBar
-        title="Recertification"
-        crumbs={[{ label: 'Governance' }, { label: 'Recertification' }]}
-        sub="Attestation campaigns and the entitlement decisions that close them. Every certify and revoke is written to the audit trail with the reviewer, the timestamp and the recommendation it overrode."
-        actions={
-          <>
-            <Button variant="pri" icon="plus" onClick={() => navigate('/iam/recertification/add')}>Add Campaign</Button>
-          </>
-        }
-      />
+      {/* One region for the page. The register below draws its own body
+          skeleton from `loading` and stays silent, so the wait is described
+          once rather than band by band. */}
+      {loading ? (
+        <Skeleton label="Loading the recertification campaigns">
+          <SkeletonPageBar actions={1} crumbs={2} />
+          <SkeletonStats count={4} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Recertification"
+            crumbs={[{ label: 'Governance' }, { label: 'Recertification' }]}
+            sub="Attestation campaigns and the entitlement decisions that close them. Every certify and revoke is written to the audit trail with the reviewer, the timestamp and the recommendation it overrode."
+            actions={
+              <>
+                <Button variant="pri" icon="plus" onClick={() => navigate('/iam/recertification/add')}>Add Campaign</Button>
+              </>
+            }
+          />
 
-      <StatCards
-        items={[
-          { key: 'active', icon: 'certify', label: 'Active campaigns', value: stats.active, chip: `${num(stats.items)} items`, sub: 'attestation in flight' },
-          { key: 'pending', icon: 'clock', label: 'Undecided', value: stats.pending, chip: stats.pending ? 'awaiting a reviewer' : 'all decided', chipTone: stats.pending ? 'warn' : 'ok', sub: 'items with no decision yet' },
-          { key: 'flagged', icon: 'ban', label: 'Recommended revoke', value: stats.flagged, chip: stats.flagged ? 'unused access' : 'none', chipTone: stats.flagged ? 'bad' : undefined, sub: 'flagged by the platform' },
-          { key: 'decided', icon: 'checkC', label: 'Decided', value: stats.decided, chip: 'evidence captured', chipTone: 'ok', sub: 'certified or revoked' },
-        ]}
-        label="Recertification summary"
-      />
+          <StatCards
+            items={[
+              { key: 'active', icon: 'certify', label: 'Active campaigns', value: stats.active, chip: `${num(stats.items)} items`, sub: 'attestation in flight' },
+              { key: 'pending', icon: 'clock', label: 'Undecided', value: stats.pending, chip: stats.pending ? 'awaiting a reviewer' : 'all decided', chipTone: stats.pending ? 'warn' : 'ok', sub: 'items with no decision yet' },
+              { key: 'flagged', icon: 'ban', label: 'Recommended revoke', value: stats.flagged, chip: stats.flagged ? 'unused access' : 'none', chipTone: stats.flagged ? 'bad' : undefined, sub: 'flagged by the platform' },
+              { key: 'decided', icon: 'checkC', label: 'Decided', value: stats.decided, chip: 'evidence captured', chipTone: 'ok', sub: 'certified or revoked' },
+            ]}
+            label="Recertification summary"
+          />
+        </>
+      )}
 
       <div className="stack">
         <Tabs
@@ -136,6 +155,7 @@ export default function CampaignList({ campaigns, items, onResend, onClose, onDe
           <DataWorkbench
             id="recert-campaigns"
             rows={campaigns}
+            loading={loading}
             columns={campaignColumns}
             selectable
             searchPlaceholder="Search by campaign, description, auditor or scope…"
@@ -150,7 +170,9 @@ export default function CampaignList({ campaigns, items, onResend, onClose, onDe
           />
         )}
 
-        {tab === 'progress' && (
+        {tab === 'progress' && loading && <CampaignProgressSkeleton count={campaigns.length} />}
+
+        {tab === 'progress' && !loading && (
           <div className="grid grid-3">
             {campaigns.map((c) => {
               const closed = c.status !== 'Active'

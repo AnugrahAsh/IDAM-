@@ -5,8 +5,10 @@ import Pill from '../../components/primitives/Pill'
 import PageBar from '../../components/shell/PageBar'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import RegisterHeader from '../../components/workbench/RegisterHeader'
+import { Skeleton, SkeletonPageBar } from '../../components/primitives/Skeleton'
 import { num, serialColumn, statusTone } from '../../lib/format'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { useLocalState } from '../../lib/useLocalState'
 import LdapCard from './LdapCard'
 import { SLOW_BIND_MS } from './ldapModel'
@@ -34,10 +36,44 @@ const HINTS = {
   slow: `Last bind slower than the ${SLOW_BIND_MS} ms estate threshold`,
 }
 
+/* The register's header is its headline figures — the counts, the filter they
+   filter by, the totals that give them scale — so it is data as much as the
+   rows beneath it and settles with them rather than landing first with numbers
+   the rows cannot yet corroborate.
+
+   Built from the real rule's own classes: `.reg` gives the surface and the hair
+   line under it, `.reg-f` the tab's padding and the 2px baseline it reserves
+   for the selected state. Only the bars inside are ours. */
+function RegisterHeaderSkeleton({ tabs = 4, summary = 3 }) {
+  return (
+    <div className="reg" aria-hidden="true">
+      <div className="reg-row">
+        <div className="reg-tabs">
+          {Array.from({ length: tabs }, (_, i) => (
+            <span className="reg-f ldap-reg-skel-f" key={i}>
+              <span className="skel" style={{ width: 28 + (i % 3) * 10 }} />
+              <span className="skel" style={{ width: 62 + (i % 3) * 20, height: 9 }} />
+            </span>
+          ))}
+        </div>
+        <div className="reg-sum">
+          {Array.from({ length: summary }, (_, i) => (
+            <span className="skel" key={i} style={{ width: 88 + (i % 3) * 24, height: 9 }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function LdapList({ apps, setApps, maps, stats, rules = [] }) {
   const { toast, confirm, navigate } = useApp()
   const [facet, setFacet] = useState('all')
   const [mutedAlert, setMutedAlert] = useState(null)
+  /* One flag for the register. It settles on arrival — including on the way
+     back from a directory's record, which is a route away and back rather than
+     a filter — and faceting does not settle again. */
+  const loading = useLoading()
 
   const rows = useMemo(
     () => apps.map((a, i) => ({ ...a, sno: i + 1 })).filter(FACETS[facet] || FACETS.all),
@@ -213,42 +249,70 @@ export default function LdapList({ apps, setApps, maps, stats, rules = [] }) {
 
   return (
     <>
-      <PageBar
-        title="LDAP Applications"
-        sub="Directories the platform binds to for authentication and identity source data."
-        crumbs={[{ label: 'LDAP Applications' }]}
-        actions={(
-          <>
-            <Button icon="sliders" onClick={() => navigate('/iam/ldapapplications/configure')}>Configure</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate('/iam/ldapapplications/add')}>Add application</Button>
-          </>
-        )}
-      />
+      {/* One announcing region for the screen. The register header and the row
+          skeleton inside the workbench are both decoration and stay silent, so
+          the wait is described once. */}
+      {loading ? (
+        <Skeleton label="Loading the LDAP directory register">
+          <SkeletonPageBar actions={2} crumbs={1} />
+          {/* The options below hold their place too. They have nothing of their
+              own to read, but a crisp row of buttons between a grey masthead
+              and a grey register reads as a page half broken rather than as a
+              page arriving. */}
+          <div className="ldap-opts ldap-opts-skel" aria-hidden="true">
+            {options.map((o) => (
+              <span key={o.id}>
+                <span className="skel ldap-opt-skel-ic" />
+                <span className="ldap-opt-skel-m">
+                  <span className="skel" style={{ width: '54%', height: 9 }} />
+                  <span className="skel" style={{ width: '82%', height: 8 }} />
+                </span>
+              </span>
+            ))}
+          </div>
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="LDAP Applications"
+            sub="Directories the platform binds to for authentication and identity source data."
+            crumbs={[{ label: 'LDAP Applications' }]}
+            actions={(
+              <>
+                <Button icon="sliders" onClick={() => navigate('/iam/ldapapplications/configure')}>Configure</Button>
+                <Button variant="pri" icon="plus" onClick={() => navigate('/iam/ldapapplications/add')}>Add application</Button>
+              </>
+            )}
+          />
 
-      {/* Landing on the module used to show only the register, so the two things
-          an operator comes here to do that are not "read a directory" — add one,
-          and configure how every directory behaves — were a small button in the
-          corner or nowhere at all. Naming the module's options at the top states
-          what this screen can do before the estate is read. */}
-      <nav className="ldap-opts" aria-label="LDAP application options">
-        {options.map((o) => (
-          <button key={o.id} type="button" onClick={o.onSelect}>
-            <span className="feed-ic" data-tone={o.tone}><Icon name={o.icon} size={15} /></span>
-            <span className="ldap-opt-m">
-              <b>{o.label}{o.count ? <span className="chip-n num">{o.count}</span> : null}</b>
-              <span>{o.desc}</span>
-            </span>
-            <Icon name="chevR" size={13} />
-          </button>
-        ))}
-      </nav>
+          {/* Landing on the module used to show only the register, so the two
+              things an operator comes here to do that are not "read a
+              directory" — add one, and configure how every directory behaves —
+              were a small button in the corner or nowhere at all. Naming the
+              module's options at the top states what this screen can do before
+              the estate is read. */}
+          <nav className="ldap-opts" aria-label="LDAP application options">
+            {options.map((o) => (
+              <button key={o.id} type="button" onClick={o.onSelect}>
+                <span className="feed-ic" data-tone={o.tone}><Icon name={o.icon} size={15} /></span>
+                <span className="ldap-opt-m">
+                  <b>{o.label}{o.count ? <span className="chip-n num">{o.count}</span> : null}</b>
+                  <span>{o.desc}</span>
+                </span>
+                <Icon name="chevR" size={13} />
+              </button>
+            ))}
+          </nav>
+        </>
+      )}
 
       <DataWorkbench
         id="ldap-applications"
         rows={rows}
         columns={columns}
         selectable
-        header={(
+        loading={loading}
+        header={loading ? <RegisterHeaderSkeleton tabs={headerItems.length} /> : (
           <RegisterHeader
             items={headerItems}
             value={facet}

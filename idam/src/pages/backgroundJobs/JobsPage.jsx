@@ -13,10 +13,12 @@ import Tabs from '../../components/primitives/Tabs'
 import Meter from '../../components/primitives/Meter'
 import TextInput from '../../components/primitives/TextInput'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { duration, num, serialColumn, statusTone } from '../../lib/format'
 import { JOBS, USERS } from '../../data/seed'
 import { appliedPct, meterTone } from './jobDetailData'
 import { withDerivedCounts } from './jobData'
+import { JobStatStripSkeleton, JobsListSkeleton } from './JobsSkeleton'
 import JobDetail from './JobDetail'
 
 const LIST_PATH = '/iam/jobs'
@@ -53,6 +55,11 @@ export default function JobsPage({ segments = [] }) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [rows, setRows] = useState(() => JOBS.map(withDerivedCounts))
+
+  /* One flag for the register. The tabs and the date window narrow a history
+     that is already on screen, so neither is keyed on; the record route is,
+     because coming back from a job is a return to the list. */
+  const loading = useLoading(segments[0] || '')
 
   const completed = useMemo(() => rows.filter(isDone), [rows])
   const inProgress = useMemo(() => rows.filter((j) => j.status === 'Running'), [rows])
@@ -240,43 +247,54 @@ export default function JobsPage({ segments = [] }) {
 
   return (
     <>
-      <PageBar
-        title="Background Jobs"
-        sub="Every provisioning, reconciliation and policy execution the platform has dispatched, with per-record outcomes for replay."
-        actions={
-          <>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Execution history is being exported as CSV.')}>Export</Button>
-            <Button variant="pri" icon="play" onClick={() => toast('info', 'Run a job', 'The ad-hoc execution wizard opens here.')}>Run job</Button>
-          </>
-        }
-      />
+      {/* One announcing region for the screen: the masthead and the five
+          posture figures. The register below draws its own rows from
+          `loading`, and those shapes are decoration. */}
+      {loading ? <JobsListSkeleton /> : (
+        <>
+          <PageBar
+            title="Background Jobs"
+            sub="Every provisioning, reconciliation and policy execution the platform has dispatched, with per-record outcomes for replay."
+            actions={
+              <>
+                <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Execution history is being exported as CSV.')}>Export</Button>
+                <Button variant="pri" icon="play" onClick={() => toast('info', 'Run a job', 'The ad-hoc execution wizard opens here.')}>Run job</Button>
+              </>
+            }
+          />
 
-      <StatCards
-        items={[
-          { id: 'all', icon: 'jobs', label: 'Executions', value: rows.length, chip: `${stats.successRate.toFixed(1)}% ok`, chipTone: stats.successRate > 90 ? 'ok' : 'warn', sub: `over the last ${DAYS.length} days`, hint: 'Every dispatched run' },
-          { id: 'progress', icon: 'refresh', label: 'Running now', value: stats.running, chip: stats.running ? 'in flight' : 'idle', sub: 'dispatched and not finished', hint: 'Runs still executing' },
-          { id: 'completed', icon: 'checkC', label: 'Succeeded 24h', value: stats.succeeded24, chip: `${num(stats.records)} records`, chipTone: 'ok', sub: 'clean completions', hint: 'Runs that finished cleanly today' },
-          { id: 'failed', icon: 'warn', label: 'Failed 24h', value: stats.failed24, chip: `${num(stats.recordsFailed)} records`, chipTone: stats.failed24 ? 'bad' : undefined, sub: 'need a replay', hint: 'Runs that failed today' },
-          { key: 'slow', icon: 'clock', label: 'Average duration', value: duration(stats.avgMs), chip: `${stats.longRunning} over 5 min`, chipTone: stats.longRunning ? 'warn' : undefined, sub: 'across every run' },
-        ]}
-        value={tab}
-        onChange={(id) => setTab(id)}
-        label="Filter the execution history"
-      />
+          <StatCards
+            items={[
+              { id: 'all', icon: 'jobs', label: 'Executions', value: rows.length, chip: `${stats.successRate.toFixed(1)}% ok`, chipTone: stats.successRate > 90 ? 'ok' : 'warn', sub: `over the last ${DAYS.length} days`, hint: 'Every dispatched run' },
+              { id: 'progress', icon: 'refresh', label: 'Running now', value: stats.running, chip: stats.running ? 'in flight' : 'idle', sub: 'dispatched and not finished', hint: 'Runs still executing' },
+              { id: 'completed', icon: 'checkC', label: 'Succeeded 24h', value: stats.succeeded24, chip: `${num(stats.records)} records`, chipTone: 'ok', sub: 'clean completions', hint: 'Runs that finished cleanly today' },
+              { id: 'failed', icon: 'warn', label: 'Failed 24h', value: stats.failed24, chip: `${num(stats.recordsFailed)} records`, chipTone: stats.failed24 ? 'bad' : undefined, sub: 'need a replay', hint: 'Runs that failed today' },
+              { key: 'slow', icon: 'clock', label: 'Average duration', value: duration(stats.avgMs), chip: `${stats.longRunning} over 5 min`, chipTone: stats.longRunning ? 'warn' : undefined, sub: 'across every run' },
+            ]}
+            value={tab}
+            onChange={(id) => setTab(id)}
+            label="Filter the execution history"
+          />
+        </>
+      )}
 
       <div className="stack">
         <Tabs
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: 'all', label: 'All Jobs', icon: 'jobs', count: rows.length },
-            { id: 'progress', label: 'In-Progress Jobs', icon: 'refresh', count: inProgress.length },
-            { id: 'completed', label: 'Completed Jobs', icon: 'checkC', count: completed.length },
-            { id: 'failed', label: 'Failed Jobs', icon: 'warn', count: failed.length },
+            /* The counts are left off until the history lands: a strip reading
+               "0 / 0 / 0" is a figure, and a wrong one. */
+            { id: 'all', label: 'All Jobs', icon: 'jobs', count: loading ? undefined : rows.length },
+            { id: 'progress', label: 'In-Progress Jobs', icon: 'refresh', count: loading ? undefined : inProgress.length },
+            { id: 'completed', label: 'Completed Jobs', icon: 'checkC', count: loading ? undefined : completed.length },
+            { id: 'failed', label: 'Failed Jobs', icon: 'warn', count: loading ? undefined : failed.length },
           ]}
         />
 
-        {tab === 'completed' && (
+        {tab === 'completed' && loading && <JobStatStripSkeleton cells={6} />}
+
+        {tab === 'completed' && !loading && (
           <div className="stat-strip">
             <div className="stat-cell">
               <span className="stat-k"><Icon name="jobs" size={11} />Completed</span>
@@ -308,6 +326,7 @@ export default function JobsPage({ segments = [] }) {
         <div style={{ position: 'relative' }}>
           <DataWorkbench
             id={`jobs-${tab}`}
+            loading={loading}
             rows={dated}
             columns={columns}
             selectable

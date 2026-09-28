@@ -9,7 +9,11 @@ import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
 import Banner from '../../components/primitives/Banner'
 import EmptyState from '../../components/primitives/EmptyState'
+import {
+  Skeleton, SkeletonLine, SkeletonPageBar, SkeletonStats,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num, pct, serialColumn, statusTone } from '../../lib/format'
 import { PASSWORD_POLICIES, nextId } from '../../data/seed'
 import { DEFAULT_RULES, LIST_PATH, entropyBits, seatsFor, strengthBand } from './passwordData'
@@ -51,6 +55,14 @@ export default function PasswordPolicyPage({ segments = [] }) {
     dictionary: policies.filter((p) => p.dictionary).length,
     unassigned: policies.filter((p) => p.orgs.length === 0).length,
   }), [policies])
+
+  /* One settle for the whole section, keyed on the address. The page bar and
+     the panel under the tabs are one arrival, so they are held by one flag and
+     released together; a tab or a record is the round trip a real deployment
+     would make, and the key changing is what says so. The tab strip itself is
+     chrome and is never held — an operator who has just clicked a tab should
+     not watch it disappear. */
+  const loading = useLoading(segments.join('/'))
 
   const mutate = (ids, patch, message, body) => {
     const set = new Set(ids.map(String))
@@ -105,12 +117,21 @@ export default function PasswordPolicyPage({ segments = [] }) {
   // header and back link rather than a tab strip that cannot describe them.
   const section = (children, actions) => (
     <>
-      <PageBar
-        title="Password Policy"
-        sub="Named credential rule sets, the organizations each one governs and the terms no credential may contain."
-        crumbs={[{ label: 'Reports' }, { label: 'Password Policy' }]}
-        actions={actions}
-      />
+      {/* The announcing region for the section: everything under it, including
+          each register's own body skeleton, is decoration, so the wait is
+          described once. */}
+      {loading ? (
+        <Skeleton label="Loading Password Policy">
+          <SkeletonPageBar actions={actions ? 2 : 0} crumbs={2} />
+        </Skeleton>
+      ) : (
+        <PageBar
+          title="Password Policy"
+          sub="Named credential rule sets, the organizations each one governs and the terms no credential may contain."
+          crumbs={[{ label: 'Reports' }, { label: 'Password Policy' }]}
+          actions={actions}
+        />
+      )}
       <div className="stack">
         <Tabs
           value={tab}
@@ -126,6 +147,7 @@ export default function PasswordPolicyPage({ segments = [] }) {
     return section(
       <PolicyMappings
         policies={policies}
+        loading={loading}
         onAssign={assignOrgs}
         onRelease={releaseOrgs}
         navigate={navigate}
@@ -137,7 +159,7 @@ export default function PasswordPolicyPage({ segments = [] }) {
   }
 
   if (mode === 'dictionary') {
-    return section(<PasswordDictionaryPage embedded />)
+    return section(<PasswordDictionaryPage embedded loading={loading} />)
   }
 
   if (mode === 'add') {
@@ -189,6 +211,7 @@ export default function PasswordPolicyPage({ segments = [] }) {
     return (
       <PolicyDetail
         policy={policy}
+        loading={loading}
         onEdit={(p) => navigate(`${LIST_PATH}/${p.id}/edit`)}
         onDelete={(p) => confirmDelete(p, true)}
         onNavigate={navigate}
@@ -266,13 +289,19 @@ export default function PasswordPolicyPage({ segments = [] }) {
 
   return section(
     <>
+      {/* The dictionary line is a standing fact read off the register below it,
+          so it holds its place with the tiles rather than landing first with a
+          figure the rows cannot yet corroborate. */}
+      {loading ? <SkeletonLine height={58} /> : (
       <Banner tone="info">
         Dictionary checking is enforced by <b>{stats.dictionary} of {stats.total}</b> policies, covering{' '}
         <b>{pct((policies.filter((p) => p.dictionary).reduce((a, p) => a + p.users, 0) / Math.max(1, stats.identities)) * 100)}</b>{' '}
         of governed identities. The forbidden terms themselves are maintained under{' '}
         <button className="link" onClick={() => navigate(`${LIST_PATH}/dictionary`)}>Dictionary</button>.
       </Banner>
+      )}
 
+      {loading ? <SkeletonStats count={4} /> : (
       <StatCards
         items={[
           { key: 'total', icon: 'lock', label: 'Policies', value: stats.total, chip: `${num(stats.orgs)} organizations`, sub: 'credential rules in force' },
@@ -282,11 +311,13 @@ export default function PasswordPolicyPage({ segments = [] }) {
         ]}
         label="Password policy summary"
       />
+      )}
 
       <DataWorkbench
         id="password-policies"
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by policy name, description, organization…"
         toolbar={

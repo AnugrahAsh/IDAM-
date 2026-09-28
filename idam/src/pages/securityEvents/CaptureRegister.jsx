@@ -11,6 +11,7 @@ import TextInput from '../../components/primitives/TextInput'
 import Banner from '../../components/primitives/Banner'
 import KeyValue from '../../components/primitives/KeyValue'
 import Icon from '../../components/primitives/Icon'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
 import {
@@ -26,7 +27,7 @@ import {
  * and a single global retention cannot answer the second one for a tenant that
  * has to keep privilege changes for seven years and sign-ins for ninety days.
  */
-export default function CaptureRegister({ globals }) {
+export default function CaptureRegister({ globals, loading = false }) {
   const { toast, setDrawer, confirm } = useApp()
   const [rows, setRows] = useState(captureRows)
   const [category, setCategory] = useState('all')
@@ -216,18 +217,26 @@ export default function CaptureRegister({ globals }) {
 
   return (
     <div className="stack">
-      <StatCards
-        label="Capture summary"
-        items={[
-          { key: 'captured', icon: 'logs', label: 'Events captured', value: stats.captured, chip: `of ${CAPTURE_TOTAL}`, chipTone: 'ok', sub: 'writing a log line' },
-          { key: 'silent', icon: 'eyeoff', label: 'Not captured', value: stats.silent, chip: stats.silent ? 'no record at all' : 'none', chipTone: stats.silent ? 'warn' : undefined, sub: 'produce no evidence' },
-          { key: 'overrides', icon: 'sliders', label: 'With an override', value: stats.overrides, chip: 'own retention', sub: 'not following the global default' },
-          { key: 'longest', icon: 'clock', label: 'Longest retention', value: archivalLabel(stats.longest || 0), chip: 'archival period', sub: 'across every captured event' },
-        ]}
-      />
+      {/* Four tiles counted off the register itself, so they wait with it
+          rather than printing a figure the rows underneath have not landed on
+          yet. The register keeps its toolbar and draws its own body. */}
+      {loading ? (
+        <SkeletonStats count={4} />
+      ) : (
+        <StatCards
+          label="Capture summary"
+          items={[
+            { key: 'captured', icon: 'logs', label: 'Events captured', value: stats.captured, chip: `of ${CAPTURE_TOTAL}`, chipTone: 'ok', sub: 'writing a log line' },
+            { key: 'silent', icon: 'eyeoff', label: 'Not captured', value: stats.silent, chip: stats.silent ? 'no record at all' : 'none', chipTone: stats.silent ? 'warn' : undefined, sub: 'produce no evidence' },
+            { key: 'overrides', icon: 'sliders', label: 'With an override', value: stats.overrides, chip: 'own retention', sub: 'not following the global default' },
+            { key: 'longest', icon: 'clock', label: 'Longest retention', value: archivalLabel(stats.longest || 0), chip: 'archival period', sub: 'across every captured event' },
+          ]}
+        />
+      )}
 
       <DataWorkbench
         id="log-capture"
+        loading={loading}
         rows={visible}
         columns={columns}
         selectable

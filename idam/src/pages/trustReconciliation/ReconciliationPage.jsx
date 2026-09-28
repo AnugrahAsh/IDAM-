@@ -17,7 +17,10 @@ import TrustSourceForm from './TrustSourceForm'
 import TrustSourceDetail from './TrustSourceDetail'
 import { SEED_SOURCES, connectorName, sourceLabel, withConnector } from './trustModel'
 import TrustUsers from './TrustUsers'
+import { OverviewSkeleton } from './ReconciliationSkeleton'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num, duration, serialColumn } from '../../lib/format'
 import { brandFor, brandForConnector } from '../shared/provisioning/shared'
 import { connectionEndpoint } from '../applications/appModel'
@@ -77,6 +80,11 @@ function Overview({ apps, sources, onRemove, onRemoveSource, onRun }) {
   // The synced register is filtered by category rather than by a separate
   // control: the three counts are the filter (client item 7).
   const [category, setCategory] = useState(CATEGORY.ALL)
+  /* One flag for the screen: the masthead, the estate figures and whichever
+     register is open resolve together. The five tabs are slices of one estate
+     read rather than five reads, so moving between them does not settle
+     again — the numbers the operator just saw are still the ones on screen. */
+  const loading = useLoading()
 
   // Every onboarded application contributes the accounts its latest run read,
   // so the estate view answers the same three questions the per-application
@@ -233,55 +241,65 @@ function Overview({ apps, sources, onRemove, onRemoveSource, onRun }) {
 
   return (
     <>
-      <PageBar
-        title="Trust Reconciliation"
-        sub="Onboard an application, correlate its accounts against the identity store with matching rules, then resolve every discrepancy — unmatched accounts and unmatched identities alike."
-        crumbs={[{ label: 'Applications' }, { label: 'Trust Reconciliation' }]}
-        actions={
-          <>
-            <Button icon="jobs" onClick={() => navigate('/iam/jobs')}>Job log</Button>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', `${RUNS.length} reconciliation runs queued for CSV export.`)}>Export</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/add`)}>Add source</Button>
-          </>
-        }
-      />
+      {/* One announcing region for the screen. The figure strip above and the
+          row skeleton inside whichever register is open are both decoration and
+          stay silent, so the wait is described once. */}
+      {loading ? <OverviewSkeleton /> : (
+        <PageBar
+          title="Trust Reconciliation"
+          sub="Onboard an application, correlate its accounts against the identity store with matching rules, then resolve every discrepancy — unmatched accounts and unmatched identities alike."
+          crumbs={[{ label: 'Applications' }, { label: 'Trust Reconciliation' }]}
+          actions={
+            <>
+              <Button icon="jobs" onClick={() => navigate('/iam/jobs')}>Job log</Button>
+              <Button icon="download" onClick={() => toast('ok', 'Export queued', `${RUNS.length} reconciliation runs queued for CSV export.`)}>Export</Button>
+              <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/add`)}>Add source</Button>
+            </>
+          }
+        />
+      )}
 
       <div className="stack">
-        {stats.failed > 0 && (
+        {!loading && stats.failed > 0 && (
           <Banner tone="bad">
             <b>{stats.failed} application{stats.failed === 1 ? '' : 's'} failed the most recent reconciliation.</b>{' '}
             Results for those applications are partial and should not be acted on until a clean run completes.
           </Banner>
         )}
 
-        <div className="stat-strip">
-          <div className="stat-cell">
-            <span className="stat-k"><Icon name="provision" size={12} />Applications onboarded</span>
-            <span className="stat-v">{num(stats.apps)}</span>
-            <span className="t-xs t-mut">Targets reconciled against the identity store</span>
+        {!loading && (
+          <div className="stat-strip">
+            <div className="stat-cell">
+              <span className="stat-k"><Icon name="provision" size={12} />Applications onboarded</span>
+              <span className="stat-v">{num(stats.apps)}</span>
+              <span className="t-xs t-mut">Targets reconciled against the identity store</span>
+            </div>
+            <div className="stat-cell">
+              <span className="stat-k"><Icon name="users" size={12} />Accounts read</span>
+              <span className="stat-v">{num(stats.scanned)}</span>
+              <span className="t-xs t-mut">Across the latest run of each application</span>
+            </div>
+            <div className="stat-cell">
+              <span className="stat-k"><Icon name="checkC" size={12} />Matched</span>
+              <span className="stat-v">{num(stats.matched)}</span>
+              <span className="t-xs t-mut">Accounts correlated to a governed identity</span>
+            </div>
+            <div className="stat-cell">
+              <span className="stat-k"><Icon name="orphan" size={12} />Unmatched accounts</span>
+              <span className="stat-v" style={{ color: stats.unmatchedAccounts > 0 ? 'var(--bad)' : undefined }}>{num(stats.unmatchedAccounts)}</span>
+              <span className="t-xs t-mut">On a target with no owning identity</span>
+            </div>
+            <div className="stat-cell">
+              <span className="stat-k"><Icon name="user" size={12} />Unmatched identities</span>
+              <span className="stat-v" style={{ color: stats.unmatchedIdentities > 0 ? 'var(--warn)' : undefined }}>{num(stats.unmatchedIdentities)}</span>
+              <span className="t-xs t-mut">In the store with no account on the target</span>
+            </div>
           </div>
-          <div className="stat-cell">
-            <span className="stat-k"><Icon name="users" size={12} />Accounts read</span>
-            <span className="stat-v">{num(stats.scanned)}</span>
-            <span className="t-xs t-mut">Across the latest run of each application</span>
-          </div>
-          <div className="stat-cell">
-            <span className="stat-k"><Icon name="checkC" size={12} />Matched</span>
-            <span className="stat-v">{num(stats.matched)}</span>
-            <span className="t-xs t-mut">Accounts correlated to a governed identity</span>
-          </div>
-          <div className="stat-cell">
-            <span className="stat-k"><Icon name="orphan" size={12} />Unmatched accounts</span>
-            <span className="stat-v" style={{ color: stats.unmatchedAccounts > 0 ? 'var(--bad)' : undefined }}>{num(stats.unmatchedAccounts)}</span>
-            <span className="t-xs t-mut">On a target with no owning identity</span>
-          </div>
-          <div className="stat-cell">
-            <span className="stat-k"><Icon name="user" size={12} />Unmatched identities</span>
-            <span className="stat-v" style={{ color: stats.unmatchedIdentities > 0 ? 'var(--warn)' : undefined }}>{num(stats.unmatchedIdentities)}</span>
-            <span className="t-xs t-mut">In the store with no account on the target</span>
-          </div>
-        </div>
+        )}
 
+        {/* The tab bar is chrome and stays live: a control that disappears
+            under the pointer that just used it has been taken away
+            mid-gesture. */}
         <Tabs
           value={tab}
           onChange={setTab}
@@ -297,6 +315,7 @@ function Overview({ apps, sources, onRemove, onRemoveSource, onRun }) {
         {tab === 'sources' && (
           <DataWorkbench
             id="trust-sources"
+            loading={loading}
             rows={sources}
             columns={[
               serialColumn('S.No'),
@@ -343,21 +362,24 @@ emptyTitle="No trust source registered"
           />
         )}
 
-        {tab === 'users' && <TrustUsers sources={sources} />}
+        {tab === 'users' && <TrustUsers sources={sources} loading={loading} />}
 
         {tab === 'synced' && (
           <DataWorkbench
             id="reconciliation-synced"
             header={(
               <div className="sync-head">
-                <StatCards
-                  items={categoryCards(syncCounts)}
-                  value={category}
-                  onChange={setCategory}
-                  label="Filter the synced accounts by category"
-                />
+                {loading ? <SkeletonStats count={categoryCards(syncCounts).length} /> : (
+                  <StatCards
+                    items={categoryCards(syncCounts)}
+                    value={category}
+                    onChange={setCategory}
+                    label="Filter the synced accounts by category"
+                  />
+                )}
               </div>
             )}
+            loading={loading}
             rows={filterByCategory(synced, category)}
             columns={SYNCED_COLUMNS}
             searchPlaceholder="Search by account, identity, application or department…"
@@ -370,7 +392,7 @@ emptyTitle="No trust source registered"
         )}
 
         {tab === 'applications' && (
-          apps.length === 0 ? (
+          apps.length === 0 && !loading ? (
             <EmptyState
               icon="recon"
               title="No application is onboarded for reconciliation"
@@ -380,6 +402,7 @@ emptyTitle="No trust source registered"
           ) : (
             <DataWorkbench
               id="reconciliation-apps"
+              loading={loading}
               rows={apps}
               columns={appColumns}
               selectable
@@ -407,6 +430,7 @@ emptyTitle="No trust source registered"
         {tab === 'runs' && (
           <DataWorkbench
             id="reconciliation-runs"
+            loading={loading}
             rows={RUNS}
             columns={runColumns}
             selectable

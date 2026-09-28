@@ -1,6 +1,9 @@
 import './LogsPage.css'
+import { useEffect, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import Tabs from '../../components/primitives/Tabs'
+import { Skeleton, SkeletonPageBar } from '../../components/primitives/Skeleton'
+import { useLoading } from '../../lib/useLoading'
 import { useApp } from '../../store/AppContext'
 import AuditLogConfig from './AuditLogConfig'
 import CaptureRegister from './CaptureRegister'
@@ -23,6 +26,13 @@ const BASE_PATH = '/iam/syslogs'
    so the capture register can state what "global" actually means. */
 const GLOBALS = { level: 'INFO', target: 'File and Syslog', retentionDays: 90 }
 
+/* What the reader is told is on its way, in the words the tab itself uses. */
+const WAITING = {
+  capture: 'Loading the capture register',
+  audit: 'Loading the audit log configuration',
+  siem: 'Loading the SIEM transport',
+}
+
 export default function LogsPage({ segments = [] }) {
   const { navigate } = useApp()
 
@@ -30,19 +40,42 @@ export default function LogsPage({ segments = [] }) {
   // transport moved here from Settings and existing links redirect to it.
   const tab = TABS.some((t) => t.id === segments[0]) ? segments[0] : 'capture'
 
+  /* One flag for the screen, keyed on the tab: a deployment fetches the panel
+     under the tab bar when the tab changes, and nothing above it. `booted`
+     only records that the masthead has been painted once — re-drawing the
+     title every time someone moves between registers would blink the page's
+     identity for no reason, and the tab strip is navigation, not content. */
+  const loading = useLoading(tab)
+  const [booted, setBooted] = useState(false)
+  useEffect(() => { if (!loading) setBooted(true) }, [loading])
+
+  const panel = (
+    <>
+      {tab === 'capture' && <CaptureRegister globals={GLOBALS} loading={loading} />}
+      {tab === 'audit' && <AuditLogConfig loading={loading} />}
+      {tab === 'siem' && <SiemTransport loading={loading} />}
+    </>
+  )
+
   return (
     <>
-      <PageBar
-        title="Security Events"
-        sub="Which security events the platform records, how long it keeps them, and where it ships them."
-        crumbs={[{ label: 'Logging' }, { label: 'Security Events' }]}
-      />
+      {booted ? (
+        <PageBar
+          title="Security Events"
+          sub="Which security events the platform records, how long it keeps them, and where it ships them."
+          crumbs={[{ label: 'Logging' }, { label: 'Security Events' }]}
+        />
+      ) : (
+        <SkeletonPageBar actions={0} crumbs={2} />
+      )}
 
       <div className="stack">
         <Tabs value={tab} onChange={(id) => navigate(`${BASE_PATH}/${id}`)} tabs={TABS} />
-        {tab === 'capture' && <CaptureRegister globals={GLOBALS} />}
-        {tab === 'audit' && <AuditLogConfig />}
-        {tab === 'siem' && <SiemTransport />}
+        {/* The one announcing region on this screen. It sits around the panel
+            rather than the masthead because the panel is what settles on every
+            wait, not just the first one; the masthead's shapes above are
+            aria-hidden decoration and say nothing of their own. */}
+        {loading ? <Skeleton label={WAITING[tab]}>{panel}</Skeleton> : panel}
       </div>
     </>
   )

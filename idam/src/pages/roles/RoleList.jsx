@@ -5,14 +5,20 @@ import Icon from '../../components/primitives/Icon'
 import EmptyState from '../../components/primitives/EmptyState'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
 import { useRoles } from './rolesStore'
 import { useRoleActions } from './useRoleActions'
+import { RoleListSkeleton } from './RolesSkeleton'
 
 /** The role catalog. Presentation is scoped to this page; role actions are unchanged. */
 export default function RoleList() {
   const { navigate } = useApp()
   const rows = useRoles()
   const { removeRoles: onDelete } = useRoleActions()
+  /* One flag for the screen. The masthead, the four figures and the card grid
+     are one reading of the catalog and settle as one — a grid that filled in
+     after the figures above it would read as two loads of the same page. */
+  const loading = useLoading()
   const systemCount = rows.filter((r) => r.system).length
   const metrics = [
     { icon: 'roles', label: 'Total roles', value: rows.length, detail: `${systemCount} system · ${rows.length - systemCount} custom` },
@@ -20,6 +26,8 @@ export default function RoleList() {
     { icon: 'key', label: 'Permission grants', value: rows.reduce((sum, r) => sum + r.permCount, 0), detail: 'Permissions summed across roles' },
     { icon: 'roles', label: 'Unassigned roles', value: rows.filter((r) => r.members === 0).length, detail: 'Roles with no members' },
   ]
+
+  if (loading) return <RoleListSkeleton />
 
   return (
     <div className="rl-workspace">

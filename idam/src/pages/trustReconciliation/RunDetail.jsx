@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
 import StickyActions from '../../components/shell/StickyActions'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
+import { Skeleton } from '../../components/primitives/Skeleton'
+import { useLoading } from '../../lib/useLoading'
+import { RunPanelSkeleton } from './ReconciliationSkeleton'
 import Card from '../../components/primitives/Card'
 import Button from '../../components/primitives/Button'
 import IconButton from '../../components/primitives/IconButton'
@@ -375,7 +378,7 @@ function RulesTab({ run }) {
   )
 }
 
-function IdentitiesTab({ run, onTab }) {
+function IdentitiesTab({ run, onTab, loading = false }) {
   const { navigate, toast, confirm } = useApp()
   const [ignored, setIgnored] = useState(() => new Set())
   const [provisioned, setProvisioned] = useState(() => new Set())
@@ -428,25 +431,27 @@ function IdentitiesTab({ run, onTab }) {
 
   return (
     <div className="stack">
-      <div className="stat-strip">
-        <div className="stat-cell">
-          <span className="stat-k"><Icon name="user" size={12} />Unmatched identities</span>
-          <span className="stat-v" style={{ color: open > 0 ? 'var(--warn-core)' : undefined }}>{num(open)}</span>
-          <span className="t-xs t-mut">Active in the identity store, no account on {run.source}</span>
+      {!loading && (
+        <div className="stat-strip">
+          <div className="stat-cell">
+            <span className="stat-k"><Icon name="user" size={12} />Unmatched identities</span>
+            <span className="stat-v" style={{ color: open > 0 ? 'var(--warn-core)' : undefined }}>{num(open)}</span>
+            <span className="t-xs t-mut">Active in the identity store, no account on {run.source}</span>
+          </div>
+          <div className="stat-cell">
+            <span className="stat-k"><Icon name="provision" size={12} />Provisioning queued</span>
+            <span className="stat-v">{num(rows.filter((r) => r.state === 'Provisioning').length)}</span>
+            <span className="t-xs t-mut">Account creation requested on the target</span>
+          </div>
+          <div className="stat-cell">
+            <span className="stat-k"><Icon name="ban" size={12} />Ignored</span>
+            <span className="stat-v">{num(rows.filter((r) => r.state === 'Ignored').length)}</span>
+            <span className="t-xs t-mut">Excluded until the next full reconciliation</span>
+          </div>
         </div>
-        <div className="stat-cell">
-          <span className="stat-k"><Icon name="provision" size={12} />Provisioning queued</span>
-          <span className="stat-v">{num(rows.filter((r) => r.state === 'Provisioning').length)}</span>
-          <span className="t-xs t-mut">Account creation requested on the target</span>
-        </div>
-        <div className="stat-cell">
-          <span className="stat-k"><Icon name="ban" size={12} />Ignored</span>
-          <span className="stat-v">{num(rows.filter((r) => r.state === 'Ignored').length)}</span>
-          <span className="t-xs t-mut">Excluded until the next full reconciliation</span>
-        </div>
-      </div>
+      )}
 
-      {open > 0 && (
+      {!loading && open > 0 && (
         <Banner tone="info">
           These identities are expected to hold an account on {run.source} but none was found in the inventory.
           Provision an account, or ignore the identity if it legitimately has no access here.{' '}
@@ -458,6 +463,7 @@ function IdentitiesTab({ run, onTab }) {
         id={`reconciliation-identities-${run.id}`}
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by name, username, email or department…"
         bulkActions={(ids, clear) => (
@@ -584,6 +590,18 @@ export default function RunDetail({ run, tab, onTab }) {
   const [added, setAdded] = useState([])
   const [adding, setAdding] = useState(false)
   const timer = useRef(null)
+
+  /* One flag for the record, keyed on the run and the tab together, so the run
+     settles as one thing: arriving at a run is a read, and so is opening a
+     different tab, because each tab is a separate read of that run rather than
+     another slice of one already in hand.
+
+     The tab bar is not keyed to it — it is passed to the masthead outside the
+     conditionals below and stays live throughout — because a control that
+     disappears under the pointer that just used it has been taken away
+     mid-gesture. `running` below is a different thing entirely: a re-run the
+     operator asked for, which the results register already reports. */
+  const settling = useLoading(`${run.id}:${active}`)
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
@@ -807,14 +825,36 @@ export default function RunDetail({ run, tab, onTab }) {
 
   return (
     <>
+      {/* The masthead is the real `DetailHeader` while it settles rather than an
+          imitation of one: the crumb row, the gutters, the tab row and every gap
+          between them are the component's own, so the run lands in exactly the
+          box that was holding its place. Only the run's own content greys. */}
       <DetailHeader
         backTo="/iam/trustReconciliation"
         backLabel="Trust Reconciliation"
         eyebrow={`Reconciliation run · ${run.id}`}
-        title={run.source}
-        sub={`${run.mode} reconciliation of ${num(run.scanned)} accounts read from the target, correlated against the identity store with the ${run.ruleSet} matching rules.`}
-        media={<AppLogo brand={brandFor({ name: run.sourceName, connector: run.connector })} name={run.source} size={56} />}
-        badges={
+        title={settling ? <span className="skel tr-skel-title" aria-hidden="true" /> : run.source}
+        sub={settling
+          ? (
+            /* Two bars, because the sentence below wraps to two lines inside the
+               100ch `.detail-sub` is capped at — for every run in the estate.
+               One bar held one line and the tab strip stepped down when the
+               sentence landed. */
+            <span className="tr-skel-sub" aria-hidden="true">
+              <span className="skel" />
+              <span className="skel" />
+            </span>
+          )
+          : `${run.mode} reconciliation of ${num(run.scanned)} accounts read from the target, correlated against the identity store with the ${run.ruleSet} matching rules.`}
+        media={settling
+          ? <span className="skel tr-skel-media" aria-hidden="true" />
+          : <AppLogo brand={brandFor({ name: run.sourceName, connector: run.connector })} name={run.source} size={56} />}
+        badges={settling ? (
+          <>
+            <span className="skel skel-chip" style={{ width: 78 }} aria-hidden="true" />
+            <span className="skel skel-chip" style={{ width: 56 }} aria-hidden="true" />
+          </>
+        ) : (
           <>
             <Pill tone={runTone(run.status)} dot>{run.status}</Pill>
             <Tag>{run.mode}</Tag>
@@ -822,8 +862,16 @@ export default function RunDetail({ run, tab, onTab }) {
             {stats.fresh > 0 && <Pill tone="warn" icon="orphan">{num(stats.fresh)} unmatched accounts</Pill>}
             {identityCount > 0 && <Pill tone="warn" icon="user">{num(identityCount)} unmatched identities</Pill>}
           </>
-        }
-        meta={
+        )}
+        meta={settling ? (
+          <>
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <span className="tr-skel-fact" key={i} aria-hidden="true">
+                <span className="skel" style={{ width: 92 + (i % 3) * 28, height: 9 }} />
+              </span>
+            ))}
+          </>
+        ) : (
           <>
             <Fact icon="server" label="Source" value={`${run.method} · ${run.host}`} />
             <Fact icon="users" label="Scanned" value={num(run.scanned)} />
@@ -832,8 +880,14 @@ export default function RunDetail({ run, tab, onTab }) {
             <Fact icon="user" label="Triggered by" value={run.triggeredBy} />
             <Fact icon="policy" label="Matching rules" value={`${rulesFor(run).filter((r) => r.enabled).length} active`} />
           </>
-        }
-        actions={
+        )}
+        actions={settling ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <span className="skel skel-btn" key={i} style={{ width: 86 + (i % 3) * 24 }} aria-hidden="true" />
+            ))}
+          </>
+        ) : (
           <>
             <Button icon="sliders" onClick={() => navigate(`/iam/trustReconciliation/apps/${run.applicationId}`)}>Reconciliation setup</Button>
             <Button icon="download" onClick={() => toast('ok', 'Export queued', `${rows.length} result rows queued for CSV export.`)}>Export</Button>
@@ -842,7 +896,7 @@ export default function RunDetail({ run, tab, onTab }) {
               {running ? 'Running…' : 'Re-run'}
             </Button>
           </>
-        }
+        )}
         tabs={
           <Tabs
             value={active}
@@ -858,43 +912,55 @@ export default function RunDetail({ run, tab, onTab }) {
       />
 
       <div className="detail-body">
+        {/* The screen's one announcing region, so the run says once that it is
+            on its way. Every shape is decoration, including the bars in the
+            masthead above and the rows the results register draws for
+            itself. */}
+        {settling && (
+          <Skeleton label={`Loading reconciliation run ${run.id}`}>
+            <RunPanelSkeleton tab={active} />
+          </Skeleton>
+        )}
+
         {active === 'results' && (
           <div className="stack">
-            <div className="stat-strip">
-              <div className="stat-cell" data-nav="true" role="button" tabIndex={0}
-                onClick={() => setView('matched')} onKeyDown={(e) => e.key === 'Enter' && setView('matched')}
-              >
-                <span className="stat-k"><Icon name="checkC" size={12} />Matched accounts</span>
-                <span className="stat-v">{num(stats.matched)}</span>
-                <span className="t-xs t-mut">Correlated to a governed identity by a matching rule</span>
+              {!settling && (
+              <div className="stat-strip">
+                <div className="stat-cell" data-nav="true" role="button" tabIndex={0}
+                  onClick={() => setView('matched')} onKeyDown={(e) => e.key === 'Enter' && setView('matched')}
+                >
+                  <span className="stat-k"><Icon name="checkC" size={12} />Matched accounts</span>
+                  <span className="stat-v">{num(stats.matched)}</span>
+                  <span className="t-xs t-mut">Correlated to a governed identity by a matching rule</span>
+                </div>
+                <div className="stat-cell" data-nav="true" role="button" tabIndex={0}
+                  onClick={() => setView('unmatched')} onKeyDown={(e) => e.key === 'Enter' && setView('unmatched')}
+                >
+                  <span className="stat-k"><Icon name="orphan" size={12} />Unmatched accounts</span>
+                  <span className="stat-v" style={{ color: stats.fresh > 0 ? 'var(--bad)' : undefined }}>{num(stats.fresh)}</span>
+                  <span className="t-xs t-mut">On the target, no owning identity in the store</span>
+                </div>
+                <div className="stat-cell" data-nav="true" role="button" tabIndex={0}
+                  onClick={() => onTab('identities')} onKeyDown={(e) => e.key === 'Enter' && onTab('identities')}
+                >
+                  <span className="stat-k"><Icon name="user" size={12} />Unmatched identities</span>
+                  <span className="stat-v" style={{ color: identityCount > 0 ? 'var(--warn-core)' : undefined }}>{num(identityCount)}</span>
+                  <span className="t-xs t-mut">In the store, no account on the target</span>
+                </div>
+                <div className="stat-cell">
+                  <span className="stat-k"><Icon name="warn" size={12} />Needs review</span>
+                  <span className="stat-v">{num(stats.unresolved)}</span>
+                  <span className="t-xs t-mut">Matched below the {pct(THRESHOLDS.review)} review threshold</span>
+                </div>
+                <div className="stat-cell">
+                  <span className="stat-k"><Icon name="history" size={12} />Resolved</span>
+                  <span className="stat-v">{num(stats.imported + stats.suppressed)}</span>
+                  <span className="t-xs t-mut">{num(stats.imported)} linked or created · {num(stats.suppressed)} ignored</span>
+                </div>
               </div>
-              <div className="stat-cell" data-nav="true" role="button" tabIndex={0}
-                onClick={() => setView('unmatched')} onKeyDown={(e) => e.key === 'Enter' && setView('unmatched')}
-              >
-                <span className="stat-k"><Icon name="orphan" size={12} />Unmatched accounts</span>
-                <span className="stat-v" style={{ color: stats.fresh > 0 ? 'var(--bad)' : undefined }}>{num(stats.fresh)}</span>
-                <span className="t-xs t-mut">On the target, no owning identity in the store</span>
-              </div>
-              <div className="stat-cell" data-nav="true" role="button" tabIndex={0}
-                onClick={() => onTab('identities')} onKeyDown={(e) => e.key === 'Enter' && onTab('identities')}
-              >
-                <span className="stat-k"><Icon name="user" size={12} />Unmatched identities</span>
-                <span className="stat-v" style={{ color: identityCount > 0 ? 'var(--warn-core)' : undefined }}>{num(identityCount)}</span>
-                <span className="t-xs t-mut">In the store, no account on the target</span>
-              </div>
-              <div className="stat-cell">
-                <span className="stat-k"><Icon name="warn" size={12} />Needs review</span>
-                <span className="stat-v">{num(stats.unresolved)}</span>
-                <span className="t-xs t-mut">Matched below the {pct(THRESHOLDS.review)} review threshold</span>
-              </div>
-              <div className="stat-cell">
-                <span className="stat-k"><Icon name="history" size={12} />Resolved</span>
-                <span className="stat-v">{num(stats.imported + stats.suppressed)}</span>
-                <span className="t-xs t-mut">{num(stats.imported)} linked or created · {num(stats.suppressed)} ignored</span>
-              </div>
-            </div>
+            )}
 
-            {run.status === 'Failed' && (
+            {!settling && run.status === 'Failed' && (
               <Banner tone="bad">
                 <b>This run failed before the inventory was fully read.</b>{' '}
                 The results below are partial and should not be acted on until a clean run completes.{' '}
@@ -902,7 +968,7 @@ export default function RunDetail({ run, tab, onTab }) {
               </Banner>
             )}
 
-            {stats.fresh > 0 && run.status !== 'Failed' && (
+            {!settling && stats.fresh > 0 && run.status !== 'Failed' && (
               <Banner tone="warn">
                 <b>{num(stats.fresh)} accounts on {run.source} have no owning identity.</b>{' '}
                 Link each one to an existing identity, create an identity from it, or ignore it if it is a legitimate
@@ -911,23 +977,25 @@ export default function RunDetail({ run, tab, onTab }) {
               </Banner>
             )}
 
-            <Card
-              title="Matching rules applied to this run"
-              sub={`${rules.filter((r) => r.enabled).length} active rules, evaluated in weight order`}
-              actions={<Button size="sm" icon="sliders" onClick={() => onTab('rules')}>Edit matching rules</Button>}
-            >
-              <div className="row" style={{ flexWrap: 'wrap', gap: 7 }}>
-                {rules.map((r) => (
-                  <span className="chip" key={r.id} data-on={r.enabled || undefined}>
-                    <Icon name={r.enabled ? 'checkC' : 'ban'} size={12} />
-                    {r.name}
-                    <span className="t-faint">{r.enabled ? `${num(r.hits)} hits` : 'disabled'}</span>
-                  </span>
-                ))}
-              </div>
-            </Card>
+            {!settling && (
+              <Card
+                title="Matching rules applied to this run"
+                sub={`${rules.filter((r) => r.enabled).length} active rules, evaluated in weight order`}
+                actions={<Button size="sm" icon="sliders" onClick={() => onTab('rules')}>Edit matching rules</Button>}
+              >
+                <div className="row" style={{ flexWrap: 'wrap', gap: 7 }}>
+                  {rules.map((r) => (
+                    <span className="chip" key={r.id} data-on={r.enabled || undefined}>
+                      <Icon name={r.enabled ? 'checkC' : 'ban'} size={12} />
+                      {r.name}
+                      <span className="t-faint">{r.enabled ? `${num(r.hits)} hits` : 'disabled'}</span>
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            )}
 
-            {adding && (
+            {!settling && adding && (
               <AddCandidatePanel
                 run={run}
                 onClose={() => setAdding(false)}
@@ -945,7 +1013,7 @@ export default function RunDetail({ run, tab, onTab }) {
               rows={shownRows}
               columns={columns}
               selectable
-              loading={running}
+              loading={running || settling}
               searchPlaceholder="Search by account, matched identity, employee type…"
               bulkActions={bulkActions}
               rowActions={rowActions}
@@ -977,9 +1045,11 @@ export default function RunDetail({ run, tab, onTab }) {
           </div>
         )}
 
-        {active === 'identities' && <IdentitiesTab run={run} onTab={onTab} />}
-        {active === 'rules' && <RulesTab run={run} />}
-        {active === 'summary' && <SummaryTab run={run} />}
+        {/* The unmatched-identity register settles its own rows; the figures
+            above it are held by the shape in the announcing region. */}
+        {active === 'identities' && <IdentitiesTab run={run} onTab={onTab} loading={settling} />}
+        {!settling && active === 'rules' && <RulesTab run={run} />}
+        {!settling && active === 'summary' && <SummaryTab run={run} />}
       </div>
     </>
   )

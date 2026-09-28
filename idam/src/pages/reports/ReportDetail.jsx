@@ -5,6 +5,10 @@ import JsonView from '../../components/primitives/JsonView'
 import EmptyState from '../../components/primitives/EmptyState'
 import Icon from '../../components/primitives/Icon'
 import Tag from '../../components/primitives/Tag'
+import {
+  Skeleton, SkeletonCard, SkeletonKeyValue, SkeletonList, SkeletonTable,
+} from '../../components/primitives/Skeleton'
+import { useLoading } from '../../lib/useLoading'
 import { inZone, zoneSuffix } from './reportTime'
 
 /**
@@ -32,6 +36,13 @@ import { inZone, zoneSuffix } from './reportTime'
 export default function ReportDetail({ report, row, zone }) {
   const kind = (report.detail && report.detail.kind) || 'record'
 
+  /* The panel is its own round trip: the diff, the provider's answer and the
+     sets a cell had to flatten are retained beside the row, not inside it. The
+     drawer keeps this component mounted between rows, so the wait is keyed on
+     which row is being read rather than on the mount. */
+  const rowKey = row.id ?? row.uniqueid ?? row.session_id ?? row.ts ?? null
+  const loading = useLoading(`${report.id}|${rowKey}`)
+
   const record = (
     <KeyValue
       cols={1}
@@ -42,6 +53,45 @@ export default function ReportDetail({ report, row, zone }) {
       })}
     />
   )
+
+  if (loading) {
+    /* A typed panel gets a typed skeleton. The plain reading is the field grid
+       on its own — no card around it, because the real one has none — and
+       every other reading is one or more blocks above the Record card that
+       closes all three. */
+    if (kind === 'record') {
+      return (
+        <Skeleton label="Loading the record">
+          <div className="stack"><SkeletonKeyValue rows={report.columns.length} cols={1} /></div>
+        </Skeleton>
+      )
+    }
+
+    const lists = Array.isArray(row.lists) ? row.lists : []
+    const above = kind === 'response'
+      ? (
+        <>
+          <SkeletonCard head><SkeletonKeyValue rows={4} cols={2} /></SkeletonCard>
+          {report.detail && report.detail.raw && <SkeletonCard head lines={6} />}
+        </>
+      )
+      : kind === 'lists'
+        ? lists.map((l) => (
+          <SkeletonCard key={l.k} head>
+            <SkeletonList rows={Math.min(4, l.items.length || 1)} media="square" trailing={false} />
+          </SkeletonCard>
+        ))
+        : <SkeletonCard head><SkeletonTable rows={Math.min(6, (row.changes || []).length || 1)} cols={3} /></SkeletonCard>
+
+    return (
+      <Skeleton label={`Loading the ${(report.detail && report.detail.label) || 'record'}`}>
+        <div className="stack">
+          {above}
+          <SkeletonCard head><SkeletonKeyValue rows={report.columns.length} cols={1} /></SkeletonCard>
+        </div>
+      </Skeleton>
+    )
+  }
 
   if (kind === 'response') {
     const d = report.detail || {}

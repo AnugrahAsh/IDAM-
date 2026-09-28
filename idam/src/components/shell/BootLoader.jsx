@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useApp } from '../../store/AppContext'
 import wordmarkDark from '../../assets/tanflow-wordmark-dark.png'
 import wordmarkWhite from '../../assets/tanflow-wordmark-white.png'
 
@@ -38,11 +39,17 @@ import wordmarkWhite from '../../assets/tanflow-wordmark-white.png'
  *    the reader nothing — unlike a hold, which is latency over a working app.
  */
 
-/* Measured from the moment the panel is built, not from the navigation: the
-   time already spent fetching the bundle is spent whatever this file does, and
-   counting it would make the panel certain to appear on exactly the loads where
-   it has the least left to cover. */
-const DELAY = 200
+/* The panel is shown on every load, not only on the slow ones. It was gated on
+   a 200ms wait before, on the argument that a panel nobody needed was a tax —
+   and on a warm reload it never appeared at all, which is not what a company
+   boot screen is for. It is the first thing the console says, so it says it
+   every time.
+
+   HOLD is what makes that true rather than nominal: the shell is usually on the
+   glass inside 150ms, and a panel dismissed the instant it arrives is a flash,
+   not a boot screen. The console underneath is live the whole time — the hold
+   is a deliberate beat, so it is kept short enough to read once and no longer. */
+const HOLD = 900
 const FADE = 260
 /* If `App` returns before it reaches <BootLoader /> — the recertification link
    and self-enrolment routes both do — nothing else would clear the panel. It is
@@ -66,9 +73,9 @@ function add(tag, cls, parent) {
    a running console is precisely the failure this file exists to avoid. */
 function cold() {
   if (typeof document === 'undefined' || !document.body) return false
-  if (document.querySelector('.boot')) return false
-  const root = document.getElementById('root')
-  return !root || !root.firstChild
+  // One panel at a time. Vite re-evaluates this module on every hot update, and
+  // a second panel dropped over a running console is the failure this guards.
+  return !document.querySelector('.boot')
 }
 
 function build() {
@@ -98,42 +105,60 @@ function build() {
   return el
 }
 
-/* Reveal is a question about frames, not about the clock. If an animation frame
-   is produced while `#root` is still empty, the reader is genuinely looking at
-   nothing and the panel has something to do; if the first frame of the load is
-   also the frame that paints the console, it has not, and it stays hidden. */
-function watch() {
+/* Revealed on the frame after it is built, with no condition attached. `born`
+   is stamped here rather than at build time because HOLD is measured from when
+   the reader could first see it. */
+function reveal() {
   if (finished || revealed || !panel) return
-  const root = document.getElementById('root')
-  if (root && root.firstChild) return
-  if (performance.now() - born >= DELAY) {
-    revealed = true
-    panel.setAttribute('data-visible', 'true')
-    return
-  }
-  requestAnimationFrame(watch)
+  revealed = true
+  born = performance.now()
+  panel.setAttribute('data-visible', 'true')
 }
 
 function dismiss() {
-  if (finished) return
-  finished = true
+  if (finished || !panel) return
   const node = panel
-  panel = null
-  if (!node) return
   // Never drawn, so there is nothing to dissolve and nothing was seen.
-  if (!revealed) { node.remove(); return }
+  if (!revealed) { finished = true; panel = null; node.remove(); return }
+  // The shell is ready, but the reader has not had the beat yet. Wait out what
+  // is left of it rather than blinking the panel away.
+  const left = HOLD - (performance.now() - born)
+  if (left > 0) { setTimeout(dismiss, left); return }
+  finished = true
+  panel = null
   node.setAttribute('data-hiding', 'true')
   setTimeout(() => node.remove(), FADE + 80)
 }
 
-if (typeof document !== 'undefined' && cold()) {
-  born = performance.now()
+/* Raise the panel again, for a transition the page load cannot cover — signing
+   in, where the console is built from nothing a second time inside one page. */
+function raise() {
+  if (!cold()) return
+  finished = false
+  revealed = false
   panel = build()
-  requestAnimationFrame(watch)
+  requestAnimationFrame(reveal)
+  setTimeout(dismiss, FAILSAFE)
+}
+
+if (typeof document !== 'undefined' && cold()) {
+  panel = build()
+  requestAnimationFrame(reveal)
   setTimeout(dismiss, FAILSAFE)
 }
 
 export default function BootLoader() {
+  const { signedIn } = useApp()
+  /* Signing in rebuilds the whole console from the sign-in card, and that is a
+     boot the reader watches happen. `was` holds the previous value so the panel
+     is raised on the transition into the console and not on the first render,
+     which the page-load panel is already covering. */
+  const was = useRef(signedIn)
+  useEffect(() => {
+    if (signedIn && !was.current) raise()
+    was.current = signedIn
+  }, [signedIn])
+
   /* "Booted" is the shell being on the glass. This effect runs after the commit
      that put it there, and one more frame passes before the browser has painted
      it — that is the whole of the wait. There is no font to settle for:

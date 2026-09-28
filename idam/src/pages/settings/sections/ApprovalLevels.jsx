@@ -10,6 +10,7 @@ import Tag from '../../../components/primitives/Tag'
 import Pill from '../../../components/primitives/Pill'
 import EmptyState from '../../../components/primitives/EmptyState'
 import { useApp } from '../../../store/AppContext'
+import SectionSkeleton, { LevelListSkeleton } from './SectionSkeleton'
 import { ROLES } from '../../../data/seed'
 import { writeSection } from '../settingsStore'
 
@@ -26,7 +27,7 @@ const ROLE_NAMES = ROLES.map((r) => r.name)
  * generate their `APPROVED ON (<level>)` / `APPROVED BY (<level>)` column pairs
  * from this list, so renaming a level here renames those columns.
  */
-export default function ApprovalLevels({ value }) {
+export default function ApprovalLevels({ value, loading = false }) {
   const { toast, confirm } = useApp()
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ name: '', role: '', detail: '', sla: 8 })
@@ -90,6 +91,21 @@ export default function ApprovalLevels({ value }) {
       toast('ok', 'Level deleted', level.name)
     },
   })
+
+/* Held while Settings settles. This section is a register of stored rows, not
+   a form the operator arrives already typing into: the add row above the table
+   appends to rows that are still on their way, so it holds its place with
+   them. */
+  if (loading) {
+    return (
+      <SectionSkeleton foot>
+        {/* Drawn at the number of levels the chain actually holds — the
+            configuration is one document and it is in hand before the settle
+            starts, so a guessed count is only a guessed height. */}
+        <LevelListSkeleton rows={value.length || 3} />
+      </SectionSkeleton>
+    )
+  }
 
   return (
     <Card

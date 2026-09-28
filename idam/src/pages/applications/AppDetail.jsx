@@ -11,9 +11,12 @@ import KeyValue from '../../components/primitives/KeyValue'
 import Field from '../../components/primitives/Field'
 import Select from '../../components/primitives/Select'
 import Banner from '../../components/primitives/Banner'
+import { Skeleton } from '../../components/primitives/Skeleton'
 import { TODAY } from '../../data/seed'
 import AppLogo from '../../components/primitives/AppLogo'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
+import { AppPanelSkeleton } from './ApplicationsSkeleton'
 import { num, statusTone } from '../../lib/format'
 import { StatStrip, UrlConfigCard } from './facetControls'
 import ProvisioningTab from './ProvisioningTab'
@@ -44,6 +47,11 @@ const publishedUrls = (facet) => {
 /* Accounts correlate on the mail address, which is the one value both a
    federated assertion and a provisioned account always carry. */
 const MATCH_ATTR = 'email'
+
+/* The tabs whose panel is cards and fields, and so has a shape of its own to
+   hold while the record settles. Attribute Configuration and Client Scope are
+   missing on purpose: they are registers and settle their own rows. */
+const PANEL_SHAPES = ['overview', 'provisioning', 'reconciliation', 'sso', 'urls', 'linkage']
 
 function OverviewTab({ app, onTab }) {
   const health = healthOf(app)
@@ -329,27 +337,61 @@ export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelet
   ]
   const active = tabs.some((t) => t.id === tab) ? tab : 'overview'
 
+  /* One flag for the record, keyed on the application and the tab together, so
+     the record settles as one thing: arriving at an application is a read, and
+     so is opening a different tab, because each tab is a separate read of that
+     application rather than another slice of one already in hand.
+
+     The tab bar is not keyed to it — it is passed to the masthead outside the
+     conditionals below and stays live throughout — because a control that
+     disappears under the pointer that just used it has been taken away
+     mid-gesture. Nor is the SSO editor, which is reached from the view beside
+     it with the record already on screen. */
+  const loading = useLoading(`${app.id}:${active}`)
+
   // The page owner raises its own confirmation for deletion.
   const remove = () => onDelete(app)
 
   return (
     <>
+      {/* The masthead is the real `DetailHeader` while it settles rather than an
+          imitation of one: the crumb row, the gutters, the tab row and every gap
+          between them are the component's own, so the application lands in
+          exactly the box that was holding its place. Only the record's own
+          content greys. */}
       <DetailHeader
         backTo={BASE}
         backLabel="Applications"
         eyebrow="Application"
-        title={app.displayName}
-        sub={app.description || `${capabilitiesOf(app).join(' and ')} application owned by ${app.owner}.`}
-        media={<AppLogo src={app.logoSrc} brand={brandOf(app)} name={app.displayName} size={56} />}
-        badges={
+        title={loading ? <span className="skel app-skel-title" aria-hidden="true" /> : app.displayName}
+        sub={loading
+          ? <span className="skel app-skel-sub" aria-hidden="true" />
+          : app.description || `${capabilitiesOf(app).join(' and ')} application owned by ${app.owner}.`}
+        media={loading
+          ? <span className="skel app-skel-media" aria-hidden="true" />
+          : <AppLogo src={app.logoSrc} brand={brandOf(app)} name={app.displayName} size={56} />}
+        badges={loading ? (
+          <>
+            <span className="skel skel-chip" style={{ width: 72 }} aria-hidden="true" />
+            <span className="skel skel-chip" style={{ width: 88 }} aria-hidden="true" />
+          </>
+        ) : (
           <>
             <Pill tone={health.tone} dot>{health.label}</Pill>
             {app.provisioning && <Tag tone="acc">Provisioning</Tag>}
             {app.sso && <Tag tone="acc">SSO</Tag>}
             <Tag>{app.name}</Tag>
           </>
-        }
-        meta={
+        )}
+        meta={loading ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <span className="app-skel-fact" key={i} aria-hidden="true">
+                <span className="skel" style={{ width: 94 + (i % 3) * 28, height: 9 }} />
+              </span>
+            ))}
+          </>
+        ) : (
           <>
             <Fact icon="building" label="Organization" value={app.org} />
             <Fact icon="user" label="Owner" value={app.owner} />
@@ -357,8 +399,14 @@ export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelet
             {app.sso && <Fact icon="sso" label="Assigned" value={num(app.sso.users)} />}
             {app.provisioning && <Fact icon="clock" label="Last sync" value={app.provisioning.lastSync} />}
           </>
-        }
-        actions={
+        )}
+        actions={loading ? (
+          <>
+            {[0, 1, 2].map((i) => (
+              <span className="skel skel-btn" key={i} style={{ width: 92 + (i % 3) * 24 }} aria-hidden="true" />
+            ))}
+          </>
+        ) : (
           <>
             {/* The mark this application is recognised by, changed from the
                 record it belongs to rather than from inside a federation
@@ -372,28 +420,42 @@ export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelet
             )}
             <Button variant="danger" icon="trash" onClick={remove}>Delete</Button>
           </>
-        }
+        )}
         tabs={<Tabs value={active} onChange={onTab} tabs={tabs} />}
       />
 
       <div className="detail-body">
-        {active === 'overview' && <OverviewTab app={app} onTab={onTab} />}
-        {active === 'provisioning' && <ProvisioningTab app={app} onPatch={onPatch} />}
-        {active === 'reconciliation' && <ReconciliationTab key={`rec-${app.id}`} app={app} onPatch={onPatch} />}
-        {active === 'sso' && (sub === 'edit'
+        {/* The screen's one announcing region, so the record says once that it
+            is on its way. Every shape is decoration — the bars in the masthead
+            above and the rows a register draws for itself below — and the
+            region is rendered even for the two tabs that have no panel shape of
+            their own, because the masthead is still grey while they settle. */}
+        {loading && (
+          <Skeleton label={`Loading ${app.displayName}`}>
+            {PANEL_SHAPES.includes(active) ? <AppPanelSkeleton tab={active} /> : null}
+          </Skeleton>
+        )}
+
+        {!loading && active === 'overview' && <OverviewTab app={app} onTab={onTab} />}
+        {!loading && active === 'provisioning' && <ProvisioningTab app={app} onPatch={onPatch} />}
+        {!loading && active === 'reconciliation' && <ReconciliationTab key={`rec-${app.id}`} app={app} onPatch={onPatch} />}
+        {!loading && active === 'sso' && (sub === 'edit'
           ? <SsoEdit key={`sso-edit-${app.id}`} app={app} onPatch={onPatch} onDone={() => onTab('sso')} />
           : <SsoView key={`sso-${app.id}`} app={app} onEdit={() => onTab('sso/edit')} onTab={onTab} onChangeImage={changeImage} />)}
-        {active === 'attributes' && <AttributesTab key={`attrs-${app.id}`} app={app} onPatch={onPatch} />}
+        {/* Registers settle their own rows. Handing the flag down leaves the
+            toolbar and the search box alive while the rows arrive. */}
+        {active === 'attributes' && <AttributesTab key={`attrs-${app.id}`} app={app} onPatch={onPatch} loading={loading} />}
         {active === 'scope' && app.sso && (
           <ClientScope
             key={`scope-${app.id}`}
             appName={app.displayName}
             protocol={app.sso.protocol}
             value={clientScopeOf(app.sso)}
+            loading={loading}
             onChange={(patch) => onPatch(app.id, (r) => ({ sso: withClientScope(r.sso, patch) }))}
           />
         )}
-        {active === 'urls' && (
+        {!loading && active === 'urls' && (
           <div className="stack">
             <Banner tone="info">
               This is the application URL an identity is launched at. Each query parameter carries one attribute this
@@ -408,7 +470,7 @@ export default function AppDetail({ app, rows, tab, sub, onTab, onPatch, onDelet
             />
           </div>
         )}
-        {active === 'linkage' && <LinkageTab app={app} rows={rows} onLink={onLink} onUnlink={onUnlink} />}
+        {!loading && active === 'linkage' && <LinkageTab app={app} rows={rows} onLink={onLink} onUnlink={onUnlink} />}
       </div>
     </>
   )

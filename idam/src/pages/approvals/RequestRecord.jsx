@@ -14,7 +14,11 @@ import Field from '../../components/primitives/Field'
 import TextInput from '../../components/primitives/TextInput'
 import Select from '../../components/primitives/Select'
 import EmptyState from '../../components/primitives/EmptyState'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num } from '../../lib/format'
 import {
   APPROVERS_L1, APPROVERS_L2, APPROVERS_L3, OPEN,
@@ -64,6 +68,38 @@ export default function RequestRecord({ id, rows, onApprove, onReject, onReassig
     () => (row ? rows.filter((r) => r.username === row.username && r.id !== row.id).slice(0, 6) : []),
     [rows, row],
   )
+  // Keyed on the request: opening another record from the "other requests"
+  // feed is a new reading and settles again, the way a fetch would.
+  const loading = useLoading(id)
+
+  /* Ahead of the not-found check on purpose. Until the record has resolved,
+     nobody knows whether the id is stale — a page that says "no approval
+     record for REQ-1142" for a beat before showing REQ-1142 is worse than a
+     wait. */
+  if (loading) {
+    return (
+      <Skeleton label="Loading the approval record">
+        <SkeletonDetailHeader facts={5} actions={3} />
+        <div className="detail-body">
+          <div className="detail-cols">
+            <div className="stack">
+              {/* Request summary: eleven short fields in the three-column grid. */}
+              <SkeletonCard><SkeletonKeyValue rows={12} cols={3} /></SkeletonCard>
+              {/* User information: three groups of paired fields. */}
+              <SkeletonCard><SkeletonKeyValue rows={10} cols={2} /></SkeletonCard>
+              <SkeletonCard lines={4} foot />
+              <SkeletonCard lines={3} />
+            </div>
+            <div className="stack">
+              <SkeletonCard lines={5} />
+              <SkeletonCard lines={4} />
+              <SkeletonCard lines={3} />
+            </div>
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
 
   if (!row) {
     return (

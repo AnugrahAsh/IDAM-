@@ -83,12 +83,27 @@
 .en-doc-x:hover{background:var(--bad-bg);color:var(--bad)}
 
 .en-consents{display:flex;flex-direction:column;gap:10px}
-.en-consent{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;cursor:pointer;
+.en-consent{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;
   background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-lg)}
 .en-consent .check{margin-top:1px;flex:none}
 .en-consent-m{display:flex;flex-direction:column;gap:2px;min-width:0}
 .en-consent-t{font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
 .en-consent-s{font-size:var(--t-xs);line-height:1.5;color:var(--mut)}
+
+/* The gated agreement, drawn the way the invitation page draws it: while the
+   notice is unread the row is dashed and the control is inert, and the line
+   underneath says which of those two things is still missing. */
+.en-consent[data-locked]{background:var(--surface-3);border-style:dashed}
+.en-consent .check:disabled{opacity:.45;cursor:not-allowed}
+/* `.link` is inline-flex, so it has to be dropped onto the text baseline by
+   hand when it sits inside a run of prose rather than on a row of its own. */
+.en-consent-link{font-size:inherit;vertical-align:-2px}
+.en-consent-g{position:relative;display:block;margin-top:3px;padding-left:18px;
+  font-size:var(--t-xs);line-height:1.5;color:var(--mut);overflow-wrap:anywhere}
+.en-consent-g[data-done="true"]{color:var(--ok)}
+.en-consent-g svg{position:absolute;left:0;top:3px}
+.en-consent-g b{font-weight:var(--w-semi);color:var(--ink-2)}
+.en-consent-g[data-done="true"] b{color:inherit}
 
 /* The review: what will be sent, in the order it was asked for. */
 .en-sum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin:0;

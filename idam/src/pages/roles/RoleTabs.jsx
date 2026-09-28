@@ -53,7 +53,7 @@ function MemberCsv({ mode, role, count, onFile }) {
   )
 }
 
-export function MembersTab({ role, memberIds, onAdd, onRemove }) {
+export function MembersTab({ role, memberIds, onAdd, onRemove, loading = false }) {
   const { navigate, toast, confirm, setDrawer } = useApp()
 
   const rows = useMemo(() => {
@@ -178,6 +178,7 @@ export function MembersTab({ role, memberIds, onAdd, onRemove }) {
       <DataWorkbench
         id="role-members"
         rows={rows}
+        loading={loading}
         columns={columns}
         selectable
         searchPlaceholder="Search members by username, email or department…"

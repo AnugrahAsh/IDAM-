@@ -7,6 +7,7 @@ import Tag from '../../components/primitives/Tag'
 import PageBar from '../../components/shell/PageBar'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { dateText } from '../../lib/clock'
 import { serialColumn } from '../../lib/format'
 import { useApp } from '../../store/AppContext'
@@ -16,7 +17,10 @@ import {
   CONSENT_TYPE_LABEL, TEMPLATE_BASE, blankTemplate, statusTone, validityText,
 } from './consentTemplateData'
 
-export default function ConsentTemplatesPage({ segments = [], templates, setTemplates }) {
+/* `loading` is Consent Management's flag: the tiles and the register land with
+   the page bar and the tab strip rather than a frame after them. The template
+   editor below is a form the operator types into, so it is never held. */
+export default function ConsentTemplatesPage({ segments = [], templates, setTemplates, loading = false }) {
   const { navigate, toast, confirm } = useApp()
   const [facet, setFacet] = useState('all')
   const [head] = segments
@@ -109,6 +113,7 @@ export default function ConsentTemplatesPage({ segments = [], templates, setTemp
 
   return (
     <>
+      {loading ? <SkeletonStats count={4} /> : (
       <StatCards
         items={[
           { id: 'all', icon: 'file', label: 'Templates', value: templates.length, sub: 'in the register' },
@@ -120,11 +125,13 @@ export default function ConsentTemplatesPage({ segments = [], templates, setTemp
         onChange={(id) => setFacet(id === facet ? 'all' : id)}
         label="Filter consent templates by status"
       />
+      )}
 
       <DataWorkbench
         id="consent-templates"
         rows={shown}
         columns={columns}
+        loading={loading}
         searchPlaceholder="Search templates by name or description…"
         toolbar={<Button size="sm" variant="pri" icon="plus" onClick={() => navigate(`${TEMPLATE_BASE}/add`)}>Create template</Button>}
         onRowClick={(r) => navigate(`${TEMPLATE_BASE}/${r.id}`)}

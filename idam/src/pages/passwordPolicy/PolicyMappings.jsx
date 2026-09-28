@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
 import Banner from '../../components/primitives/Banner'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import Button from '../../components/primitives/Button'
 import Field from '../../components/primitives/Field'
 import Icon from '../../components/primitives/Icon'
@@ -20,7 +21,10 @@ export const DEFAULT_LABEL = 'Platform default'
 // naming the single policy that governs it. An organization is governed by
 // exactly one policy, so this is the view where a conflict is impossible to
 // miss — the register itself enforces the cardinality.
-export default function PolicyMappings({ policies, onAssign, onRelease, navigate, setDrawer, toast, confirm }) {
+/* `loading` is Password Policy's flag: the tiles and the register land with the
+   page bar and the tab strip rather than a frame after them. The mapping form
+   below is a drawer the operator types into, so it is never held. */
+export default function PolicyMappings({ policies, onAssign, onRelease, navigate, setDrawer, toast, confirm, loading = false }) {
   const bulkRef = useRef('')
 
   /**
@@ -290,6 +294,7 @@ export default function PolicyMappings({ policies, onAssign, onRelease, navigate
         </Banner>
       )}
 
+      {loading ? <SkeletonStats count={4} /> : (
       <StatCards
         label="Policy mapping summary"
         items={[
@@ -299,11 +304,13 @@ export default function PolicyMappings({ policies, onAssign, onRelease, navigate
           { key: 'unmapped', icon: 'warn', label: 'Uncovered', value: stats.unmapped, chip: stats.unmapped ? `${num(stats.exposed)} identities` : 'none', chipTone: stats.unmapped ? 'warn' : undefined, sub: 'falling back to the default' },
         ]}
       />
+      )}
 
       <DataWorkbench
         id="password-policy-mappings"
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by configuration, organization, application or DN…"
         toolbar={

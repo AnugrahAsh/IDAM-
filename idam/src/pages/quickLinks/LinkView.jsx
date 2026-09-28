@@ -7,7 +7,11 @@ import Pill from '../../components/primitives/Pill'
 import Tabs from '../../components/primitives/Tabs'
 import Tag from '../../components/primitives/Tag'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { describeAudience, matchedUsers, reachIsExact, reachOf, readAudience } from '../shared/comms/audienceModel'
 import { num } from '../../lib/format'
 import { MANAGE_PATH } from './quickLinksAccess'
@@ -30,9 +34,31 @@ const MODE_LABEL = {
   condition: 'Matching a condition',
 }
 
+/* The tab row a record masthead lands with. The kit's header stops at the
+   facts, and a header that will carry tabs is a row taller than one that will
+   not — enough to move the body under it when the record arrives. The hairline
+   sits above the row here rather than below it, which is the one thing this
+   cannot borrow from the real header. */
+function SkeletonTabRow({ count = 2 }) {
+  return (
+    <div className="tabs" style={{ borderBottom: 'none' }} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <span className="tab" key={i}>
+          <span className="skel" style={{ width: 74 + (i % 3) * 16, height: 'calc(var(--t-body) * var(--t-body-lh))' }} />
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export default function LinkView({ record, onEdit, onDelete, onToggleStatus }) {
   const { toast } = useApp()
   const [tab, setTab] = useState('link')
+  /* The record settles as one thing, keyed on which link is being read: moving
+     between two links is the round trip a deployment would make. The tab is
+     not part of the key — both panels are built from the record already in
+     hand, so switching between them fetches nothing. */
+  const loading = useLoading(record.id)
 
   const audience = readAudience(record, 'visibility')
   const scopeLabel = describeAudience(audience)
@@ -41,6 +67,23 @@ export default function LinkView({ record, onEdit, onDelete, onToggleStatus }) {
   // Named people resolve to actual identities, so the view can list them rather
   // than restate the count.
   const named = audience.mode === 'users' ? matchedUsers(audience) : []
+
+  if (loading) {
+    return (
+      <Skeleton label="Loading link">
+        <SkeletonDetailHeader media={false} facts={3} actions={4} />
+        <SkeletonTabRow count={2} />
+        <div className="detail-body">
+          <div className="detail-cols">
+            {/* The field grid and the preview tile, at the heights they land
+                at: five rows on the left, a tile with a caption on the right. */}
+            <SkeletonCard><SkeletonKeyValue rows={5} cols={1} /></SkeletonCard>
+            <SkeletonCard lines={4} />
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
 
   return (
     <>

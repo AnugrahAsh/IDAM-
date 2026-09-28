@@ -6,6 +6,9 @@ import Banner from '../../components/primitives/Banner'
 import Button from '../../components/primitives/Button'
 import Card from '../../components/primitives/Card'
 import EmptyState from '../../components/primitives/EmptyState'
+import {
+  Skeleton, SkeletonCard, SkeletonKeyValue, SkeletonList, SkeletonPageBar, SkeletonStats,
+} from '../../components/primitives/Skeleton'
 import FileDrop, { formatSize } from '../../components/primitives/FileDrop'
 import Icon from '../../components/primitives/Icon'
 import KeyValue from '../../components/primitives/KeyValue'
@@ -14,6 +17,7 @@ import Pill from '../../components/primitives/Pill'
 import Switch from '../../components/primitives/Switch'
 import Tag from '../../components/primitives/Tag'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num } from '../../lib/format'
 import { ME } from '../../data/seed'
 
@@ -133,8 +137,28 @@ const seedAudit = () => [
   },
 ]
 
-export default function PasswordDictionaryPage({ embedded = false }) {
+/* The wait, drawn against the real geometry: the four counts, the current
+   dictionary's field grid, the enforcement switch and the audit timeline.
+   The upload card is not here — a drop zone and a progress bar describe a file
+   the operator has not chosen yet, so there is nothing on its way to hold a
+   place for. */
+function DictionarySkeleton() {
+  return (
+    <div className="stack">
+      <SkeletonStats count={4} />
+      <SkeletonCard foot><SkeletonKeyValue rows={6} cols={2} /></SkeletonCard>
+      <SkeletonCard lines={4} />
+      <SkeletonCard foot><SkeletonList rows={4} media={false} /></SkeletonCard>
+    </div>
+  )
+}
+
+/* `loading` is Password Policy's flag when the page is a section of it. On its
+   own route nothing sits above it, so it settles for itself. */
+export default function PasswordDictionaryPage({ embedded = false, loading: loadingProp }) {
   const { toast, confirm } = useApp()
+  const ownLoading = useLoading()
+  const loading = loadingProp === undefined ? ownLoading : loadingProp
 
   // The active dictionary and the candidate are separate pieces of state on
   // purpose. Nothing in this file writes to `active` except a processing run
@@ -670,7 +694,11 @@ export default function PasswordDictionaryPage({ embedded = false }) {
     </Card>
   )
 
-  const body = (
+  /* Held as one thing: the counts, the current file and its audit trail are
+     the same arrival, and the enforcement switch reads the same resource. The
+     shapes carry no announcing region — embedded, Password Policy has already
+     said the screen is loading; on its own route the masthead below has. */
+  const body = loading ? <DictionarySkeleton /> : (
     <div className="stack">
       {active && (
         <StatCards
@@ -729,11 +757,17 @@ export default function PasswordDictionaryPage({ embedded = false }) {
 
   return (
     <>
+      {loading ? (
+        <Skeleton label="Loading the password dictionary">
+          <SkeletonPageBar actions={0} crumbs={2} />
+        </Skeleton>
+      ) : (
       <PageBar
         title="Password Dictionary"
         sub="The single dictionary file consulted when a credential is set, and the uploads that replace it."
         crumbs={[{ label: 'Reports' }, { label: 'Password Dictionary' }]}
       />
+      )}
       {body}
     </>
   )

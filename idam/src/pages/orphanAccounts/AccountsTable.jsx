@@ -12,7 +12,12 @@ const VIEWS = [
   { id: 'groups', label: 'Grouped', icon: 'layers', desc: 'Split by application' },
 ]
 
-export default function AccountsTable({ id, rows, onAssign, onDisable, onSuppress, onDelete, footNote }) {
+export default function AccountsTable({
+  id, rows, onAssign, onDisable, onSuppress, onDelete, footNote,
+  // Owned by whichever page mounts the register: the toolbar, the view switch
+  // and the search stay put while the body holds its shape.
+  loading = false,
+}) {
   const { navigate, toast } = useApp()
   // Keyed on the register id, so the rule detail's copy and the main list keep
   // their own preference rather than sharing one.
@@ -52,6 +57,7 @@ export default function AccountsTable({ id, rows, onAssign, onDisable, onSuppres
     <DataWorkbench
       id={id}
       rows={rows}
+      loading={loading}
       columns={columns}
       selectable
       views={VIEWS}

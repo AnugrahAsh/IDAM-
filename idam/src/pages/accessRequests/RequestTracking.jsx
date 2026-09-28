@@ -15,7 +15,11 @@ import Field from '../../components/primitives/Field'
 import TextInput from '../../components/primitives/TextInput'
 import EmptyState from '../../components/primitives/EmptyState'
 import Menu from '../../components/primitives/Menu'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import UserInformation from './UserInformation'
 import ChangeLog from '../approvals/ChangeLog'
 import { num } from '../../lib/format'
@@ -111,6 +115,36 @@ export default function RequestTracking({ id, rows, onCancel, onDuplicate }) {
   const trail = useMemo(() => (row ? trailFor(row) : []), [row])
   const levels = useApprovalLevels()
   const evidenceRows = useMemo(() => levelColumnDefs(levels), [levels])
+  // Keyed on the request, so following a link to another one settles again.
+  const loading = useLoading(id)
+
+  /* Ahead of the not-found branch: whether the id still resolves is only
+     knowable once the record has, and "no request with id REQ-2044" flashed
+     over a request that does exist reads as a fault. */
+  if (loading) {
+    return (
+      <Skeleton label="Loading the request">
+        <SkeletonDetailHeader facts={6} actions={4} />
+        <div className="detail-body">
+          <div className="detail-cols">
+            <div className="stack">
+              {/* Request summary, then the identity the request is about. */}
+              <SkeletonCard><SkeletonKeyValue rows={10} cols={2} /></SkeletonCard>
+              <SkeletonCard><SkeletonKeyValue rows={10} cols={2} /></SkeletonCard>
+              <SkeletonCard lines={3} />
+              <SkeletonCard lines={5} foot />
+              <SkeletonCard lines={4} />
+            </div>
+            <div className="stack">
+              <SkeletonCard lines={5} />
+              <SkeletonCard lines={4} />
+              <SkeletonCard lines={4} />
+            </div>
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
 
   if (!row) {
     return (

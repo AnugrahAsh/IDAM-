@@ -8,13 +8,21 @@ import Tag from '../../components/primitives/Tag'
 import Tabs from '../../components/primitives/Tabs'
 import { useApp } from '../../store/AppContext'
 import { num, statusTone } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
 import { membersOf, profileFor, resolvePolicy } from './orgModel'
 import { AuditTab, ChildrenTab, IdentitiesTab, OverviewTab } from './OrgTabs'
+import { OrgPanelSkeleton, OrgRecordSkeleton } from './OrganizationsSkeleton'
 
 export default function OrgDetail({ org, orgs, onPatch, onDelete }) {
   const { navigate, toast, confirm } = useApp()
   const [tab, setTab] = useState('overview')
   const [menu, setMenu] = useState(null)
+  /* Two scopes off one timer. `arriving` is the record — masthead, tab strip
+     and panel resolve on the same tick, so landing on an organization settles
+     as one thing. `settling` is the panel alone, which is all a tab change
+     fetches: the tab bar is chrome and stays where the pointer left it. */
+  const arriving = useLoading(org.id)
+  const settling = useLoading(`${org.id}:${tab}`)
 
   const members = useMemo(() => membersOf(org.name), [org.name])
   const children = useMemo(() => orgs.filter((o) => o.parent === org.name), [orgs, org.name])
@@ -33,6 +41,8 @@ export default function OrgDetail({ org, orgs, onPatch, onDelete }) {
     }
     onPatch(org.id, { status: 'Active' }, 'Organization enabled', org.name)
   }
+
+  if (arriving) return <OrgRecordSkeleton tab={tab} />
 
   return (
     <>
@@ -123,7 +133,11 @@ export default function OrgDetail({ org, orgs, onPatch, onDelete }) {
       />
 
       <div className="detail-body">
-        {tab === 'overview' && (
+        {/* The card tabs are redrawn as shapes while they settle; the register
+            tabs keep their own chrome and settle their rows instead. */}
+        {settling && (tab === 'overview' || tab === 'audit') && <OrgPanelSkeleton tab={tab} />}
+
+        {tab === 'overview' && !settling && (
           <OverviewTab
             org={org}
             orgs={orgs}
@@ -139,9 +153,9 @@ export default function OrgDetail({ org, orgs, onPatch, onDelete }) {
             )}
           />
         )}
-        {tab === 'identities' && <IdentitiesTab org={org} members={members} />}
-        {tab === 'children' && <ChildrenTab org={org} kids={children} />}
-        {tab === 'audit' && <AuditTab org={org} members={members} kids={children} />}
+        {tab === 'identities' && <IdentitiesTab org={org} members={members} loading={settling} />}
+        {tab === 'children' && <ChildrenTab org={org} kids={children} loading={settling} />}
+        {tab === 'audit' && !settling && <AuditTab org={org} members={members} kids={children} />}
       </div>
 
       {menu && <Menu anchor={menu.anchor} items={menu.items} onClose={() => setMenu(null)} />}

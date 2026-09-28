@@ -57,6 +57,68 @@ export const providerHealth = (p) => {
 }
 
 
+/* ---------------------------------------------------------------------------
+   Per-provider delivery health.
+
+   Delivery health answered for the provider whose page you happened to open,
+   which is the same gap Email and SMS Management had: an operator triaging a
+   morning of failed challenges had to open five provider pages to find the one
+   that was failing. The state below is read off the figures `providerHealth`
+   already derives — never stored beside them, because a seeded "degraded" flag
+   disagrees with the numbers under it the first time either is touched, and the
+   flag is what an operator would believe.
+   --------------------------------------------------------------------------- */
+
+/* `attention` is what the summary counts: a factor an administrator withdrew
+   from enrollment is a decision, not an incident, so it reads the way every
+   other disabled record in the console reads and is not counted against the
+   tenant. */
+export const HEALTH_STATES = {
+  ok: { id: 'ok', label: 'Healthy', tone: 'ok', attention: false },
+  warn: { id: 'warn', label: 'Degraded', tone: 'warn', attention: true },
+  bad: { id: 'bad', label: 'Failing', tone: 'bad', attention: true },
+  off: { id: 'off', label: 'Disabled', tone: 'mut', attention: false },
+}
+
+/* The thresholds operations triages a factor on. Some proportion of challenges
+   always fails — a mistyped code, a prompt left unanswered — so the bar is not
+   zero: better than one in sixty-six is normal, worse than one in thirty-three
+   is a provider to look at now. Latency is the other half, because a factor
+   that works in half a second and a factor that works in half a minute are the
+   same success rate and a different product. */
+const FAIL_FAILING = 0.03
+const FAIL_DEGRADED = 0.015
+const LATENCY_DEGRADED = 250
+
+/**
+ * The triage state of one provider, with the figures that decided it.
+ *
+ * `drivers` is why this returns an object rather than a label. Two independent
+ * thresholds raise the same amber pill, so the state alone does not say which
+ * figure tripped it — a provider answering every challenge and taking four
+ * hundred milliseconds to do it is amber for latency alone, and a head showing
+ * its failure count, coloured, would say the opposite of what the arithmetic
+ * said. The keys that crossed a threshold come back with the state, and they
+ * are the figure ids the tab's tiles use, so the head colours exactly what the
+ * body names.
+ */
+export const providerState = (p, enabled) => {
+  const settled = (state) => ({ ...state, drivers: [] })
+  if (!p) return settled(HEALTH_STATES.bad)
+  if (!enabled) return settled(HEALTH_STATES.off)
+  const h = providerHealth(p)
+  const rate = h.challenges7d ? h.failures7d / h.challenges7d : 0
+  // Both are collected rather than the first to match: a provider can be
+  // failing challenges and slow at once, and the head has room to say so.
+  const drivers = []
+  if (rate >= FAIL_DEGRADED) drivers.push('failed')
+  if (h.latencyMs > LATENCY_DEGRADED) drivers.push('latency')
+  if (rate >= FAIL_FAILING) return { ...HEALTH_STATES.bad, drivers }
+  if (drivers.length) return { ...HEALTH_STATES.warn, drivers }
+  return { ...HEALTH_STATES.ok, drivers }
+}
+
+
 export const providerSeries = (p) => {
   const s = seedOf(p.id)
   const health = providerHealth(p)

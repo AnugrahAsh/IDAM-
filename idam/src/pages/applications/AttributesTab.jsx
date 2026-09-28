@@ -6,6 +6,7 @@ import IconButton from '../../components/primitives/IconButton'
 import Pill from '../../components/primitives/Pill'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { nextId } from '../../data/seed'
 import { useApp } from '../../store/AppContext'
 import { AttributeEditor } from './facetControls'
@@ -22,7 +23,11 @@ import {
  * own protocol: a SAML service provider is offered SAML mappers, an OIDC or
  * OAuth client its own.
  */
-export default function AttributesTab({ app, onPatch }) {
+// `loading` is the application record's own settling flag, handed down rather
+// than started again here: this panel is one of that record's tabs, and a
+// register running its own timer would land at a different moment from the
+// masthead above it.
+export default function AttributesTab({ app, onPatch, loading = false }) {
   const { toast, confirm } = useApp()
   const [draft, setDraft] = useState(null)
   const [facet, setFacet] = useState('all')
@@ -127,19 +132,21 @@ export default function AttributesTab({ app, onPatch }) {
 
   return (
     <div className="stack">
-      <StatCards
-        items={[
-          { id: 'all', icon: 'swap', label: 'Mappers', value: rows.length, chip: facet_.protocol, sub: `${released}s ${saml ? 'released in the assertion' : 'written into the token'}` },
-          { id: 'required', icon: 'lock', label: 'Required', value: required, chipTone: 'acc', chip: required ? 'refuse when empty' : 'none', sub: saml ? 'sign-in refused without a value' : 'token refused without a value' },
-          { id: 'optional', icon: 'checkC', label: 'Optional', value: rows.length - required, sub: 'omitted when the source is empty' },
-          { icon: 'layers', label: 'Mapper types', value: types.size, sub: types.size ? [...types].slice(0, 2).map(mapperLabel).join(', ') + (types.size > 2 ? '…' : '') : 'none in use' },
-        ]}
-        value={facet}
-        onChange={setFacet}
-        label="Filter mappers"
-      />
+      {loading ? <SkeletonStats count={4} /> : (
+        <StatCards
+          items={[
+            { id: 'all', icon: 'swap', label: 'Mappers', value: rows.length, chip: facet_.protocol, sub: `${released}s ${saml ? 'released in the assertion' : 'written into the token'}` },
+            { id: 'required', icon: 'lock', label: 'Required', value: required, chipTone: 'acc', chip: required ? 'refuse when empty' : 'none', sub: saml ? 'sign-in refused without a value' : 'token refused without a value' },
+            { id: 'optional', icon: 'checkC', label: 'Optional', value: rows.length - required, sub: 'omitted when the source is empty' },
+            { icon: 'layers', label: 'Mapper types', value: types.size, sub: types.size ? [...types].slice(0, 2).map(mapperLabel).join(', ') + (types.size > 2 ? '…' : '') : 'none in use' },
+          ]}
+          value={facet}
+          onChange={setFacet}
+          label="Filter mappers"
+        />
+      )}
 
-      {draft && (
+      {!loading && draft && (
         <section className="card">
           <AttributeEditor
             key={draft.id || 'new'}
@@ -157,6 +164,7 @@ export default function AttributesTab({ app, onPatch }) {
         id={`app-attrs-${app.id}`}
         rows={shown}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder={`Search mappers by name, source or ${released}…`}
         toolbar={<Button size="sm" variant="pri" icon="plus" disabled={!!draft} onClick={startAdd}>Add mapper</Button>}

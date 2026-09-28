@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Avatar from '../../components/primitives/Avatar'
 import Banner from '../../components/primitives/Banner'
 import Button from '../../components/primitives/Button'
@@ -8,26 +8,176 @@ import StatCards from '../../components/workbench/StatCards'
 import EmptyState from '../../components/primitives/EmptyState'
 import Field from '../../components/primitives/Field'
 import Icon from '../../components/primitives/Icon'
-import KeyValue from '../../components/primitives/KeyValue'
 import Meter from '../../components/primitives/Meter'
 import PageBar from '../../components/shell/PageBar'
 import Pill from '../../components/primitives/Pill'
 import Select from '../../components/primitives/Select'
 import TextInput from '../../components/primitives/TextInput'
-import StickyActions from '../../components/shell/StickyActions'
-import Switch from '../../components/primitives/Switch'
 import Tabs from '../../components/primitives/Tabs'
 import Tag from '../../components/primitives/Tag'
+import {
+  Skeleton, SkeletonCard, SkeletonLine, SkeletonPageBar, SkeletonStats, SkeletonText,
+} from '../../components/primitives/Skeleton'
 import { LOGS, MFA_METHODS } from '../../data/seed'
 import { BASE_PATH, DIRECTORY, ENROLLED_BY_FACTOR, STRENGTH, fieldsOf, validateProvider } from './authData'
 import { num, pct } from '../../lib/format'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import './AuthenticationPage.css'
 import MfaEnforcement from './MfaEnforcement'
 import MethodConfig, { blankConfig } from './MethodConfig'
-import ProviderBlock from './ProviderBlock'
 import ProviderPage from './ProviderPage'
 import { CONSOLE_TABS, ENROLMENTS, FACTOR_NAME, GRACE_PERIODS, PROVIDERS, REAUTH_INTERVALS, RISK_RULES, SESSION_LIFETIMES, runProviderTest } from './mfaData'
+
+/* ---------------------------------------------------------------------------
+   The shapes this console holds its space with.
+
+   A bar carries no text, so it sets no line box of its own. Where the real
+   element takes its height from the type inside it — a figure strip, a factor
+   name — the shape states the line box that type prints, because a strip that
+   comes up short moves every tile under it when the numbers land. Everything
+   else is drawn with the page's own rules, so the padding, the hairlines and
+   the wrap behaviour are the ones that will still be there a frame later.
+   --------------------------------------------------------------------------- */
+
+/* `.stat-k` is --t-xs; `.stat-v` is 1.125rem on the inherited line height. */
+const LINE_XS = 'calc(var(--t-xs) * var(--t-xs-lh))'
+const LINE_STAT = 'calc(1.125rem * var(--t-body-lh))'
+/* `.mfa-tile-name` is body type on a 1.3 line. */
+const LINE_TILE_NAME = 'calc(var(--t-body) * 1.3)'
+
+const bar = { display: 'block' }
+
+/* The joined figure strip both tabs open with — the real `.stat-strip` rule,
+   so the cell dividers and the wrap at narrow widths are the real ones. */
+function SkeletonStatStrip({ cells = 4 }) {
+  return (
+    <div className="stat-strip" aria-hidden="true">
+      {Array.from({ length: cells }, (_, i) => (
+        <div className="stat-cell" key={i}>
+          <span className="stat-k" style={{ minHeight: LINE_XS }}>
+            <span className="skel" style={{ ...bar, width: 84 + (i % 3) * 20, height: 8 }} />
+          </span>
+          <span className="stat-v" style={{ minHeight: LINE_STAT, display: 'flex', alignItems: 'center' }}>
+            <span className="skel" style={{ ...bar, width: 48, height: 15 }} />
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * One factor tile.
+ *
+ * `.mfa-tile-sub` already carries a 2.9em floor for the description, so two
+ * lines of bars sit inside the height the real copy will take rather than
+ * setting a shorter one. The footer states a small button's height because the
+ * grid stretches every tile to the tallest in its row, and the tallest is the
+ * one carrying a Configure button — a footer drawn to the caption alone would
+ * let the whole row grow when it lands. Everything on this page is
+ * `border-box`, and `.mfa-tile-foot` spends 10px of padding and a 1px hairline
+ * before its content starts, so the button's height is stated on top of those
+ * rather than as the whole box — otherwise the shape is 11px short of the
+ * footer it is holding space for.
+ */
+const FOOT_MIN = 'calc(1.625rem + 10px + 1px)'
+
+function SkeletonMethodTile() {
+  return (
+    <div className="mfa-tile" aria-hidden="true">
+      <div className="mfa-tile-top">
+        {/* Sized here rather than by borrowing `.mfa-tile-ic`: that rule is
+            paired with `.feed-ic`, which sets a background `.skel` would then
+            be fighting for the shimmer. */}
+        <span className="skel" style={{ ...bar, width: 32, height: 32, borderRadius: 'var(--r-lg)', flex: 'none' }} />
+        <span className="mfa-tile-badges">
+          <span className="skel skel-chip" style={{ ...bar, width: 104 }} />
+        </span>
+      </div>
+      <div className="mfa-tile-name" style={{ minHeight: LINE_TILE_NAME, display: 'flex', alignItems: 'center' }}>
+        <span className="skel" style={{ ...bar, width: '62%', height: 11 }} />
+      </div>
+      <div className="mfa-tile-sub"><SkeletonText lines={2} /></div>
+      <div className="mfa-tile-meter">
+        <div className="row-between" style={{ minHeight: LINE_XS }}>
+          <span className="skel" style={{ ...bar, width: 76, height: 8 }} />
+          <span className="skel" style={{ ...bar, width: 32, height: 8 }} />
+        </div>
+        <span className="skel" style={{ ...bar, width: '100%', height: 5, borderRadius: 'var(--r-pill)' }} />
+      </div>
+      <div className="mfa-tile-foot" style={{ minHeight: FOOT_MIN }}>
+        <span className="skel" style={{ ...bar, width: 96, height: 8 }} />
+      </div>
+    </div>
+  )
+}
+
+/* One entry of the change log — `.tl` geometry, so the rail and the dots are
+   drawn by the real rule rather than approximated with boxes. */
+function SkeletonTimeline({ rows = 6 }) {
+  return (
+    <div className="tl" aria-hidden="true">
+      {Array.from({ length: rows }, (_, i) => (
+        <div className="tl-it" key={i}>
+          <span className="tl-dot" />
+          <div className="tl-t" style={{ minHeight: LINE_XS }}>
+            <span className="skel" style={{ ...bar, width: '38%', height: 10 }} />
+          </div>
+          {/* `.tl-s` and `.tl-time` carry their own top margins, so only the
+              line box is stated here — setting the margin again would move the
+              entry away from where the real one sits. */}
+          <div className="tl-s" style={{ minHeight: LINE_XS }}>
+            <span className="skel" style={{ ...bar, width: '56%', height: 8 }} />
+          </div>
+          <div className="tl-time" style={{ minHeight: LINE_XS }}>
+            <span className="skel" style={{ ...bar, width: 168, height: 7 }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * The panel under the tab bar, while it settles.
+ *
+ * Each tab is a different shape, so each gets its own: the factor grid with a
+ * tile per method, the change log's entries, or the enrollment figures. The
+ * enrollment register is not drawn here — `DataWorkbench` holds its own body,
+ * and it is handed the same flag.
+ */
+/* Said in the words the tab bar uses, so the announcement names the thing the
+   operator has just clicked on. */
+const PANEL_LABEL = {
+  factors: 'Loading the factor list',
+  enrollment: 'Loading factor enrollment',
+  events: 'Loading recent factor events',
+}
+
+function PanelSkeleton({ tab, methods }) {
+  if (tab === 'events') {
+    return <SkeletonCard><SkeletonTimeline rows={6} /></SkeletonCard>
+  }
+  if (tab === 'enrollment') {
+    return (
+      <>
+        <SkeletonStatStrip cells={4} />
+        <SkeletonStats count={4} />
+      </>
+    )
+  }
+  return (
+    <>
+      <SkeletonStatStrip cells={5} />
+      {/* The sentence under the strip, which is one line of body type. */}
+      <SkeletonLine width="46%" height={9} />
+      <div className="mfa-tilegrid">
+        {methods.map((m) => <SkeletonMethodTile key={m.id} />)}
+      </div>
+    </>
+  )
+}
 
 export default function AuthenticationPage({ segments = [] }) {
   const { toast, confirm, navigate, setDrawer } = useApp()
@@ -200,6 +350,45 @@ export default function AuthenticationPage({ segments = [] }) {
   // The bare route answers one question — is a second factor required — and the
   // deeper console (factors, providers, policy, enrolment) sits behind it.
   const enforcementOnly = segments.length === 0
+  const providerSegment = segments[0] === 'providers' ? segments[1] : null
+
+  const tab = CONSOLE_TABS.includes(segments[0]) ? segments[0] : 'factors'
+  /* Which screen this module is showing, not which tab it would show if it were
+     showing the console. `tab` alone cannot say: every segment that is not a
+     console tab falls back to 'factors', so the bare enforcement route, the
+     factors tab and a provider page all read as the same value. */
+  const screen = providerSegment
+    ? `p:${providerSegment}`
+    : enforcementOnly ? 'enforcement' : tab
+  /* One flag for the whole screen, keyed on the screen: the console settles on
+     arrival and again when the panel under the tab bar changes, which is the
+     round trip a real deployment would make. Every route this component owns
+     reads the same flag — the enforcement screen is handed it rather than
+     starting a second timer, because a page whose halves settle on their own
+     clocks arrives in pieces. `App` keys its route boundary on the module id,
+     which is 'mfa' for all of these, so this component is never remounted
+     between them and the key is the only thing that can restart the wait. */
+  const loading = useLoading(screen)
+  /* The masthead is drawn once per masthead. A tab change settles the panel
+     below it, but the crumbs, the title and the tab bar are the chrome the
+     operator has just clicked on — blanking those would take away the control
+     they used and put it back a moment later. So the header is held on arrival
+     only, and arrival is a fact about a masthead rather than about this
+     component: enforcement and the console are two pages sharing one module,
+     with different titles, different crumbs and different actions, so one that
+     has landed is not the other. The console's three tabs share theirs, which
+     is why the surface is coarser than the settle key above. Adjusted during
+     render rather than from an effect, so the effect below cannot read a stale
+     `arrived` and hand the next page a settled one. */
+  const surface = enforcementOnly ? 'enforcement' : 'console'
+  const [arrived, setArrived] = useState(false)
+  const [arrivedOn, setArrivedOn] = useState(surface)
+  if (arrivedOn !== surface) {
+    setArrivedOn(surface)
+    setArrived(false)
+  }
+  useEffect(() => { if (!loading) setArrived(true) }, [loading])
+  const settling = loading && !arrived
 
   const providersDirty = useMemo(
     () => PROVIDERS.some((p) => fieldsOf(p).some((f) => config[p.id][f.key] !== saved[p.id][f.key])),
@@ -279,8 +468,6 @@ export default function AuthenticationPage({ segments = [] }) {
     onConfirm: () => { resetFactors(ids, 'An enrollment link has been mailed.'); if (clear) clear() },
   })
 
-  const providerSegment = segments[0] === 'providers' ? segments[1] : null
-
   if (providerSegment) {
     const provider = PROVIDERS.find((p) => p.id === providerSegment)
     if (!provider) {
@@ -301,11 +488,18 @@ export default function AuthenticationPage({ segments = [] }) {
       )
     }
     const dirty = fieldsOf(provider).some((f) => config[provider.id][f.key] !== saved[provider.id][f.key])
+    /* Delivery health reads every other provider, not just this one, and a
+       factor's enabled state lives up here on `methods` rather than on the
+       provider record. Without the whole map the health tab reads every other
+       provider as withdrawn from enrollment and reports "all healthy" whatever
+       the figures say, which is the one answer that screen must never give. */
+    const factorEnabled = Object.fromEntries(PROVIDERS.map((x) => [x.id, isEnabled(x)]))
     return (
       <ProviderPage
         provider={provider}
         values={config[provider.id]}
         enabled={isEnabled(provider)}
+        factorEnabled={factorEnabled}
         dirty={dirty}
         result={results[provider.id]}
         onChange={(k, v) => setValue(provider.id, k, v)}
@@ -317,9 +511,8 @@ export default function AuthenticationPage({ segments = [] }) {
     )
   }
 
-  if (enforcementOnly) return <MfaEnforcement methods={methods} />
+  if (enforcementOnly) return <MfaEnforcement methods={methods} loading={settling} />
 
-  const tab = CONSOLE_TABS.includes(segments[0]) ? segments[0] : 'factors'
   const goTab = (id) => navigate(`${BASE_PATH}/${id}`)
 
   const enrolStats = {
@@ -407,17 +600,25 @@ export default function AuthenticationPage({ segments = [] }) {
 
   return (
     <>
-      <PageBar
-        title="MFA Configuration"
-        sub="Which factors identities may enrol, how each provider is configured, how long a session survives, and when the platform demands another challenge."
-        crumbs={[{ label: 'Core' }, { label: 'Multi-Factor Authentication' }]}
-        badge={<Pill tone={phishingPct >= 70 ? 'ok' : 'warn'} dot>{pct(phishingPct)} phishing-resistant</Pill>}
-        /* "Publish changes" published the provider and policy drafts, and both
-           are gone. Every control left on this page writes when it is used. */
-        actions={
-          <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Factor enrollment report is being generated.')}>Enrollment report</Button>
-        }
-      />
+      {/* The masthead is held on the first arrival only. A tab change settles
+          the panel below, but the crumbs and the title did not change and
+          blanking them would make the whole page flash for a switch that moved
+          one region. */}
+      {settling && <SkeletonPageBar actions={1} crumbs={2} />}
+
+      {!settling && (
+        <PageBar
+          title="MFA Configuration"
+          sub="Which factors identities may enrol, how each provider is configured, how long a session survives, and when the platform demands another challenge."
+          crumbs={[{ label: 'Core' }, { label: 'Multi-Factor Authentication' }]}
+          badge={<Pill tone={phishingPct >= 70 ? 'ok' : 'warn'} dot>{pct(phishingPct)} phishing-resistant</Pill>}
+          /* "Publish changes" published the provider and policy drafts, and both
+             are gone. Every control left on this page writes when it is used. */
+          actions={
+            <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Factor enrollment report is being generated.')}>Enrollment report</Button>
+          }
+        />
+      )}
 
       <div className="stack">
         <Tabs
@@ -430,7 +631,18 @@ export default function AuthenticationPage({ segments = [] }) {
           ]}
         />
 
-        {tab === 'factors' && (
+        {/* The tab bar above is chrome and stays; what settles is the panel it
+            switches. One announcing region for the swap — every shape inside
+            it, and the register's own body below, is decoration. */}
+        {loading && (
+          <Skeleton label={PANEL_LABEL[tab]}>
+            <div className="stack">
+              <PanelSkeleton tab={tab} methods={methods} />
+            </div>
+          </Skeleton>
+        )}
+
+        {!loading && tab === 'factors' && (
           <>
             <div className="stat-strip">
               <div className="stat-cell" data-nav="true" onClick={() => navigate('/iam/users')}>
@@ -525,7 +737,7 @@ export default function AuthenticationPage({ segments = [] }) {
         {/* Recent activity was the tail of the Factors tab, which made a
             page about eight factors run for two screens. It is its own tab
             now, beside Factors and Enrollment. */}
-        {tab === 'events' && (
+        {!loading && tab === 'events' && (
           <Card
             title="Recent factor events"
             sub="Authentication-category entries from the control-plane log"
@@ -568,38 +780,47 @@ export default function AuthenticationPage({ segments = [] }) {
 
         {tab === 'enrollment' && (
           <>
-            <div className="stat-strip">
-              <div className="stat-cell">
-                <span className="stat-k"><Icon name="users" size={12} />Enrolled</span>
-                <span className="stat-v">{num(enrolStats.enrolled)}</span>
-              </div>
-              <div className="stat-cell">
-                <span className="stat-k"><Icon name="key" size={12} />Hold a passkey</span>
-                <span className="stat-v">{num(enrolStats.passkey)}</span>
-              </div>
-              <div className="stat-cell">
-                <span className="stat-k"><Icon name="sms" size={12} />SMS without a passkey</span>
-                <span className="stat-v">{num(enrolStats.smsOnly)}</span>
-              </div>
-              <div className="stat-cell">
-                <span className="stat-k"><Icon name="warn" size={12} />Not enrolled</span>
-                <span className="stat-v" style={{ color: enrolStats.none > 0 ? 'var(--warn)' : undefined }}>{num(enrolStats.none)}</span>
-              </div>
-            </div>
+            {/* The figures above the register are held, but the register keeps
+                its toolbar, its search and its pager and settles its own body:
+                the controls an operator reaches for should not vanish and come
+                back a moment later. */}
+            {!loading && (
+              <>
+                <div className="stat-strip">
+                  <div className="stat-cell">
+                    <span className="stat-k"><Icon name="users" size={12} />Enrolled</span>
+                    <span className="stat-v">{num(enrolStats.enrolled)}</span>
+                  </div>
+                  <div className="stat-cell">
+                    <span className="stat-k"><Icon name="key" size={12} />Hold a passkey</span>
+                    <span className="stat-v">{num(enrolStats.passkey)}</span>
+                  </div>
+                  <div className="stat-cell">
+                    <span className="stat-k"><Icon name="sms" size={12} />SMS without a passkey</span>
+                    <span className="stat-v">{num(enrolStats.smsOnly)}</span>
+                  </div>
+                  <div className="stat-cell">
+                    <span className="stat-k"><Icon name="warn" size={12} />Not enrolled</span>
+                    <span className="stat-v" style={{ color: enrolStats.none > 0 ? 'var(--warn)' : undefined }}>{num(enrolStats.none)}</span>
+                  </div>
+                </div>
 
-            <StatCards
-              items={[
-                { key: 'enrolled', icon: 'users', label: 'Enrolled identities', value: DIRECTORY, chip: `${enabled.length} of ${methods.length} factors on`, sub: 'holding at least one factor' },
-                { key: 'strong', icon: 'shield', label: 'Strong factor', value: resistantEnrolled, chip: 'phishing-resistant', chipTone: 'ok', sub: 'passkey or hardware token' },
-                { key: 'gaps', icon: 'warn', label: 'Without a strong factor', value: gaps, chip: gaps ? 'weaker methods only' : 'none', chipTone: gaps ? 'warn' : undefined, sub: 'code or push only' },
-                { key: 'providers', icon: 'sliders', label: 'Providers', value: PROVIDERS.length, chip: 'configured', sub: 'delivering the factors' },
-              ]}
-              label="Authentication summary"
-            />
+                <StatCards
+                  items={[
+                    { key: 'enrolled', icon: 'users', label: 'Enrolled identities', value: DIRECTORY, chip: `${enabled.length} of ${methods.length} factors on`, sub: 'holding at least one factor' },
+                    { key: 'strong', icon: 'shield', label: 'Strong factor', value: resistantEnrolled, chip: 'phishing-resistant', chipTone: 'ok', sub: 'passkey or hardware token' },
+                    { key: 'gaps', icon: 'warn', label: 'Without a strong factor', value: gaps, chip: gaps ? 'weaker methods only' : 'none', chipTone: gaps ? 'warn' : undefined, sub: 'code or push only' },
+                    { key: 'providers', icon: 'sliders', label: 'Providers', value: PROVIDERS.length, chip: 'configured', sub: 'delivering the factors' },
+                  ]}
+                  label="Authentication summary"
+                />
+              </>
+            )}
 
             <DataWorkbench
               id="mfa-enrollment"
               rows={enrollments}
+              loading={loading}
               columns={enrolColumns}
               selectable
               searchPlaceholder="Search by username, email or organization…"

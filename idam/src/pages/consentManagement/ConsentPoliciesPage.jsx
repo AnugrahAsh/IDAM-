@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import Button from '../../components/primitives/Button'
 import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
@@ -77,7 +78,10 @@ const INITIAL_POLICIES = [
 
 const TODAY = '2026-08-05'
 
-export default function ConsentPoliciesPage({ embedded }) {
+/* `loading` is Consent Management's flag: this register is reached from the
+   Consents tab, which is a route away, so it is held with the masthead it
+   arrives under rather than settling on a timer of its own. */
+export default function ConsentPoliciesPage({ embedded, loading = false }) {
   const { toast, confirm, setDrawer } = useApp()
   const [rows, setRows] = useState(INITIAL_POLICIES)
 
@@ -256,7 +260,13 @@ export default function ConsentPoliciesPage({ embedded }) {
 
   return (
     <div className="consent-policies-page">
-      {!embedded && (
+      {!embedded && loading && (
+        <Skeleton label="Loading the assignment rules">
+          <SkeletonPageBar actions={1} crumbs={2} />
+        </Skeleton>
+      )}
+
+      {!embedded && !loading && (
         <PageBar
           title="Assignment Rules"
           sub="Rules that decide which consent is presented, to whom, and when it must be captured again."
@@ -265,6 +275,7 @@ export default function ConsentPoliciesPage({ embedded }) {
         />
       )}
 
+      {loading ? <SkeletonStats count={4} /> : (
       <StatCards
         label="Assignment rule summary"
         items={[
@@ -274,9 +285,11 @@ export default function ConsentPoliciesPage({ embedded }) {
           { key: 'uncovered', icon: 'ban', label: 'Reached by nothing', value: stats.uncovered, chip: stats.uncovered ? 'no consent captured' : 'none', chipTone: stats.uncovered ? 'warn' : undefined, sub: 'no active rule matches' },
         ]}
       />
+      )}
 
       <DataWorkbench
         id="consent-policies"
+        loading={loading}
         toolbar={embedded
           ? <Button size="sm" variant="pri" icon="plus" onClick={() => openEditor(null)}>Add rule</Button>
           : undefined}

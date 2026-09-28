@@ -5,7 +5,6 @@ import Icon from '../../components/primitives/Icon'
 import { useApp } from '../../store/AppContext'
 import { ME } from '../../data/seed'
 import { stampText } from '../../lib/clock'
-import wordmarkDark from '../../assets/tanflow-wordmark-dark.png'
 import wordmarkWhite from '../../assets/tanflow-wordmark-white.png'
 import ConsentDocument from './ConsentDocument'
 import {
@@ -24,9 +23,13 @@ import './ConsentGate.css'
  * Declining is a real answer rather than a dead end. The reference simply
  * dropped the visitor; this says what declining costs and offers the one action
  * that follows from it.
+ *
+ * It is built on the same Tanflow field the sign-in screen stands on, because
+ * it is the screen immediately after it and the person has not yet seen
+ * anything else of the console.
  */
 export default function ConsentGatePage({ onAccept }) {
-  const { theme, signOut, toast } = useApp()
+  const { signOut, toast } = useApp()
   const doc = GATE_DOCUMENT
   const [lang, setLang] = useState(doc.defaultLang)
   const [accepted, setAccepted] = useState(false)
@@ -64,11 +67,19 @@ export default function ConsentGatePage({ onAccept }) {
 
   return (
     <div className="cg-page">
+      {/* The lockup the sign-in screen opens with: the wordmark on the field,
+          the descriptor beside it, then what this particular screen is. The
+          field is dark in both themes, so the mark is the white one in both. */}
       <header className="cg-top">
-        <img src={theme === 'dark' ? wordmarkWhite : wordmarkDark} alt="Tanflow" className="cg-logo" />
+        <span className="cg-lockup">
+          <img src={wordmarkWhite} alt="Tanflow" className="cg-logo" />
+          <span className="cg-descriptor">Identity &amp; access management</span>
+        </span>
         <span className="cg-top-sep" aria-hidden="true" />
-        <span className="t-sm t-mut">Consent required</span>
-        <span className="spacer" />
+        <span className="cg-context">
+          <Icon name="consent" size={13} />
+          Consent required
+        </span>
         <span className="cg-who">
           <Icon name="user" size={13} />
           <span className="cg-who-t">{ME.firstName} {ME.lastName} · <span className="mono">{ME.username}</span></span>

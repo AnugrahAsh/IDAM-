@@ -58,6 +58,11 @@ export default function ServiceConfigPanel({ code, config, onChange }) {
                     key={f.key}
                     field={f}
                     value={config[f.key]}
+                    /* A field that previews what it will produce reads its
+                       siblings — the campaign name needs the period beside it —
+                       so the whole configuration is handed down rather than
+                       only the one value. */
+                    config={config}
                     onChange={(v) => set(f.key, v)}
                   />
                 ))}

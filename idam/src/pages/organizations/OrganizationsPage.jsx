@@ -16,6 +16,8 @@ import StatCards from '../../components/workbench/StatCards'
 import RecordCard, { CardIcon } from '../../components/workbench/RecordCard'
 import Tag from '../../components/primitives/Tag'
 import { useLocalState } from '../../lib/useLocalState'
+import { useLoading } from '../../lib/useLoading'
+import { OrgFormSkeleton, OrgListSkeleton } from './OrganizationsSkeleton'
 
 function NotFound({ id, onBack }) {
   return (
@@ -43,6 +45,10 @@ const FACETS = {
 
 function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
   const [facet, setFacet] = useState('all')
+  /* One flag for the screen: the masthead, the five posture figures and the
+     rows settle together. Changing the facet does not settle again — filtering
+     a register you can already see is not a round trip. */
+  const loading = useLoading()
 
   const visible = useMemo(() => rows.filter(FACETS[facet] || FACETS.all), [rows, facet])
 
@@ -152,29 +158,36 @@ function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
 
   return (
     <>
-      <PageBar
-        title="Organizations"
-        crumbs={[{ label: 'Organizations' }]}
-        sub="The tenant scoping boundary. Organizations determine password policy, delegated administration and which provisioning targets an identity reaches."
-        actions={(
-          <>
-            <Button icon="hierarchy" onClick={() => navigate('/iam/organizationHierarchy')}>View hierarchy</Button>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Organization structure export is being generated.')}>Export</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate('/iam/organizations/add')}>Add Organization</Button>
-          </>
-        )}
-      />
+      {/* One announcing region for the screen. The register below draws its own
+          rows from `loading`, and those shapes are decoration. */}
+      {loading ? <OrgListSkeleton /> : (
+        <>
+          <PageBar
+            title="Organizations"
+            crumbs={[{ label: 'Organizations' }]}
+            sub="The tenant scoping boundary. Organizations determine password policy, delegated administration and which provisioning targets an identity reaches."
+            actions={(
+              <>
+                <Button icon="hierarchy" onClick={() => navigate('/iam/organizationHierarchy')}>View hierarchy</Button>
+                <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Organization structure export is being generated.')}>Export</Button>
+                <Button variant="pri" icon="plus" onClick={() => navigate('/iam/organizations/add')}>Add Organization</Button>
+              </>
+            )}
+          />
 
-      <StatCards
-        items={cards}
-        value={facet}
-        onChange={(id) => setFacet(id === facet && id !== 'all' ? 'all' : id)}
-        label="Filter the organization structure"
-      />
+          <StatCards
+            items={cards}
+            value={facet}
+            onChange={(id) => setFacet(id === facet && id !== 'all' ? 'all' : id)}
+            label="Filter the organization structure"
+          />
+        </>
+      )}
 
       <DataWorkbench
         id="organizations"
         rows={visible}
+        loading={loading}
         columns={columns}
         selectable
         searchPlaceholder="Search by organization, parent or code…"
@@ -188,6 +201,19 @@ function OrgList({ rows, stats, onPatch, onDelete, onBulkDelete }) {
       />
     </>
   )
+}
+
+/**
+ * The editor, waiting on the record it edits.
+ *
+ * Only the edit address settles. Creating an organization has nothing to
+ * fetch, so a skeleton over an empty form would be a wait invented for its
+ * own sake rather than one standing in for a round trip.
+ */
+function OrgEdit({ org, orgs, onSave, onCancel }) {
+  const loading = useLoading(org.id)
+  if (loading) return <OrgFormSkeleton />
+  return <OrgForm key={org.id} org={org} orgs={orgs} onSave={onSave} onCancel={onCancel} />
 }
 
 export default function OrganizationsPage({ segments = [] }) {
@@ -284,7 +310,7 @@ export default function OrganizationsPage({ segments = [] }) {
     if (!org) return <NotFound id={mode} onBack={() => navigate('/iam/organizations')} />
     if (segments[1] === 'edit') {
       return (
-        <OrgForm
+        <OrgEdit
           key={org.id}
           org={org}
           orgs={rows}

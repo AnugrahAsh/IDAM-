@@ -7,7 +7,9 @@ import { useLocalState } from '../../lib/useLocalState'
 import { serialColumn } from '../../lib/format'
 import Button from '../../components/primitives/Button'
 import KeyValue from '../../components/primitives/KeyValue'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { markRead, markUnread, useRead } from './readStore'
 import { inboxRows } from './inboxModel'
 import { usePublishedAnnouncements } from './announcementStore'
@@ -36,6 +38,10 @@ export default function NotificationInbox() {
   // genuinely the notification center rather than a second, stale list.
   const announcements = usePublishedAnnouncements()
   const mayManage = can(NOTIFICATION_MODULE, WRITE_ANNOUNCEMENT)
+  /* One settle for the inbox: the masthead, the tiles and the rows are the same
+     arrival. Choosing a severity is not — the rows are already here and the
+     filter runs over them. */
+  const loading = useLoading()
 
   // Read state is applied before anything is counted, so the tile, the filter
   // and the navigation badge can never disagree about what is still unread.
@@ -137,39 +143,51 @@ export default function NotificationInbox() {
 
   return (
     <>
-      <PageBar
-        title="Notification Center"
-        crumbs={[{ label: 'Notification Center' }]}
-        sub="Everything the platform has published to you — governance deadlines, operational failures and security events."
-        actions={
-          <>
-            <Button icon="checkC" disabled={stats.unread === 0} onClick={markAllRead}>
-              Mark all read{stats.unread ? ` (${stats.unread})` : ''}
-            </Button>
-            {/* Authoring lives inside this page rather than beside it in the
-                navigation, and only for identities whose role may author. */}
-            {mayManage && (
-              <Button variant="pri" icon="sliders" onClick={() => navigate(MANAGE_PATH)}>Manage</Button>
-            )}
-          </>
-        }
-      />
-      <StatCards
-        items={[
-          { id: 'all', icon: 'bell', label: 'Notifications', value: stats.total, chip: `${stats.unread} unread`, sub: 'published to you', hint: 'Everything the platform has raised' },
-          { id: 'unread', icon: 'info', label: 'Unread', value: stats.unread, chip: stats.unread ? 'not yet opened' : 'all read', chipTone: stats.unread ? 'warn' : 'ok', sub: 'waiting to be read', hint: 'Notifications you have not opened' },
-          { id: 'critical', icon: 'warn', label: 'Critical', value: stats.critical, chip: stats.critical ? 'act now' : 'none', chipTone: stats.critical ? 'bad' : undefined, sub: 'highest severity', hint: 'Critical severity notifications' },
-          { id: 'high', icon: 'activity', label: 'High', value: stats.high, chip: 'review today', chipTone: stats.high ? 'warn' : undefined, sub: 'raised for attention', hint: 'High severity notifications' },
-        ]}
-        value={sev}
-        onChange={(id) => setSev(id === sev && id !== 'all' ? 'all' : id)}
-        label="Filter notifications"
-      />
+      {/* One announcing region for the inbox. The register below keeps its own
+          panel, toolbar and filter strip while the rows settle inside it. */}
+      {loading ? (
+        <Skeleton label="Loading your notifications">
+          <SkeletonPageBar actions={mayManage ? 2 : 1} crumbs={1} />
+          <SkeletonStats count={4} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Notification Center"
+            crumbs={[{ label: 'Notification Center' }]}
+            sub="Everything the platform has published to you — governance deadlines, operational failures and security events."
+            actions={
+              <>
+                <Button icon="checkC" disabled={stats.unread === 0} onClick={markAllRead}>
+                  Mark all read{stats.unread ? ` (${stats.unread})` : ''}
+                </Button>
+                {/* Authoring lives inside this page rather than beside it in the
+                    navigation, and only for identities whose role may author. */}
+                {mayManage && (
+                  <Button variant="pri" icon="sliders" onClick={() => navigate(MANAGE_PATH)}>Manage</Button>
+                )}
+              </>
+            }
+          />
+          <StatCards
+            items={[
+              { id: 'all', icon: 'bell', label: 'Notifications', value: stats.total, chip: `${stats.unread} unread`, sub: 'published to you', hint: 'Everything the platform has raised' },
+              { id: 'unread', icon: 'info', label: 'Unread', value: stats.unread, chip: stats.unread ? 'not yet opened' : 'all read', chipTone: stats.unread ? 'warn' : 'ok', sub: 'waiting to be read', hint: 'Notifications you have not opened' },
+              { id: 'critical', icon: 'warn', label: 'Critical', value: stats.critical, chip: stats.critical ? 'act now' : 'none', chipTone: stats.critical ? 'bad' : undefined, sub: 'highest severity', hint: 'Critical severity notifications' },
+              { id: 'high', icon: 'activity', label: 'High', value: stats.high, chip: 'review today', chipTone: stats.high ? 'warn' : undefined, sub: 'raised for attention', hint: 'High severity notifications' },
+            ]}
+            value={sev}
+            onChange={(id) => setSev(id === sev && id !== 'all' ? 'all' : id)}
+            label="Filter notifications"
+          />
+        </>
+      )}
 
       <DataWorkbench
         id="notifications"
         rows={rows}
         columns={columns}
+        loading={loading}
         /* Table and Grouped only. A notification is a title, a severity and a
            line of body text — a card gave that a whole tile and turned a
            thirteen-row inbox into three screens of scrolling. */

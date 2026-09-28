@@ -2,3 +2,38 @@
 
 /* Header facts are information, not controls. */
 .sso-fact{display:inline-flex;align-items:center;gap:5px}
+
+/* --- Settling ---------------------------------------------------------------
+
+   Shapes the shared kit has no member for, because they are particular to this
+   screen: the masthead's rail of facts, the switch rows in the method card,
+   and the certificate box. Each is drawn at the size the real rule gives it —
+   .pagebar-rail, .tag, .switch, .pill — so the configuration lands in the space
+   its skeleton was holding instead of stepping the page down on arrival. */
+
+/* The rail is a row of its own below the title, so the shared masthead shape
+   hands its bottom padding over and the rail carries it instead. */
+.sso-skel .skel-pagebar{padding-bottom:0}
+.sso-skel-rail{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+  padding:7px var(--canvas-px) 16px;margin:0 calc(var(--canvas-px) * -1)}
+.sso-skel-rail > .skel{height:1.1875rem;border-radius:var(--r-xs)}
+
+.sso-skel-body{display:flex;flex-direction:column;gap:10px}
+.sso-skel-body > div{display:flex;align-items:center;gap:var(--sp-2);min-width:0}
+/* The first switch sits further from the pill above it than the switches do
+   from one another — 16px against 10px, as the real card does. */
+.sso-skel-body > div:nth-child(2){margin-top:6px}
+.sso-skel-pill{width:132px;height:1.25rem;border-radius:var(--r-xs)}
+.sso-skel-sw{width:32px;height:19px;border-radius:var(--r-pill)}
+
+.sso-skel-cert{display:flex;flex-direction:column;gap:7px;margin-top:var(--sp-4)}
+/* The PEM textarea carries min-height:190px on the real field. */
+.sso-skel-pem{height:190px;border-radius:var(--r-sm)}
+
+/* The canvas narrows its gutter at the width the navigation goes off-canvas,
+   and the real masthead follows it there. The rail has to follow too, or it
+   would sit a few pixels wider than the bar it belongs to. */
+@media(max-width:960px){
+  .sso-skel-rail{padding-left:var(--sp-4);padding-right:var(--sp-4);
+    margin:0 calc(var(--sp-4) * -1)}
+}

@@ -75,3 +75,51 @@
    two-line identifier cell — so that cell drops the vertical padding it uses
    for the label-and-sub pair and centres the control instead. */
 .map-tbl.trust-map td.td-main{vertical-align:middle}
+
+/* --- Settling ----------------------------------------------------------------
+   A record masthead greys in place rather than being swapped for the kit's
+   imitation of one. The crumb row, the gutters, the gaps and the tab strip are
+   then `DetailHeader`'s own and cannot drift from it, and the source or the run
+   lands in exactly the box that was holding it.
+
+   What is left is the bars that stand in for type, and each one has to state
+   the line box the type it replaces prints at — a bar carries no text to set
+   one, so a masthead built from bars alone comes up short and steps the whole
+   record up when the name arrives. The sizes below are `.detail-title`,
+   `.detail-sub`, `.detail-fact` and the 56px mark both records pass. */
+.tr-skel-title{display:block;width:min(18rem,36%);height:calc(1.375rem * 1.24);
+  border-radius:var(--r-sm)}
+.tr-skel-media{display:block;width:56px;height:56px;border-radius:var(--r-lg)}
+.tr-skel-fact{display:inline-flex;align-items:center;min-width:0;
+  min-height:calc(var(--t-xs) * var(--t-xs-lh))}
+
+/* The sub is a paragraph, not a line. `.detail-sub` is capped at 100ch and both
+   subs this module prints run past one line of that: the source's standing
+   explanation of what a trust source is, and the run's account of what was read
+   and what it was correlated against. Both wrap to two. A single bar held one
+   line box, so the tab strip and every panel under it stepped down the height of
+   the second line the moment the sentence landed — the jump this whole exercise
+   exists to remove. One bar per line box holds what the paragraph occupies, and
+   the last is short so the block reads as prose rather than as a form. */
+.tr-skel-sub{display:flex;flex-direction:column;width:min(46rem,80%)}
+.tr-skel-sub > .skel{display:block;height:9px;
+  margin:calc((var(--t-sm) * 1.45 - 9px) / 2) 0}
+.tr-skel-sub > .skel:last-child{width:88%}
+
+/* A figure tile holding its place keeps `.stat-cell` — the padding, the border
+   and the radius are the real rule's. All this adds is that a shape holding
+   space is not a control and should not light up under the pointer. */
+.tr-skel-cell:hover{border-color:var(--line)}
+
+/* A panel shape standing in for a `Card … flush`. `.skel-card-b` pads its body
+   the way `.card-b` does, which is right for a body of prose or fields and wrong
+   for one whose body is a table or a list: `.card-b.flush` drops that padding,
+   and `SkeletonTable`/`SkeletonList` carry the row gutters themselves. Without
+   this the shape stands 32px taller than the card it holds space for and insets
+   its rows by a second gutter. */
+.tr-skel-flush > .skel-card-b{padding:0}
+
+/* The control inside a `Field` row holding its place. `.sel` and `.inp` are both
+   31px, which is 1px off the kit's `.skel-input` — small, but it is stated here
+   rather than guessed because the match-key block prints two of them. */
+.tr-skel-input{display:block;height:31px;border-radius:var(--r-sm)}

@@ -9,7 +9,10 @@ import Pill from '../../components/primitives/Pill'
 import Tabs from '../../components/primitives/Tabs'
 import Tag from '../../components/primitives/Tag'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
+import { Skeleton } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
+import { SourcePanelSkeleton } from './ReconciliationSkeleton'
 import { duration, num, statusTone } from '../../lib/format'
 import { since } from '../../lib/clock'
 import { brandForConnector } from '../shared/provisioning/shared'
@@ -25,6 +28,11 @@ import {
 const BASE = '/iam/trustReconciliation'
 
 const runTone = (s) => ({ Succeeded: 'ok', Partial: 'warn', Failed: 'bad', Running: 'info' }[s] || 'mut')
+
+/* The tabs whose panel is cards and fields, and so has a shape of its own to
+   hold while the record settles. User management and Run history are missing on
+   purpose: both are registers and settle their own rows. */
+const PANEL_SHAPES = ['overview', 'connection', 'attributes']
 
 const RUN_COLUMNS = [
   {
@@ -163,49 +171,110 @@ export default function TrustSourceDetail({ source, tab, onTab, onPatch, onDelet
   ]
   const active = tabs.some((t) => t.id === tab) ? tab : 'overview'
 
+  /* One flag for the record, keyed on the source and the tab together, so the
+     record settles as one thing: arriving at a source is a read, and so is
+     opening a different tab, because each tab is a separate read of that source
+     rather than another slice of one already in hand.
+
+     The tab bar is not keyed to it — it is passed to the masthead outside the
+     conditionals below and stays live throughout — because a control that
+     disappears under the pointer that just used it has been taken away
+     mid-gesture. */
+  const loading = useLoading(`${source.id}:${active}`)
+
   return (
     <>
+      {/* The masthead is the real `DetailHeader` while it settles rather than an
+          imitation of one: the crumb row, the gutters, the tab row and every gap
+          between them are the component's own, so the source lands in exactly
+          the box that was holding its place. Only the record's own content
+          greys. */}
       <DetailHeader
         backTo={BASE}
         backLabel="Trust Reconciliation"
         eyebrow="Trust source"
-        title={name}
-        sub="A trust source is a system the platform reads identities out of. Its connector says where the records come from, its attribute configuration says what each record becomes, and user management is where the results are acted on."
-        media={<AppLogo brand={brandForConnector(source.connector)} name={name} size={56} />}
-        badges={
+        title={loading ? <span className="skel tr-skel-title" aria-hidden="true" /> : name}
+        sub={loading
+          ? (
+            /* Two bars, because the sentence below wraps to two lines inside the
+               100ch `.detail-sub` is capped at. One bar held one line and the
+               tab strip stepped down when the sentence landed. */
+            <span className="tr-skel-sub" aria-hidden="true">
+              <span className="skel" />
+              <span className="skel" />
+            </span>
+          )
+          : 'A trust source is a system the platform reads identities out of. Its connector says where the records come from, its attribute configuration says what each record becomes, and user management is where the results are acted on.'}
+        media={loading
+          ? <span className="skel tr-skel-media" aria-hidden="true" />
+          : <AppLogo brand={brandForConnector(source.connector)} name={name} size={56} />}
+        badges={loading ? (
+          <>
+            <span className="skel skel-chip" style={{ width: 66 }} aria-hidden="true" />
+            <span className="skel skel-chip" style={{ width: 92 }} aria-hidden="true" />
+          </>
+        ) : (
           <>
             <Pill tone={statusTone(source.status)} dot>{source.status || 'Draft'}</Pill>
             <Tag tone="acc">{connectorName(source.connector)}</Tag>
             <Tag>{source.application_name || 'unnamed'}</Tag>
           </>
-        }
-        meta={
+        )}
+        meta={loading ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <span className="tr-skel-fact" key={i} aria-hidden="true">
+                <span className="skel" style={{ width: 98 + (i % 3) * 26, height: 9 }} />
+              </span>
+            ))}
+          </>
+        ) : (
           <>
             <Fact icon="swap" label="Connector" value={connectorName(source.connector)} />
             <Fact icon="server" label="Endpoint" value={connectionEndpoint(source.connector, source.connection)} />
             <Fact icon="sliders" label="Attributes" value={(source.mappings || []).length} />
             <Fact icon="clock" label="Last run" value={source.lastRun || 'Never run'} />
           </>
-        }
-        actions={
+        )}
+        actions={loading ? (
+          <>
+            {[0, 1].map((i) => (
+              <span className="skel skel-btn" key={i} style={{ width: 104 - i * 24 }} aria-hidden="true" />
+            ))}
+          </>
+        ) : (
           <>
             <Button icon="refresh" onClick={() => toast('ok', 'Reconciliation queued', `${name} is being read. Results publish when the run completes.`)}>Reconcile now</Button>
             <Button variant="danger" icon="trash" onClick={() => onDelete(source)}>Delete</Button>
           </>
-        }
+        )}
         tabs={<Tabs value={active} onChange={onTab} tabs={tabs} />}
       />
 
       <div className="detail-body">
-        {active === 'overview' && <OverviewTab source={source} onTab={onTab} counts={counts} />}
-        {active === 'connection' && <TrustConnection key={`conn-${source.id}`} source={source} onSave={onPatch} />}
-        {active === 'attributes' && <TrustMapping source={source} onPatch={onPatch} />}
-        {active === 'users' && <TrustUsers key={`users-${source.id}`} source={source} />}
+        {/* The screen's one announcing region, so the record says once that it
+            is on its way. Every shape is decoration — the bars in the masthead
+            above and the rows a register draws for itself below — and the
+            region is rendered even for the two tabs that have no panel shape of
+            their own, because the masthead is still grey while they settle. */}
+        {loading && (
+          <Skeleton label={`Loading ${name}`}>
+            {PANEL_SHAPES.includes(active) ? <SourcePanelSkeleton tab={active} /> : null}
+          </Skeleton>
+        )}
+
+        {!loading && active === 'overview' && <OverviewTab source={source} onTab={onTab} counts={counts} />}
+        {!loading && active === 'connection' && <TrustConnection key={`conn-${source.id}`} source={source} onSave={onPatch} />}
+        {!loading && active === 'attributes' && <TrustMapping source={source} onPatch={onPatch} />}
+        {/* Registers settle their own rows. Handing the flag down leaves the
+            toolbar and the search box alive while the rows arrive. */}
+        {active === 'users' && <TrustUsers key={`users-${source.id}`} source={source} loading={loading} />}
         {active === 'runs' && (
           <DataWorkbench
             id={`trust-runs-${source.id}`}
             rows={runs}
             columns={RUN_COLUMNS}
+            loading={loading}
             searchPlaceholder="Search runs by identifier or outcome…"
             toolbar={<Button size="sm" icon="download" onClick={() => toast('ok', 'Export queued', `${runs.length} runs queued for CSV export.`)}>Export</Button>}
             emptyTitle="No reconciliation runs"

@@ -1,98 +1,416 @@
 /* Page-owned styles for External User Federation. Shared primitives remain in
-   src/styles. */
+   src/styles, and every colour here is a token so the dark theme redeclaring
+   them is the only change dark mode needs. */
 
-/* --- Connector Hub: category rail and connector list -------------------------
-   The same hub shape the report library uses: categories on the left, the
-   connectors under the chosen one on the right. The rail keeps its own height
-   rather than stretching down the list, which left an empty panel beside the
-   lower connectors once the page scrolled. */
-.fed-hub{display:grid;grid-template-columns:16.5rem minmax(0,1fr);gap:var(--sp-4);align-items:start}
+/* --- Field help: the `?` and its tooltip -------------------------------------
+   These three rules dress `Field`'s new `help` prop, so they belong beside the
+   rest of `.field` in styles/components.css and should move there the moment a
+   second page asks for a `?`. They are here because this module is the only
+   caller today and this change is scoped to it; nothing outside this page
+   renders the markup, so nothing outside it can be moved by these rules.
 
-.fed-rail{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-3)}
-.fed-rail-h{display:flex;align-items:center;gap:11px;padding:4px 4px var(--sp-3);border-bottom:1px solid var(--hair)}
-.fed-rail-mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:2.5rem;height:2.5rem;
-  border-radius:var(--r-lg);background:var(--accent-solid);color:#fff;box-shadow:0 4px 10px -4px rgba(15,98,254,.55)}
-.fed-rail-hm{display:flex;flex-direction:column;min-width:0}
-.fed-rail-t{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
-.fed-rail-s{font-size:var(--t-xs);color:var(--mut)}
-.fed-rail-list{display:flex;flex-direction:column;gap:2px}
-.fed-rail-it{display:flex;align-items:center;gap:10px;width:100%;min-width:0;padding:8px 10px;border-radius:var(--r);
-  text-align:left;font-size:var(--t-sm);font-weight:var(--w-med);color:var(--ink-2);cursor:pointer;
-  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
-.fed-rail-it svg{flex:none;color:var(--faint)}
-.fed-rail-it:hover{background:var(--surface-3);color:var(--ink)}
-.fed-rail-it:focus-visible{outline:none;box-shadow:var(--sh-focus)}
-.fed-rail-it[data-on]{background:var(--accent-bg);color:var(--accent-a);font-weight:var(--w-semi)}
-.fed-rail-it[data-on] svg{color:var(--accent-a)}
-.fed-rail-n{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  min-width:1.5rem;height:1.25rem;padding:0 7px;border-radius:var(--r-pill);
-  background:var(--surface-3);color:var(--mut);font-size:var(--t-micro);font-weight:var(--w-bold)}
-.fed-rail-it[data-on] .fed-rail-n{background:var(--accent-solid);color:#fff}
-.fed-rail-note{display:flex;align-items:flex-start;gap:8px;padding:11px 12px;border-radius:var(--r);
-  background:var(--accent-bg);border:1px solid var(--accent-line);font-size:var(--t-xs);line-height:1.5;color:var(--ink-2)}
-.fed-rail-note svg{flex:none;margin-top:2px;color:var(--accent-a)}
-.fed-rail-note .link{display:inline;font-size:inherit}
-
-.fed-main{display:flex;flex-direction:column;min-width:0;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
-.fed-main-h{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;padding:var(--sp-4);border-bottom:1px solid var(--hair)}
-.fed-main-t{flex:1 1 16rem;min-width:0}
-.fed-main-t h2{margin:0;font-size:var(--t-h2);font-weight:var(--w-semi);letter-spacing:var(--t-h2-ls);color:var(--ink)}
-.fed-main-t p{margin:3px 0 0;font-size:var(--t-xs);color:var(--mut)}
-.fed-search{min-width:15rem}
-.fed-search-x{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.25rem;height:1.25rem;
-  border-radius:50%;color:var(--mut);cursor:pointer}
-.fed-search-x:hover{background:var(--surface-3);color:var(--ink)}
-
-.fed-list{list-style:none;margin:0;padding:var(--sp-4);display:flex;flex-direction:column;gap:10px}
-.fed-conn{display:flex;align-items:center;gap:14px;width:100%;min-width:0;padding:13px 16px;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);text-align:left;cursor:pointer;
-  transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease),background var(--dur-1) var(--ease)}
-.fed-conn:hover{border-color:var(--accent-line);background:var(--row-hover);box-shadow:var(--sh-md)}
-.fed-conn:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--sh-focus)}
-.fed-conn-m{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
-.fed-conn-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
-.fed-conn-name{font-size:var(--t-h3);font-weight:var(--w-semi);color:var(--ink)}
-.fed-conn-top .tag{text-transform:uppercase;letter-spacing:.06em;font-size:var(--t-micro);font-weight:var(--w-semi)}
-.fed-conn-desc{font-size:var(--t-sm);line-height:1.45;color:var(--mut)}
-/* "Set up" states what a click does, on the row the pointer or focus is on.
-   A touch screen has no hover, so there it is always shown. */
-.fed-conn-go{display:inline-flex;align-items:center;gap:6px;flex:none;height:2rem;padding:0 13px;border-radius:var(--r);
-  background:var(--accent-solid);color:#fff;font-size:var(--t-sm);font-weight:var(--w-semi);
-  opacity:0;transform:translateX(-4px);transition:opacity var(--dur-1) var(--ease),transform var(--dur-1) var(--ease)}
-.fed-conn:hover .fed-conn-go,.fed-conn:focus-visible .fed-conn-go{opacity:1;transform:none}
-@media(hover:none){.fed-conn-go{opacity:1;transform:none}}
-
-.fed-main-f{display:flex;align-items:center;gap:8px;margin-top:auto;padding:11px var(--sp-4);
-  border-top:1px solid var(--hair);font-size:var(--t-xs);color:var(--mut)}
-.fed-main-f svg{flex:none;color:var(--faint)}
-
-/* --- Setup form -------------------------------------------------------------- */
-/* A value the connector fixes: it reads as a field, with a lock to say why it
-   cannot be edited. */
-.fed-locked{position:relative;display:block}
-.fed-locked .inp{padding-right:30px;background:var(--surface-2);color:var(--ink-2);cursor:default}
-.fed-locked .inp:hover{border-color:var(--line-2)}
-.fed-locked svg{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
-.fed-note{margin-top:var(--sp-3)}
-
-/* --- Narrow ------------------------------------------------------------------ */
-/* The rail becomes a row of category chips above the list; the help note
-   follows the chips. */
-@media(max-width:1080px){
-  .fed-hub{grid-template-columns:minmax(0,1fr)}
-  .fed-rail{padding:8px}
-  .fed-rail-h{display:none}
-  .fed-rail-list{flex-direction:row;overflow-x:auto;gap:6px;scrollbar-width:thin}
-  .fed-rail-it{width:auto;flex:none;white-space:nowrap}
+   The row exists only when a field asks for help — a field without it keeps the
+   bare <label> it has always had, and therefore the layout it has always had. */
+/* --- Provider list ----------------------------------------------------------
+   A provider card is a fixed reading width, not a share of the canvas: the four
+   facts on it are a vendor, a URL and two DNs, and stretching that to a 1600px
+   row puts a label at one edge and its value at the other. `auto-fill` keeps
+   the cards their own size and lets the row hold as many as fit. */
+.fed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
 }
-/* A phone keeps the arrow and drops the label, so every row still says it
-   opens something. */
-@media(max-width:640px){
-  .fed-search{min-width:0;flex:1 1 100%}
-  .fed-list{padding:var(--sp-3)}
-  .fed-conn{padding:12px;gap:12px}
-  .fed-conn-go{width:2rem;padding:0;justify-content:center;background:var(--accent-bg);color:var(--accent-a)}
-  .fed-conn-go-t{display:none}
+
+/* The name is the card's own heading, so it carries the heading's size while
+   keeping the link colour that says it opens something. */
+.fed-card-name {
+  font-size: var(--t-h3);
+  letter-spacing: var(--t-h3-ls);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  text-align: left;
+}
+
+.fed-card-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fed-card-state {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.fed-card-state-t {
+  font-size: var(--t-sm);
+  font-weight: var(--w-med);
+  color: var(--ink-2);
+}
+
+/* The last key/value row would otherwise draw a hairline across the bottom of
+   the card, a second edge one padding step inside the card's own. */
+.fed-card .kv-row:last-child { border-bottom: 0; padding-bottom: 0 }
+
+/* --- The header pair --------------------------------------------------------
+   Two fields at a field's own width, not two cells of the four-column grid the
+   sections use. Stretched across the card they read as the first row of a table
+   that never arrives; at a fixed measure they read as what they are, the two
+   answers the rest of the form is given before it starts. */
+.fed-ident {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 20rem));
+  justify-content: start;
+  gap: var(--sp-4) var(--sp-5);
+}
+
+/* --- The form's top edge ----------------------------------------------------
+   What is left to answer, and one control for six headings. Six sections with
+   four of them closed can hide their own remaining work, and pressing each
+   heading in turn to find it is not a search. */
+.fed-form-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 10px var(--sp-4);
+  border-bottom: 1px solid var(--hair);
+}
+
+.fed-form-p {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  max-width: 24rem;
+}
+
+.fed-form-t {
+  font-size: var(--t-xs);
+  font-weight: var(--w-semi);
+  color: var(--ink-2);
+}
+
+.fed-form-t[data-done] { color: var(--ok) }
+
+/* The readout is capped at a reading width, so the control that opens and
+   closes six headings is pushed to the edge the headings end at rather than
+   left floating beside a half-empty bar. */
+.fed-form-h > .btn { margin-left: auto }
+
+/* --- Collapsible sections ---------------------------------------------------
+   Email Management's health accordion puts figures on the head because there
+   the head *is* the triage — the numbers are what the row was opened for. A
+   form section is not read, it is filled, so its head answers one question: is
+   there anything behind this heading. Hence the client's chevron, title and
+   rule, then a count, then a rejection pill once a save has been refused. */
+.fed-acc + .fed-acc { border-top: 1px solid var(--hair) }
+
+.fed-acc-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 11px var(--sp-4);
+  text-align: left;
+  color: var(--ink);
+  /* Every heading is tinted, open or closed, so six of them read as six bars
+     with the bodies white between — which is what makes a form this long
+     scannable at all. */
+  background: var(--surface-2);
+}
+
+.fed-acc-h:hover { background: var(--row-hover) }
+
+/* Inset: the row runs to the card's own edge, which clips a ring drawn
+   outward. */
+.fed-acc-h:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.fed-acc[data-open] > .fed-acc-h { border-bottom: 1px solid var(--hair) }
+
+.fed-acc-chev {
+  flex: none;
+  color: var(--mut);
+  transition: transform var(--dur-2) var(--ease);
+}
+
+.fed-acc[data-open] .fed-acc-chev { transform: rotate(90deg) }
+
+.fed-acc-ic { flex: none; color: var(--faint) }
+
+.fed-acc-t {
+  flex: none;
+  font-size: var(--t-h3);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-h3-ls);
+}
+
+.fed-acc-rule {
+  flex: 1;
+  min-width: var(--sp-4);
+  height: 1px;
+  background: var(--hair);
+}
+
+/* How many fields are inside, or — on a closed heading with starred fields
+   still blank — how many of those there are, which is the one thing a closed
+   heading can hide from somebody about to press Submit. */
+.fed-acc-n {
+  flex: none;
+  font-size: var(--t-xs);
+  font-weight: var(--w-med);
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.fed-acc-n[data-warn] { color: var(--warn) }
+
+/* More air above and below than between the columns: a section's body has to
+   read as its own block, not as a continuation of the heading. */
+.fed-acc-b { padding: var(--sp-5) var(--sp-4) var(--sp-6) }
+
+/* In the DOM whether or not it is open, so the attribute has to be the thing
+   that hides it. */
+.fed-acc-b[hidden] { display: none }
+
+/* --- Groups inside a section ------------------------------------------------
+   Thirty-five fields evenly spaced have no shape: every gap is the same, so
+   nothing reads as belonging with anything. A caption and a rule cost one line
+   and give the eye somewhere to rest between twelve fields. The separation
+   between groups is deliberately larger than the separation between rows. */
+.fed-grp + .fed-grp {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--hair);
+}
+
+.fed-grp-h {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--t-micro);
+  letter-spacing: var(--t-micro-ls);
+  text-transform: uppercase;
+  font-weight: var(--w-bold);
+  color: var(--faint);
+}
+
+.fed-grp-n {
+  margin: calc(var(--sp-3) * -1) 0 var(--sp-3);
+  max-width: 52rem;
+  font-size: var(--t-xs);
+  line-height: var(--t-xs-lh);
+  color: var(--mut);
+}
+
+/* --- Form fields ------------------------------------------------------------
+   Four columns, as the client's screens lay them out, stepping down a column at
+   a time so a label never has to wrap before the row has run out of room. The
+   row gap is a step wider than the column gap, so a row of fields reads as one
+   row rather than as a lattice. */
+.fed-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--sp-4);
+  row-gap: var(--sp-5);
+  align-items: start;
+}
+
+/* The switch and the live On / Off word the client asks for, in both the places
+   a toggle appears. */
+.fed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* A toggle standing among inputs. The tile gives it an input's height and edge
+   so the row has one baseline, and it sizes to its content rather than to the
+   column — a switch stretched across a quarter of the card reads as a control
+   that failed to render. */
+.fed-fields .fed-toggle {
+  align-self: flex-start;
+  height: 1.9375rem;
+  padding: 0 10px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+
+.fed-toggle-t {
+  font-size: var(--t-sm);
+  font-weight: var(--w-med);
+  color: var(--ink-2);
+  min-width: 1.5rem;
+}
+
+/* --- Setting rows -----------------------------------------------------------
+   Synchronization, Kerberos and Advanced are almost nothing but switches —
+   eleven of the fourteen on the form. As grid cells each one repeats a label
+   line, a control line and a column of air it never fills, and the section
+   reads as scattered chrome. As rows the label runs along the line and the
+   switch closes it. Rows fill left to right, so the reading order is the
+   client's order even where two columns fit. */
+.fed-set {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2) var(--sp-4);
+  align-items: start;
+}
+
+.fed-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 2.375rem;
+  padding: 6px 11px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+
+.fed-row[data-invalid] { border-color: var(--bad-line) }
+
+.fed-row-m {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fed-row-t {
+  min-width: 0;
+  font-size: var(--t-sm);
+  font-weight: var(--w-med);
+  color: var(--ink-2);
+}
+
+.fed-row-c { flex: none }
+
+/* The number box in a row of switches: sized to the figure it holds, not to the
+   half-card the row occupies. */
+.fed-row-num { width: 7.5rem }
+
+.fed-row-e { flex: 1 0 100% }
+
+/* --- The two test buttons ---------------------------------------------------
+   Inline in the grid beside the fields they test, as the client's layout notes
+   require — but a bare button in a field's slot reads as a field whose label
+   failed to render. A tile and a line of its own make it read as the action it
+   is, and the line carries the reason it is unavailable: a disabled button
+   takes no pointer events, so a `title` on one is a tooltip nobody can reach. */
+.fed-act {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--sp-2);
+  align-self: stretch;
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+
+.fed-act-n {
+  font-size: var(--t-xs);
+  line-height: var(--t-xs-lh);
+  color: var(--mut);
+}
+
+/* --- The test result --------------------------------------------------------
+   It used to trail the section unannounced. Named, marked passed or failed and
+   dismissible, it reads as the answer to the button that was pressed rather
+   than as output the form has started producing. */
+.fed-probe {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--hair);
+}
+
+.fed-probe-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--faint);
+}
+
+.fed-probe-t {
+  font-size: var(--t-h3);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-h3-ls);
+  color: var(--ink);
+}
+
+.fed-probe-x { margin-left: auto }
+
+/* A field the form has switched off. The base input has no disabled state of
+   its own, and a period nobody can type must not look like one waiting to be
+   typed in. */
+.fed-fields .inp:disabled {
+  background: var(--surface-3);
+  border-color: var(--line);
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+/* The vendor select with the clear beside it. The button sits outside the
+   select rather than inside its own hit area, so opening the list and emptying
+   it are never the same press. */
+.fed-clearable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fed-clearable .ssel { flex: 1; min-width: 0 }
+
+/* --- Narrow -----------------------------------------------------------------
+   One column at a time. The field grid is the only thing that changes: the
+   provider cards already reflow on their own track size. */
+@media (max-width: 1180px) {
+  .fed-fields { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+}
+
+/* A switch row needs its label on one line. Two of them still fit at 1280 with
+   the sidebar open; below this the longest label in Advanced Settings starts
+   wrapping, and a list of rows of different heights is worse than a taller
+   list of even ones. */
+@media (max-width: 1100px) {
+  .fed-set { grid-template-columns: minmax(0, 1fr) }
+}
+
+@media (max-width: 960px) {
+  .fed-fields { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .fed-ident { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}
+
+/* Below the tablet break the section heading gives up its icon before the title
+   is squeezed, and the body loses the gutter the card already provides. */
+@media (max-width: 820px) {
+  .fed-acc-ic { display: none }
+  .fed-acc-b { padding: var(--sp-4) var(--sp-3) var(--sp-5) }
+  .fed-form-h { flex-wrap: wrap }
+}
+
+@media (max-width: 560px) {
+  .fed-grid { grid-template-columns: minmax(0, 1fr) }
+  .fed-fields { grid-template-columns: minmax(0, 1fr) }
+  .fed-ident { grid-template-columns: minmax(0, 1fr) }
+  /* The count is the first thing a narrow heading can spare: the title and the
+     rejection pill are what the row is for. */
+  .fed-acc-rule { display: none }
+  .fed-acc-n { display: none }
 }

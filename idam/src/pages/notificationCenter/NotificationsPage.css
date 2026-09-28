@@ -1,1 +1,15 @@
 /* Page-owned styles for NotificationsPage. Shared primitives remain in src/styles. */
+
+/* --- The summary band, holding its place ----------------------------------- */
+/* The same four rules the quick-link pages carry beside SummarySkeleton, which
+   the announcement register draws too. They say what an inline style cannot: a
+   panel holding space must not lift under the cursor the way the control it
+   stands in for does, and a segment cell needs the geometry the real rule hands
+   only to a `button` — including the stacking it does at phone width. */
+.rsum-anchor[data-skel]:hover{border-color:var(--line);box-shadow:none}
+.rsum-seg > [data-skel]{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;padding:12px 16px}
+.rsum-seg > [data-skel] + [data-skel]{border-left:1px solid var(--hair)}
+@media(max-width:560px){
+  .rsum-seg > [data-skel]{flex-direction:row;align-items:baseline;justify-content:space-between}
+  .rsum-seg > [data-skel] + [data-skel]{border-left:0;border-top:1px solid var(--hair)}
+}

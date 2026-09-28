@@ -3,8 +3,9 @@ import DataWorkbench from '../../components/workbench/DataWorkbench'
 import Pill from '../../components/primitives/Pill'
 import { duration, num } from '../../lib/format'
 import { runHistory } from './policyPageData'
+import { SkeletonStatStrip } from './PoliciesSkeleton'
 
-export default function HistoryTab({ policy, matchedCount }) {
+export default function HistoryTab({ policy, matchedCount, loading = false }) {
   const runs = useMemo(() => runHistory(policy, matchedCount), [policy, matchedCount])
   const failed = runs.filter((r) => r.status === 'Failed').length
 
@@ -22,16 +23,21 @@ export default function HistoryTab({ policy, matchedCount }) {
 
   return (
     <div className="stack">
-      <div className="stat-strip">
-        <div className="stat-cell"><span className="stat-k">Runs recorded</span><span className="stat-v">{num(runs.length)}</span></div>
-        <div className="stat-cell"><span className="stat-k">Failures</span><span className="stat-v" style={{ color: failed ? 'var(--bad)' : undefined }}>{num(failed)}</span></div>
-        <div className="stat-cell"><span className="stat-k">Grants issued</span><span className="stat-v">{num(runs.reduce((a, r) => a + r.granted, 0))}</span></div>
-        <div className="stat-cell"><span className="stat-k">Revocations</span><span className="stat-v">{num(runs.reduce((a, r) => a + r.revoked, 0))}</span></div>
-      </div>
+      {/* The strip reads the same run records the rows do, so it settles with
+          them rather than printing totals for a table that is still grey. */}
+      {loading ? <SkeletonStatStrip cells={4} /> : (
+        <div className="stat-strip">
+          <div className="stat-cell"><span className="stat-k">Runs recorded</span><span className="stat-v">{num(runs.length)}</span></div>
+          <div className="stat-cell"><span className="stat-k">Failures</span><span className="stat-v" style={{ color: failed ? 'var(--bad)' : undefined }}>{num(failed)}</span></div>
+          <div className="stat-cell"><span className="stat-k">Grants issued</span><span className="stat-v">{num(runs.reduce((a, r) => a + r.granted, 0))}</span></div>
+          <div className="stat-cell"><span className="stat-k">Revocations</span><span className="stat-v">{num(runs.reduce((a, r) => a + r.revoked, 0))}</span></div>
+        </div>
+      )}
 
       <DataWorkbench
         id={`policy-runs-${policy.id}`}
         rows={runs}
+        loading={loading}
         columns={columns}
         searchPlaceholder="Search runs…"
         emptyTitle="No runs recorded"

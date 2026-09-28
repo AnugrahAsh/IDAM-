@@ -8,8 +8,9 @@ import Meter from '../../components/primitives/Meter'
 import Avatar from '../../components/primitives/Avatar'
 import { num } from '../../lib/format'
 import { reviewersFor } from './data'
+import { CampaignReviewersSkeleton } from './RecertificationSkeleton'
 
-export function ReviewersTab({ c, onResendReviewer, onEscalate }) {
+export function ReviewersTab({ c, onResendReviewer, onEscalate, loading = false }) {
   const rows = useMemo(() => reviewersFor(c), [c])
   const outstanding = rows.reduce((a, r) => a + r.remaining, 0)
 
@@ -71,28 +72,34 @@ export function ReviewersTab({ c, onResendReviewer, onEscalate }) {
 
   return (
     <div className="stack">
-      <div className="stat-strip">
-        <div className="stat-cell">
-          <span className="stat-k"><Icon name="users" size={12} />Reviewers</span>
-          <span className="stat-v">{rows.length}</span>
+      {/* The strip and the register count the same reviewers, so they settle
+          together. The register keeps its toolbar and draws its own rows; this
+          is the panel's one announcing region. */}
+      {loading ? <CampaignReviewersSkeleton /> : (
+        <div className="stat-strip">
+          <div className="stat-cell">
+            <span className="stat-k"><Icon name="users" size={12} />Reviewers</span>
+            <span className="stat-v">{rows.length}</span>
+          </div>
+          <div className="stat-cell">
+            <span className="stat-k"><Icon name="checkC" size={12} />Signed off</span>
+            <span className="stat-v">{rows.filter((r) => r.remaining === 0).length}</span>
+          </div>
+          <div className="stat-cell">
+            <span className="stat-k"><Icon name="inbox" size={12} />Items still owed</span>
+            <span className="stat-v">{num(outstanding)}</span>
+          </div>
+          <div className="stat-cell">
+            <span className="stat-k"><Icon name="trendUp" size={12} />Escalated</span>
+            <span className="stat-v">{rows.filter((r) => r.escalated).length}</span>
+          </div>
         </div>
-        <div className="stat-cell">
-          <span className="stat-k"><Icon name="checkC" size={12} />Signed off</span>
-          <span className="stat-v">{rows.filter((r) => r.remaining === 0).length}</span>
-        </div>
-        <div className="stat-cell">
-          <span className="stat-k"><Icon name="inbox" size={12} />Items still owed</span>
-          <span className="stat-v">{num(outstanding)}</span>
-        </div>
-        <div className="stat-cell">
-          <span className="stat-k"><Icon name="trendUp" size={12} />Escalated</span>
-          <span className="stat-v">{rows.filter((r) => r.escalated).length}</span>
-        </div>
-      </div>
+      )}
 
       <DataWorkbench
         id="recert-reviewers"
         rows={rows}
+        loading={loading}
         columns={columns}
         searchPlaceholder="Search reviewers by name, role or remit…"
         rowActions={(r) => [

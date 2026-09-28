@@ -19,6 +19,8 @@ import EmptyState from '../../components/primitives/EmptyState'
 import MemberCsv from './MemberCsv'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
+import { GroupPanelSkeleton, GroupRecordSkeleton } from './GroupsSkeleton'
 import { DIRECTORIES, POLICIES, REQUESTS, ROLES, SOD_RULES, USERS } from '../../data/seed'
 
 export const TAB_IDS = ['information', 'members', 'schedule', 'sod', 'activity']
@@ -472,6 +474,13 @@ export default function GroupDetail({
 
   const usage = useMemo(() => usageFor(group, seed.usageSalt || 3), [group, seed.usageSalt])
   const conflicts = useMemo(() => sodFor(group, peers, roster), [group, peers, roster])
+  /* Two scopes off one timer. `arriving` is the record — masthead, tab strip
+     and panel resolve on the same tick, so landing on a group settles as one
+     thing. `settling` is the panel alone, which is all a tab change fetches:
+     the tab bar is chrome and stays where the pointer left it. Both start
+     together on mount, so arrival is one wait and not two. */
+  const arriving = useLoading(group.id)
+  const settling = useLoading(`${group.id}:${tab}`)
 
   // Tab badges count the array their table renders, so a badge always matches the
   // row count under it. `activeGrants` is a narrower summary stat, never a badge.
@@ -758,6 +767,8 @@ export default function GroupDetail({
     { key: 'actor', label: 'Performed by' },
   ]
 
+  if (arriving) return <GroupRecordSkeleton tab={tab} />
+
   return (
     <>
       <DetailHeader
@@ -781,7 +792,11 @@ export default function GroupDetail({
       />
 
       <div className="detail-body">
-        {tab === 'information' && (
+        {/* The card tabs are redrawn as shapes while they settle; the register
+            tabs keep their own chrome and settle their rows instead. */}
+        {settling && (tab === 'information' || tab === 'sod') && <GroupPanelSkeleton tab={tab} />}
+
+        {tab === 'information' && !settling && (
           <div className="detail-cols">
             <div className="stack">
               {notices}
@@ -839,6 +854,7 @@ export default function GroupDetail({
             <DataWorkbench
               id={`${wbId}-members`}
               rows={roster}
+              loading={settling}
               columns={memberColumns}
               selectable
               searchPlaceholder="Search members by username, department or source…"
@@ -873,6 +889,7 @@ export default function GroupDetail({
             <DataWorkbench
               id={`${wbId}-schedule`}
               rows={grants}
+              loading={settling}
               columns={scheduleColumns}
               selectable
               searchPlaceholder="Search by identity, ticket or justification…"
@@ -893,7 +910,7 @@ export default function GroupDetail({
           </div>
         )}
 
-        {tab === 'sod' && (
+        {tab === 'sod' && !settling && (
           <div className="stack">
             {conflicts.length === 0 ? (
               <Card>
@@ -946,6 +963,7 @@ export default function GroupDetail({
             <DataWorkbench
               id={`${wbId}-history`}
               rows={membershipHistory}
+              loading={settling}
               columns={historyColumns}
               searchPlaceholder="Search membership history by identity, change or source…"
               actionsLabel={<span className="vis-hidden">Actions</span>}

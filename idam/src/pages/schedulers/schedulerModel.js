@@ -13,7 +13,9 @@
  */
 
 import { NOW_MS } from '../../lib/clock'
-import { APPLICATIONS } from '../../data/seed'
+import { APPLICATIONS, ORGANIZATIONS } from '../../data/seed'
+import { attrs } from '../configurations/schemaStore'
+import { TEMPLATES } from '../shared/comms/commsData'
 import { SEED_SOURCES } from '../trustReconciliation/trustModel'
 import { applicationRequired, defaultConfig, serviceFor } from './serviceCatalog'
 
@@ -128,6 +130,27 @@ export const fromLocalInput = (value, tz) => {
 export const fmtCell = (v) => {
   const ms = parseStamp(v)
   return ms == null ? '—' : stamp(ms)
+}
+
+/**
+ * The one conversion a scheduler result screen makes.
+ *
+ * Every scheduler timestamp is an absolute instant, and the response says which
+ * zone it is to be read in — `display_timezone`. Converting here, once, is the
+ * whole point of the helper existing: the console's general-purpose cell
+ * formatter treats a stamp as already local, so applying it to a scheduler
+ * value adds the offset a second time and renders an Asia/Kolkata deployment
+ * five and a half hours late. Nothing on these screens calls that formatter.
+ */
+export const schedulerTime = (value, tz = 'UTC') => {
+  const ms = parseStamp(value)
+  return ms == null ? '—' : stamp(utcToWall(tz, ms))
+}
+
+/** The same instant with the zone it is being read in, for a title or footnote. */
+export const schedulerTimeText = (value, tz = 'UTC') => {
+  const text = schedulerTime(value, tz)
+  return text === '—' ? text : `${text} ${tz}`
 }
 
 export const relFuture = (ms) => {
@@ -398,6 +421,138 @@ export const applicationLabel = (code, id) => {
   if (!meta?.requiresApplication || id == null) return null
   const hit = applicationOptions(meta.applicationField.source).find((o) => String(o.value) === String(id))
   return hit ? hit.label : `#${id}`
+}
+
+/**
+ * Carrying a single application binding forward into a multi-select.
+ *
+ * A service that reconciles several applications keeps the list in its own
+ * configuration; the record's `application_id` column predates that and holds
+ * exactly one. Declaring `migratesApplicationTo` on the service is what turns
+ * that one into the first chip, so a scheduler saved before the change opens
+ * showing what it was saved with rather than an empty required field. Nothing
+ * here knows which service that is.
+ */
+export const withApplicationBinding = (r) => {
+  const key = serviceFor(r?.service_code)?.metadata?.migratesApplicationTo
+  if (!key || r.application_id == null) return r
+  const held = r.service_config?.[key]
+  if (Array.isArray(held) && held.length) return r
+  return { ...r, service_config: { ...r.service_config, [key]: [String(r.application_id)] } }
+}
+
+// ---------------------------------------------------------------------------
+// Remote option sources
+// ---------------------------------------------------------------------------
+
+/**
+ * The lists a `remote-enum` or `multi-remote-enum` field is filled from.
+ *
+ * The descriptor names a source; this is where that name resolves. Every one of
+ * them reads the register that owns the data rather than restating it, so an
+ * organisation added under Organizations, a template written under Email
+ * Management or a date attribute defined under Configurations is selectable
+ * here without a second edit.
+ *
+ * Each source reports `configured` separately from its options: an empty list
+ * behind a required field is not an empty dropdown, it is a service that cannot
+ * be saved, and the field says so instead.
+ */
+
+/* The directory column a schema attribute is stored under. The schema's ids are
+   camelCase and most columns are the snake_case of the same word — but not all
+   of them: `dor` is the column the deprovisioning service reads and the export
+   screen offers, and no mechanical transform produces it from `retirementDate`. */
+const ATTRIBUTE_COLUMN = { retirementDate: 'dor', mobileNo: 'mobile_no' }
+
+const columnName = (id) =>
+  ATTRIBUTE_COLUMN[id] || String(id).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+
+/* Only these two schema types hold an instant. A scheduler pointed at anything
+   else parses nothing and fails at run time, which is the failure the dropdown
+   exists to prevent. */
+const DATE_TYPES = { date: 'Date', datetime: 'Timestamp' }
+
+/* Dated columns every identity carries that the identity schema does not
+   define: they are the platform's own, so Configurations never lists them, and
+   without them the three date fields would have almost nothing to choose
+   between. `doj` and `dor` are the pair the joiner and leaver services read. */
+const PLATFORM_DATE_ATTRIBUTES = [
+  { name: 'doj', label: 'Joining Date', dataType: 'Date' },
+  { name: 'dor', label: 'Date Of Retirement', dataType: 'Date' },
+  { name: 'last_login', label: 'Last Login', dataType: 'Timestamp' },
+  { name: 'created_on', label: 'Created On', dataType: 'Timestamp' },
+]
+
+/** Every attribute that actually holds a date, schema-defined ones first. */
+export const dateAttributes = () => {
+  const defined = attrs()
+    .filter((a) => DATE_TYPES[a.type])
+    .map((a) => ({ name: columnName(a.id), label: a.label, dataType: DATE_TYPES[a.type] }))
+  const named = new Set(defined.map((a) => a.name))
+  return [...defined, ...PLATFORM_DATE_ATTRIBUTES.filter((a) => !named.has(a.name))]
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+/* The attribute name is in the option rather than only in the stored value: two
+   attributes can carry the same display name, and the one that runs is the
+   column. The data type follows it — what the attribute holds is the reason
+   this list is shorter than the schema. */
+export const dateAttributeOptions = () =>
+  dateAttributes().map((a) => ({
+    value: a.name,
+    label: `${a.label} (${a.name}) · ${a.dataType}`,
+    sub: a.dataType,
+  }))
+
+/* A template that is switched off, or that has never been written, is listed
+   and labelled rather than hidden. Both are skipped when mail is sent, and an
+   administrator who cannot see that picks one and then waits for a notification
+   that was never going to arrive. */
+export const emailTemplateOptions = () =>
+  [...TEMPLATES]
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+    .map((t) => {
+      const empty = !String(t.body || '').trim()
+      const notes = [t.enabled ? null : 'disabled', empty ? 'no content' : null].filter(Boolean)
+      return {
+        value: t.name,
+        label: notes.length ? `${t.name} (${notes.join(', ')})` : t.name,
+        sub: t.subject,
+      }
+    })
+
+/* The stored value is the organisation id, because the id is what a scheduler
+   matches a request against. Inactive organisations stay in the list, labelled:
+   hiding one would make an existing selection vanish from the form. */
+export const organizationOptions = () =>
+  ORGANIZATIONS.map((o) => ({
+    value: String(o.id),
+    label: o.status === 'Active' ? o.name : `${o.name} (inactive)`,
+    sub: o.status,
+  }))
+
+export const CONFIG_SOURCES = {
+  provisionApplications: {
+    options: provisionApplications,
+    configured: () => APPLICATIONS.length > 0,
+    emptyNotice: 'No provisioning applications are configured yet. Register one under Applications before this service can run.',
+  },
+  dateAttributes: {
+    options: dateAttributeOptions,
+    configured: () => dateAttributes().length > 0,
+    emptyNotice: 'No attribute in the identity schema holds a date. Define one under Configurations → Attributes before this service can run.',
+  },
+  emailTemplates: {
+    options: emailTemplateOptions,
+    configured: () => TEMPLATES.length > 0,
+    emptyNotice: 'No email templates exist yet. Write one under Email Management → Templates before this service can notify anyone.',
+  },
+  organizations: {
+    options: organizationOptions,
+    configured: () => ORGANIZATIONS.length > 0,
+    emptyNotice: 'No organisations are defined yet.',
+  },
 }
 
 // ---------------------------------------------------------------------------

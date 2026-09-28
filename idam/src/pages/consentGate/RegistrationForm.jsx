@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Button from '../../components/primitives/Button'
 import Check from '../../components/primitives/Check'
 import Field from '../../components/primitives/Field'
@@ -34,7 +34,12 @@ export default function RegistrationForm({
   const [files, setFiles] = useState([])
   const [agreed, setAgreed] = useState(false)
   const [attempted, setAttempted] = useState(false)
+  /* Counted rather than flagged: the second refusal has to move the page as
+     much as the first did, and a boolean only changes once. */
+  const [refused, setRefused] = useState(0)
   const [open, setOpen] = useState(() => new Set(REGISTRATION_SECTIONS.map((s) => s.id)))
+  const shortRef = useRef(null)
+  const agreeRef = useRef(null)
 
   const set = (id, v) => setValues((x) => ({ ...x, [id]: v }))
   const toggle = (id) => setOpen((o) => {
@@ -50,15 +55,29 @@ export default function RegistrationForm({
 
   const submit = () => {
     setAttempted(true)
-    /* Both sections are reopened on a failed submit: a required field hidden
-       inside a collapsed section is an error the recipient cannot see. */
-    if (missing.length) {
-      setOpen(new Set(REGISTRATION_SECTIONS.map((s) => s.id)))
+    if (!missing.length && agreed) {
+      onSubmit({ values, files })
       return
     }
-    if (!agreed) return
-    onSubmit({ values, files })
+    /* Both sections are reopened on a failed submit: a required field hidden
+       inside a collapsed section is an error the recipient cannot see. */
+    if (missing.length) setOpen(new Set(REGISTRATION_SECTIONS.map((s) => s.id)))
+    setRefused((n) => n + 1)
   }
+
+  /* Submit sits in the footer, outside the part of the panel that scrolls, so
+     it can be pressed from a resting position that does not show the answer it
+     produces — on a 1100x700 window the shortfall summary rendered 26px below
+     the body's own bottom edge with nothing having scrolled to it, and the one
+     line that names which fields are empty was unreachable unless the reader
+     worked out there was a second scroller. A refusal has to put its own reason
+     on screen. `nearest` because a summary already in view must not be yanked
+     to the top of the panel under the reader. */
+  useEffect(() => {
+    if (!refused) return
+    const el = shortRef.current || agreeRef.current
+    if (el) el.scrollIntoView({ block: 'nearest' })
+  }, [refused])
 
   const renderField = (f) => {
     if (f.locked) {
@@ -97,124 +116,145 @@ export default function RegistrationForm({
     )
   }
 
+  /* The body and the decision are siblings rather than nested, so the panel
+     that holds them can scroll the one and keep the other — the form is the
+     part that gives when the window is short, and Submit stays on the bottom
+     edge where every other long form in this console keeps it. */
   return (
-    <div className="ci-form">
-      {REGISTRATION_SECTIONS.map((s) => {
-        const expanded = open.has(s.id)
-        const tenantCount = s.fields.filter((f) => f.tenant).length
-        const shortCount = attempted ? s.fields.filter((f) => f.required && !String(values[f.id] ?? '').trim()).length : 0
-        return (
-          <section key={s.id} className="ci-sec">
-            <button
-              type="button"
-              className="ci-sec-h"
-              aria-expanded={expanded}
-              aria-controls={`ci-sec-${s.id}`}
-              onClick={() => toggle(s.id)}
-            >
-              <Icon name={expanded ? 'chevD' : 'chevR'} size={14} />
-              <span className="ci-sec-t">{s.name}</span>
-              <span className="ci-sec-rule" aria-hidden="true" />
-              <span className="t-xs t-mut">
-                {s.fields.length} fields{tenantCount ? ` · ${tenantCount} tenant-defined` : ''}
-              </span>
-              {shortCount > 0 && (
-                <span className="t-xs ci-sec-err">
-                  <Icon name="warn" size={11} />
-                  {shortCount} missing
-                </span>
-              )}
-            </button>
-            {expanded && (
-              <div className="ci-sec-b" id={`ci-sec-${s.id}`}>
-                {s.fields.map(renderField)}
-              </div>
-            )}
-          </section>
-        )
-      })}
-
-      <Field
-        label="Upload document"
-        hint="Proof of identity or employment. PDF, JPG or PNG, up to 5 MB."
-      >
-        <FileDrop
-          accept=".pdf,.jpg,.jpeg,.png"
-          label={files.length ? 'Attach another document' : 'Choose a file, or drag it here'}
-          hint={files.length ? `${files.length} attached` : 'Optional — an administrator may ask for one later'}
-          onFiles={(picked) => setFiles((f) => [...f, ...picked])}
-        />
-      </Field>
-
-      {files.length > 0 && (
-        <ul className="ci-docs">
-          {files.map((f, i) => (
-            <li key={`${f.name}-${f.size}`} className="ci-doc">
-              <Icon name="file" size={13} />
-              <span className="ci-doc-n">{f.name}</span>
-              <span className="ci-doc-s">{formatSize(f.size)}</span>
-              <IconButton
-                icon="x"
-                size="sm"
-                label={`Remove ${f.name}`}
-                onClick={() => setFiles((list) => list.filter((_, n) => n !== i))}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="ci-agree" data-locked={!acknowledged || undefined}>
-        <Check
-          checked={agreed}
-          disabled={!acknowledged}
-          onChange={setAgreed}
-          label={`I agree to the ${doc.title}`}
-        />
-        <div className="ci-agree-m">
-          <p className="ci-agree-t">
-            I agree to the{' '}
-            <button type="button" className="link" onClick={onOpenDocument}>
-              Terms &amp; Policy
-              <Icon name="external" size={12} />
-            </button>
+    <>
+      <div className="ci-form">
+        {/* At the head of the form rather than at its foot. It is a summary of
+            the form, and a summary read after the thing it summarises is no use
+            to anyone; the console's own banners sit above the content they are
+            about for the same reason. It also means the panel's resting
+            position — where a reader who has filled nothing in still is — shows
+            it without moving at all. */}
+        {attempted && missing.length > 0 && (
+          <p className="ci-short" role="alert" ref={shortRef}>
+            <Icon name="warn" size={12} />
+            {missing.length} required {missing.length === 1 ? 'field is' : 'fields are'} still empty:{' '}
+            {missing.map((f) => f.label).join(', ')}.
           </p>
-          {acknowledged ? (
-            <p className="ci-agree-s" data-done="true">
-              <Icon name="checkC" size={12} />
-              You opened version {doc.version} of the Terms &amp; Policy. Tick the box to agree to it.
-            </p>
-          ) : (
-            <p className="ci-agree-s">
-              <Icon name="lock" size={12} />
-              Open the Terms &amp; Policy and click <b>I Understand</b> to enable this checkbox.
-            </p>
-          )}
-          {/* Submit does nothing while the box is clear, so it has to say why —
-              and why differs depending on whether the document has been read. */}
-          {attempted && !agreed && (
-            <p className="ci-agree-e" role="alert">
-              <Icon name="warn" size={11} />
-              {acknowledged
-                ? 'Registration cannot be submitted until you agree to the Terms & Policy.'
-                : 'Open the Terms & Policy before submitting — the agreement cannot be given until it has been read.'}
-            </p>
-          )}
+        )}
+
+        {REGISTRATION_SECTIONS.map((s) => {
+          const expanded = open.has(s.id)
+          const shortCount = attempted ? s.fields.filter((f) => f.required && !String(values[f.id] ?? '').trim()).length : 0
+          return (
+            <section key={s.id} className="ci-sec">
+              <button
+                type="button"
+                className="ci-sec-h"
+                aria-expanded={expanded}
+                aria-controls={`ci-sec-${s.id}`}
+                onClick={() => toggle(s.id)}
+              >
+                <Icon name={expanded ? 'chevD' : 'chevR'} size={14} />
+                <span className="ci-sec-t">{s.name}</span>
+                <span className="ci-sec-rule" aria-hidden="true" />
+                {/* The head used to end in "9 fields · 2 tenant-defined". A
+                    recipient cannot do anything with either number — the fields
+                    are in front of them and the badge already marks which ones
+                    the organization added — so the only count kept here is the
+                    one that asks for an action. */}
+                {shortCount > 0 && (
+                  <span className="t-xs ci-sec-err">
+                    <Icon name="warn" size={11} />
+                    {shortCount} missing
+                  </span>
+                )}
+              </button>
+              {expanded && (
+                <div className="ci-sec-b" id={`ci-sec-${s.id}`}>
+                  {s.fields.map(renderField)}
+                </div>
+              )}
+            </section>
+          )
+        })}
+
+        {/* The two blocks that close the form. Neither is a grid of fields, and
+            on a wide panel each on its own row left a 1000px dashed bar above a
+            1000px checkbox — so they share a row instead, which is also a
+            screenful less to scroll past on a short window. */}
+        <div className="ci-tail">
+          <div className="ci-tail-c">
+            <Field
+              label="Upload document"
+              hint="Proof of identity or employment. PDF, JPG or PNG, up to 5 MB."
+            >
+              <FileDrop
+                accept=".pdf,.jpg,.jpeg,.png"
+                label={files.length ? 'Attach another document' : 'Choose a file, or drag it here'}
+                hint={files.length ? `${files.length} attached` : 'Optional — an administrator may ask for one later'}
+                onFiles={(picked) => setFiles((f) => [...f, ...picked])}
+              />
+            </Field>
+
+            {files.length > 0 && (
+              <ul className="ci-docs">
+                {files.map((f, i) => (
+                  <li key={`${f.name}-${f.size}`} className="ci-doc">
+                    <Icon name="file" size={13} />
+                    <span className="ci-doc-n">{f.name}</span>
+                    <span className="ci-doc-s">{formatSize(f.size)}</span>
+                    <IconButton
+                      icon="x"
+                      size="sm"
+                      label={`Remove ${f.name}`}
+                      onClick={() => setFiles((list) => list.filter((_, n) => n !== i))}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="ci-agree" data-locked={!acknowledged || undefined} ref={agreeRef}>
+            <Check
+              checked={agreed}
+              disabled={!acknowledged}
+              onChange={setAgreed}
+              label={`I agree to the ${doc.title}`}
+            />
+            <div className="ci-agree-m">
+              <p className="ci-agree-t">
+                I agree to the{' '}
+                <button type="button" className="link" onClick={onOpenDocument}>
+                  Terms &amp; Policy
+                  <Icon name="external" size={12} />
+                </button>
+              </p>
+              {acknowledged ? (
+                <p className="ci-agree-s" data-done="true">
+                  <Icon name="checkC" size={12} />
+                  You opened version {doc.version} of the Terms &amp; Policy. Tick the box to agree to it.
+                </p>
+              ) : (
+                <p className="ci-agree-s">
+                  <Icon name="lock" size={12} />
+                  Open the Terms &amp; Policy and click <b>I Understand</b> to enable this checkbox.
+                </p>
+              )}
+              {/* Submit does nothing while the box is clear, so it has to say why —
+                  and why differs depending on whether the document has been read. */}
+              {attempted && !agreed && (
+                <p className="ci-agree-e" role="alert">
+                  <Icon name="warn" size={11} />
+                  {acknowledged
+                    ? 'Registration cannot be submitted until you agree to the Terms & Policy.'
+                    : 'Open the Terms & Policy before submitting — the agreement cannot be given until it has been read.'}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {attempted && missing.length > 0 && (
-        <p className="ci-short" role="alert">
-          <Icon name="warn" size={12} />
-          {missing.length} required {missing.length === 1 ? 'field is' : 'fields are'} still empty:{' '}
-          {missing.map((f) => f.label).join(', ')}.
-        </p>
-      )}
-
-      <div className="ci-actions">
-        <Button variant="pri" icon="check" onClick={submit}>Submit</Button>
+      <div className="ci-foot">
         <Button onClick={onCancel}>Cancel</Button>
+        <Button variant="pri" icon="check" onClick={submit}>Submit</Button>
       </div>
-    </div>
+    </>
   )
 }

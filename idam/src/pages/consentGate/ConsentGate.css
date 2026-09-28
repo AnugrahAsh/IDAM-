@@ -1,57 +1,122 @@
 /* Page-owned styles for the two consent screens. Shared primitives stay in
    src/styles.
 
-   Both screens are read by someone who is not in the console: one is between
-   the sign-in and the console, the other has no session at all. So they carry
-   their own shell — no sidebar, no register chrome — and the document itself is
-   the only thing with weight on the page.
+   Both screens are read by someone who is not inside the console: one sits
+   between the sign-in and the console, the other holds no session at all. They
+   are the sign-in screen's siblings, so they are built the way it is — a
+   Tanflow field behind and the wordmark standing on it.
 
-   The reference implementation put the document under a solid purple bar. The
-   information in that bar is right and is kept; the bar is not, because this
-   console has no purple. Here the same three facts sit on a surface band with
-   an accent edge, which is how every other header in the console marks itself. */
+   Where they part is what the field is asked to hold. A notice of four
+   sentences, and the five outcome screens, sit on a console surface centred in
+   front of it, which is what the sign-in does with its own card. A twelve-field
+   form does not: centred, it left a column of brand doing nothing down either
+   side and still ran off the bottom of the window. That one takes the field as
+   a rail and the form beside it — the sign-in's own geometry, and
+   self-enrollment's.
 
-/* --- The page shell ----------------------------------------------------------- */
+   What stood here before was drawn from a Keycloak screenshot: a boxed
+   document under a solid banded header, floating on an empty page, in a layout
+   no other screen in this console uses. Every fact that header carried is
+   kept — who is asking, which document, which version — but they are laid out
+   the way the console lays out a detail header, because that is what they are. */
 
-/* The console locks body scrolling for its own canvas; these pages scroll
-   themselves, exactly as the recertification link page does. */
-.cg-page{height:100%;overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
-.cg-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;
-  padding:12px var(--sp-6);background:var(--surface);border-bottom:1px solid var(--hair)}
-.cg-logo{height:22px;width:auto;display:block;flex:none}
-.cg-top-sep{width:1px;height:18px;background:var(--line);flex:none}
-.cg-who{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:var(--t-xs);color:var(--mut)}
-.cg-who svg{flex:none;color:var(--faint)}
+/* --- The Tanflow field --------------------------------------------------------- */
+
+/* The console's own dark chrome, which is also what the sign-in screen stands
+   on. Shell tokens rather than a colour invented here: they are declared for
+   both themes already, so the field stays Tanflow's in either one. */
+.cg-page{
+  position:relative;height:100%;overflow-y:auto;
+  display:flex;flex-direction:column;
+  background:var(--shell);
+  background-image:radial-gradient(122% 98% at 6% 2%,var(--shell-2) 0%,var(--shell) 64%);
+}
+/* One wash of the deep accent across the top-right. Fixed rather than scrolled,
+   so a four-screen notice does not drag the light off the page with it. */
+.cg-page::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(46rem 32rem at 88% -8%,var(--accent-deep) 0%,transparent 68%);
+  opacity:.42;
+}
+
+/* --- The lockup --------------------------------------------------------------- */
+
+/* The wordmark, the descriptor beneath it and what this screen is — the same
+   three things the sign-in screen opens with, in the same order. */
+.cg-top{
+  position:relative;z-index:1;flex:none;
+  display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;
+  padding:var(--sp-5) clamp(var(--sp-4),4vw,var(--sp-10)) var(--sp-4);
+}
+.cg-lockup{display:flex;align-items:center;gap:11px;min-width:0}
+.cg-logo{height:26px;width:auto;display:block;flex:none}
+.cg-descriptor{font-size:var(--t-xs);font-weight:var(--w-semi);letter-spacing:.06em;color:var(--shell-mut)}
+.cg-top-sep{width:1px;height:18px;background:var(--shell-line);flex:none}
+.cg-context{
+  display:inline-flex;align-items:center;gap:7px;flex:none;
+  padding:4px 11px;border-radius:var(--r-pill);
+  background:var(--shell-2);border:1px solid var(--shell-line);
+  font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--shell-ink);
+}
+.cg-context svg{color:var(--shell-mut)}
+.cg-who{
+  display:inline-flex;align-items:center;gap:7px;min-width:0;margin-left:auto;
+  font-size:var(--t-xs);color:var(--shell-mut);
+}
+.cg-who svg{flex:none}
 .cg-who-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cg-main{width:100%;max-width:60rem;margin:0 auto;padding:var(--sp-6) var(--sp-6) var(--sp-10);
-  display:flex;flex-direction:column;gap:var(--sp-4)}
+.cg-who .mono{color:var(--shell-ink)}
 
-/* --- The document panel ------------------------------------------------------- */
+.cg-main{
+  position:relative;z-index:1;flex:1;
+  width:100%;max-width:64rem;margin:0 auto;
+  padding:0 clamp(var(--sp-4),4vw,var(--sp-8)) var(--sp-10);
+  display:flex;flex-direction:column;gap:var(--sp-4);
+}
 
-.cdoc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  box-shadow:var(--sh-md);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+/* --- The document card --------------------------------------------------------- */
 
-.cdoc-h{position:relative;display:flex;align-items:center;gap:var(--sp-4);
-  padding:var(--sp-4) var(--sp-5);background:var(--surface-2);border-bottom:1px solid var(--line)}
-/* The accent edge carries the "this is the header" signal the reference got
-   from filling the whole band, without borrowing a colour we do not own. */
-.cdoc-h::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-solid)}
-.cdoc-brand{flex:none;padding:6px 11px;border:1px solid var(--line);border-radius:var(--r);
-  background:var(--surface);font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink)}
-.cdoc-hm{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-.cdoc-eyebrow{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+.cdoc{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);
+  box-shadow:var(--sh-lg);overflow:hidden;display:flex;flex-direction:column;min-width:0;
+}
+
+/* A console detail header: an eyebrow that names the kind of thing, the thing's
+   own name at display size, and the facts under it. The version stays a chip
+   because it is the one fact an acceptance is worthless without. */
+.cdoc-h{display:flex;flex-direction:column;gap:6px;
+  padding:var(--sp-6) var(--sp-6) var(--sp-4);border-bottom:1px solid var(--hair)}
+.cdoc-h-top{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.cdoc-eyebrow{flex:1;min-width:0;
+  font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
   font-weight:var(--w-bold);color:var(--accent-a)}
-.cdoc-title{margin:0;font-size:var(--t-h1);line-height:var(--t-h1-lh);letter-spacing:var(--t-h1-ls);
-  font-weight:var(--w-bold);color:var(--ink);overflow-wrap:anywhere}
 .cdoc-ver{flex:none;padding:3px 10px;border-radius:var(--r-pill);white-space:nowrap;
   background:var(--accent-bg);border:1px solid var(--accent-line);
   font-size:var(--t-xs);font-weight:var(--w-semi);color:var(--accent-a)}
+.cdoc-title{margin:0;font-size:var(--t-display);line-height:var(--t-display-lh);
+  letter-spacing:var(--t-display-ls);font-weight:var(--w-bold);color:var(--ink);overflow-wrap:anywhere}
+.cdoc-brand{display:flex;align-items:center;gap:7px;margin-top:2px;min-width:0;
+  font-size:var(--t-sm);line-height:var(--t-sm-lh);color:var(--mut);overflow-wrap:anywhere}
+.cdoc-brand svg{flex:none;color:var(--faint)}
+.cdoc-brand b{color:var(--ink-2);font-weight:var(--w-semi)}
 
-.cdoc-notice{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;
-  padding:10px var(--sp-5);background:var(--accent-bg);border-bottom:1px solid var(--hair)}
+/* The toolbar over the reading pane: the instruction on the left, the control
+   that changes what is being read on the right. Card toolbars sit on
+   surface-2 throughout the console, so this one does too.
+
+   The row gap is the narrow one: when the two halves no longer fit side by side
+   the selector takes a line of its own, and 16px of air between two lines inside
+   a 9px-padded toolbar reads as a gap in the card rather than as one control. */
+.cdoc-notice{display:flex;align-items:center;gap:var(--sp-2) var(--sp-4);flex-wrap:wrap;
+  padding:9px var(--sp-6);background:var(--surface-2);border-bottom:1px solid var(--hair)}
+/* The floor is what decides the wrap: held at 12rem, the instruction plus the
+   selector's own 11rem floor overflow a phone-width card, so `flex-wrap` breaks
+   the line instead of squeezing the selector. Nothing here may lower either
+   floor — a <select> cannot shrink below its own padding and chevron, so it
+   would not shrink but overflow, and the card clips what overflows it. */
 .cdoc-notice-t{flex:1;min-width:12rem;margin:0;display:flex;align-items:center;gap:8px;
-  font-size:var(--t-sm);line-height:var(--t-sm-lh);color:var(--accent-a)}
-.cdoc-notice-t svg{flex:none}
+  font-size:var(--t-sm);line-height:var(--t-sm-lh);color:var(--mut)}
+.cdoc-notice-t svg{flex:none;color:var(--faint)}
 .cdoc-lang{flex:none;display:flex;align-items:center;gap:8px}
 .cdoc-lang-k{font-size:var(--t-xs);color:var(--mut)}
 .cdoc-lang .sel{min-width:11rem}
@@ -59,16 +124,19 @@
 /* Bounded on purpose: the footer that records the decision has to stay in view
    while the notice is being read, or the decision drifts off the bottom of a
    four-screen document. */
-.cdoc-body{padding:var(--sp-5);overflow-y:auto;min-height:11rem;max-height:min(26rem,50vh);
+.cdoc-body{padding:var(--sp-6);overflow-y:auto;min-height:12rem;max-height:min(28rem,52vh);
   font-size:var(--t-body);line-height:var(--t-body-lh);color:var(--ink-2);overflow-wrap:anywhere}
-/* The panel clips to the card, so the focus ring is drawn inside it — an
-   outline with an offset would be cut off on both edges. */
+/* A card this wide would otherwise set the notice in 140-character lines, which
+   is the one thing a document nobody wants to read cannot afford. */
+.cdoc-body > *{max-width:74ch}
+/* The pane clips to the card, so the focus ring is drawn inside it — an outline
+   with an offset would be cut off on both edges. */
 .cdoc-body:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent)}
 .cdoc-body > :first-child{margin-top:0}
 .cdoc-body > :last-child{margin-bottom:0}
 .cdoc-body h3{margin:0 0 var(--sp-3);font-size:var(--t-h2);line-height:var(--t-h2-lh);
   letter-spacing:var(--t-h2-ls);font-weight:var(--w-bold);color:var(--ink)}
-.cdoc-body h4{margin:var(--sp-4) 0 var(--sp-1);font-size:var(--t-h3);line-height:var(--t-h3-lh);
+.cdoc-body h4{margin:var(--sp-5) 0 var(--sp-1);font-size:var(--t-h3);line-height:var(--t-h3-lh);
   font-weight:var(--w-semi);color:var(--ink)}
 .cdoc-body p{margin:0 0 var(--sp-3)}
 /* base.css strips list markers console-wide; an authored notice is the one
@@ -82,34 +150,42 @@
 .cdoc-body a{color:var(--link);font-weight:var(--w-med)}
 
 .cdoc-f{display:flex;flex-direction:column;gap:var(--sp-3);
-  padding:var(--sp-4) var(--sp-5);background:var(--surface-2);border-top:1px solid var(--hair)}
+  padding:var(--sp-4) var(--sp-6);background:var(--surface-2);border-top:1px solid var(--hair)}
 
-/* --- Screen 1: the post-login gate -------------------------------------------- */
+/* --- Screen 1: the post-login gate --------------------------------------------- */
 
-/* The checkbox row sits above the buttons, as it does in the reference: the
-   thing being agreed to reads before the thing that acts on it. */
-.cg-accept{display:flex;align-items:center;gap:10px;padding:10px 12px;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
-.cg-accept-t{font-size:var(--t-sm);color:var(--ink-2);text-align:left;cursor:pointer;background:none;border:0;padding:0}
+/* The thing being agreed to reads before the thing that acts on it, so the
+   acceptance row sits above the buttons. Same geometry as the consent rows on
+   the enrollment form: one console shape for one console job. */
+.cg-accept{display:flex;align-items:center;gap:10px;padding:11px 12px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+.cg-accept-t{font-size:var(--t-sm);color:var(--ink-2);text-align:left;cursor:pointer;
+  background:none;border:0;padding:0}
 .cg-accept-t b{color:var(--ink);font-weight:var(--w-semi)}
 .cg-actions{display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-2);flex-wrap:wrap}
 
-.cg-facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+/* The three things true of every acceptance. They belong to the record rather
+   than to the document, so they sit on the field beside it — the sign-in
+   screen puts its assurances outside the card for the same reason. */
+.cg-facts{list-style:none;margin:0;display:flex;flex-direction:column;gap:10px;
+  padding:var(--sp-4) var(--sp-5);
+  background:var(--shell-2);border:1px solid var(--shell-line);border-radius:var(--r-xl)}
 /* The icon is taken out of flow rather than made a flex sibling: these rows are
    prose with bold runs inside them, and a flex parent would break each run into
    an item of its own instead of letting the sentence wrap. */
-.cg-facts li{position:relative;padding-left:21px;min-width:0;
-  font-size:var(--t-xs);line-height:1.5;color:var(--mut);overflow-wrap:anywhere}
-.cg-facts svg{position:absolute;left:0;top:3px;color:var(--faint)}
-.cg-facts b{color:var(--ink-2);font-weight:var(--w-semi)}
+.cg-facts li{position:relative;padding-left:22px;min-width:0;
+  font-size:var(--t-xs);line-height:1.55;color:var(--shell-mut);overflow-wrap:anywhere}
+.cg-facts svg{position:absolute;left:0;top:3px;color:var(--shell-mut);opacity:.75}
+.cg-facts b{color:var(--shell-ink);font-weight:var(--w-semi)}
+.cg-facts .mono{color:var(--shell-ink)}
 
-/* --- Outcomes: declined, submitted, expired, used, invalid -------------------- */
+/* --- Outcomes: declined, submitted, expired, used, invalid --------------------- */
 
-.cg-out{max-width:34rem;width:100%;margin:var(--sp-6) auto 0;padding:var(--sp-8) var(--sp-6) var(--sp-6);
+.cg-out{max-width:36rem;width:100%;margin:var(--sp-4) auto 0;padding:var(--sp-8) var(--sp-6) var(--sp-6);
   display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);text-align:center;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-md)}
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--sh-lg)}
 .cg-out h1{margin:0;color:var(--ink)}
-.cg-out-ic{display:inline-flex;align-items:center;justify-content:center;width:2.75rem;height:2.75rem;
+.cg-out-ic{display:inline-flex;align-items:center;justify-content:center;width:3rem;height:3rem;
   border-radius:50%;color:var(--mut);background:var(--surface-3);border:1px solid var(--line)}
 .cg-out-ic[data-tone="ok"]{color:var(--ok);background:var(--ok-bg);border-color:var(--ok-line)}
 .cg-out-ic[data-tone="warn"]{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
@@ -118,37 +194,125 @@
 .cg-out-b p{margin:0 0 var(--sp-3)}
 .cg-out-b p:last-child{margin-bottom:0}
 .cg-out-b b{color:var(--ink-2)}
-.cg-out-a{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-2)}
+.cg-out-a{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);flex-wrap:wrap;
+  margin-top:var(--sp-2)}
 
-/* --- Screen 2: tokenised registration ----------------------------------------- */
+/* --- Screen 2: tokenised registration ------------------------------------------ */
 
-.ci-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  box-shadow:var(--sh-md);padding:var(--sp-6);display:flex;flex-direction:column;gap:var(--sp-5);min-width:0}
-.ci-head{display:flex;flex-direction:column;gap:var(--sp-1)}
-.ci-head-t{margin:0;font-size:var(--t-display);line-height:var(--t-display-lh);letter-spacing:var(--t-display-ls);
-  font-weight:var(--w-bold);color:var(--ink)}
-.ci-head-s{margin:0;font-size:var(--t-sm);color:var(--mut)}
-.ci-head-m{position:relative;margin:var(--sp-2) 0 0;padding:9px 11px 9px 32px;
-  background:var(--accent-bg);border:1px solid var(--accent-line);border-radius:var(--r);
-  font-size:var(--t-xs);line-height:1.5;color:var(--accent-a);overflow-wrap:anywhere}
-.ci-head-m svg{position:absolute;left:11px;top:11px}
-.ci-head-m b{font-weight:var(--w-semi)}
+/* Not a card on the field: the window, split.
 
-.ci-form{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}
+   The rail is the Tanflow field turned on its side — the same shell tokens the
+   gate's page uses, so the brand is doing the job it was only decorating
+   before, and the form takes everything else. The columns are the height of the
+   window and neither of them makes the page taller than one; self-enrollment,
+   the console's other screen for someone who has never seen it, is built to
+   exactly this rule. */
+.ci-page{
+  height:100%;overflow:hidden;
+  display:grid;grid-template-columns:22rem minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+  background:var(--surface);
+}
+
+/* --- The rail: the invitation -------------------------------------------------- */
+
+.ci-rail{
+  position:relative;z-index:0;min-width:0;min-height:0;overflow-y:auto;
+  display:flex;flex-direction:column;gap:var(--sp-5);
+  padding:var(--sp-6) var(--sp-5);
+  background:var(--shell);
+  background-image:radial-gradient(118% 64% at 6% 0%,var(--shell-2) 0%,var(--shell) 66%);
+  border-right:1px solid var(--shell-line);
+}
+/* The same wash the gate's field carries, sized to the rail rather than to the
+   window so it still reads as one light source and not as a stripe. */
+.ci-rail::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(26rem 20rem at 104% -6%,var(--accent-deep) 0%,transparent 72%);
+  opacity:.42;
+}
+.ci-rail > *{position:relative;z-index:1}
+/* Stacked rather than in a row, as the sign-in screen sets it: a rail is a
+   column, and the descriptor under the mark leaves the width for the heading. */
+.ci-rail .cg-lockup{flex-direction:column;align-items:flex-start;gap:9px}
+
+.ci-rail-m{display:flex;flex-direction:column;gap:var(--sp-1);min-width:0}
+/* Muted, not accent. Every accent token is tuned to be read on a console
+   surface, and on the dark field only the two shell inks are legible in both
+   themes — which is also what a console detail header does with its eyebrow. */
+.ci-eyebrow{font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
+  font-weight:var(--w-bold);color:var(--shell-mut)}
+.ci-rail-t{margin:0;font-size:var(--t-display);line-height:var(--t-display-lh);
+  letter-spacing:var(--t-display-ls);font-weight:var(--w-bold);color:var(--shell-ink);
+  overflow-wrap:anywhere}
+.ci-rail-s{margin:0;font-size:var(--t-sm);line-height:var(--t-sm-lh);color:var(--shell-mut)}
+
+/* Who sent this, to whom, and how long it lasts. The gate puts the facts that
+   belong to the record — rather than to the thing being signed — on the field
+   beside it in exactly this shape, and these are those facts.
+
+   They stay directly under the heading rather than being pushed to the foot of
+   the rail: who invited you and when it lapses finishes the sentence the
+   heading starts, and half a screen of empty field between the two halves
+   makes the reader hunt for the second one. The field below them is the
+   sign-in's art panel, which ends the same way.
+
+   The icon is taken out of flow rather than made a flex sibling: this is prose
+   with bold runs in it, and a flex parent would break each run onto a line. */
+.ci-invite{position:relative;margin:0;padding:var(--sp-4) var(--sp-4) var(--sp-4) 34px;
+  background:var(--shell-2);border:1px solid var(--shell-line);border-radius:var(--r-xl);
+  font-size:var(--t-xs);line-height:1.55;color:var(--shell-mut);overflow-wrap:anywhere}
+.ci-invite svg{position:absolute;left:var(--sp-4);top:19px;color:var(--shell-mut);opacity:.75}
+.ci-invite b{color:var(--shell-ink);font-weight:var(--w-semi)}
+
+/* --- The panel: the form ------------------------------------------------------- */
+
+.ci-main{display:flex;flex-direction:column;min-width:0;min-height:0;overflow-y:auto}
+
+/* The part that gives. Above the threshold where everything fits it simply
+   fills the panel; below it this is what scrolls, so Submit and Cancel stay on
+   the bottom edge instead of being pushed off it — the same bargain the consent
+   document strikes between its body and its footer, a few rules up.
+
+   The floor is the last stop: on a window too short even for that, the panel
+   itself scrolls rather than squeezing the form to a slot. */
+.ci-form{flex:1;min-height:12rem;overflow-y:auto;
+  display:flex;flex-direction:column;gap:var(--sp-4);min-width:0;padding:var(--sp-6)}
 
 /* Collapsible sections, the same shape the recertification link page uses for
    the same job — a long form the reader can fold away a part of at a time. */
-.ci-sec{border:1px solid var(--hair);border-radius:var(--r);min-width:0}
+.ci-sec{border:1px solid var(--hair);border-radius:var(--r-lg);min-width:0}
 .ci-sec-h{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;
-  background:var(--surface-2);border:0;border-radius:var(--r);font:inherit;
+  background:var(--surface-2);border:0;border-radius:var(--r-lg);font:inherit;
   font-size:var(--t-sm);font-weight:var(--w-semi);color:var(--ink);cursor:pointer;text-align:left}
-.ci-sec-h[aria-expanded="true"]{border-bottom:1px solid var(--hair);border-radius:var(--r) var(--r) 0 0}
+.ci-sec-h[aria-expanded="true"]{border-bottom:1px solid var(--hair);
+  border-radius:var(--r-lg) var(--r-lg) 0 0}
 .ci-sec-h svg{flex:none;color:var(--mut)}
 .ci-sec-t{flex:none}
 .ci-sec-rule{flex:1;min-width:var(--sp-4);height:1px;background:var(--hair)}
-.ci-sec-err{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--bad);font-weight:var(--w-semi)}
-.ci-sec-b{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-3) var(--sp-4);
-  padding:var(--sp-4) var(--sp-3)}
+.ci-sec-err{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--bad);
+  font-weight:var(--w-semi)}
+/* Columns counted from the width rather than fixed at three. Three was right
+   for a 960px card; across the panel it made every field wider than anything
+   that goes in one — a mobile number in a 430px box. `auto-fill` on a floor
+   spends the rest of the screen on more columns instead, which is the same rule
+   the console's own choice grids run on. `auto-fit` is deliberately not used:
+   it would stretch Office level's three fields to a third of the panel each
+   while General's nine stayed narrow, and two sections of one form must measure
+   the same.
+
+   What sets the floor is the widest thing a control in this grid has to *show*,
+   not the widest label. Sizing it against the label was the error in the first
+   pass: 11.5rem cleared "Test attribute 2" and its tenant badge, but Office
+   Code's own value is "HO-MUM-01 · Mumbai head office" — 189px of text in a
+   <select> that spends 10px of padding, 28px of chevron well and 2px of border
+   before any of it is drawn. The recipient's own answer was cut off after
+   "Mumbai", and a control that will not show what you just chose is worse than
+   a narrow screen. 15rem leaves ~200px of text slot at the floor itself rather
+   than at the track size some particular window happens to produce, so there is
+   no width at which the value clips. Nothing may lower it without measuring the
+   longest option in consentGateData's FIELD_OPTIONS again. */
+.ci-sec-b{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));
+  gap:var(--sp-3) var(--sp-4);padding:var(--sp-4) var(--sp-3)}
 
 /* A tenant attribute is one this organization added; the platform did not ask
    for it and the recipient has never seen its name before. */
@@ -156,6 +320,14 @@
   background:var(--surface-3);border:1px solid var(--hair);
   font-size:var(--t-micro);letter-spacing:var(--t-micro-ls);text-transform:uppercase;
   font-weight:var(--w-bold);color:var(--mut)}
+
+/* The upload and the agreement, side by side. Both are single blocks rather
+   than grids of fields, so stacked across the panel each became a metre of
+   dashed rule with one control at the left end of it. Top-aligned, because the
+   agreement grows as it is answered and the upload must not move when it does. */
+.ci-tail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4);
+  align-items:start}
+.ci-tail-c{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0}
 
 .ci-docs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .ci-doc{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:var(--r);
@@ -167,13 +339,15 @@
 /* The gated agreement. Until the document has been opened the control is inert
    and says so — that sentence is the whole contract of this screen. */
 .ci-agree{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;
-  background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r)}
+  background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-lg)}
 .ci-agree[data-locked]{background:var(--surface-3);border-style:dashed}
 .ci-agree .check{margin-top:2px}
 .ci-agree .check:disabled{opacity:.45;cursor:not-allowed}
 .ci-agree-m{display:flex;flex-direction:column;gap:3px;min-width:0}
 .ci-agree-t{margin:0;font-size:var(--t-sm);color:var(--ink-2)}
-.ci-agree-t .link{font:inherit;font-weight:var(--w-semi);background:none;border:0;padding:0}
+/* `.link` is inline-flex, so it has to be dropped onto the text baseline by
+   hand when it sits inside a run of prose rather than on a row of its own. */
+.ci-agree-t .link{font-size:inherit;vertical-align:-2px}
 .ci-agree-s{position:relative;margin:0;padding-left:18px;
   font-size:var(--t-xs);line-height:1.5;color:var(--mut);overflow-wrap:anywhere}
 .ci-agree-s[data-done="true"]{color:var(--ok)}
@@ -185,13 +359,20 @@
 .ci-agree-e svg{position:absolute;left:0;top:3px}
 
 .ci-short{position:relative;margin:0;padding:9px 11px 9px 31px;
-  background:var(--bad-bg);border:1px solid var(--bad-line);border-radius:var(--r);
+  background:var(--bad-bg);border:1px solid var(--bad-line);border-radius:var(--r-lg);
   font-size:var(--t-xs);line-height:1.5;color:var(--bad);overflow-wrap:anywhere}
 .ci-short svg{position:absolute;left:11px;top:11px}
 
-.ci-actions{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+/* The decision leaves the scrolling body and closes the panel — the last row of
+   the page, on the bottom edge, which is what StickyActions does for every
+   editable page inside the console. It is `flex:none` beside a body that
+   scrolls, so it is on screen from the moment the page opens: Submit below the
+   fold was the whole of what was wrong here. */
+.ci-foot{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-2);
+  flex-wrap:wrap;padding:var(--sp-4) var(--sp-6);
+  background:var(--surface-2);border-top:1px solid var(--line)}
 
-/* --- The document, over the form ---------------------------------------------- */
+/* --- The document, over the form ----------------------------------------------- */
 
 /* The console's own modal backdrop, only given room to scroll: the document is
    taller than a dialog, and `margin:auto` on the panel keeps its top reachable
@@ -199,39 +380,64 @@
 .modal-scrim.ci-scrim{padding:var(--sp-5);overflow-y:auto}
 .ci-dialog{width:100%;max-width:56rem;margin:auto}
 .ci-dialog:focus{outline:none}
-.ci-dialog .cdoc{border-color:var(--line-2);box-shadow:var(--sh-lg);
-  animation:modalIn var(--dur-3) var(--ease-out)}
+.ci-dialog .cdoc{border-color:var(--line-2);animation:modalIn var(--dur-3) var(--ease-out)}
 
 /* --- Narrow -------------------------------------------------------------------- */
 
+@media (max-width:1280px){
+  .cg-main{max-width:60rem}
+}
+/* The rail costs the form more than it is worth once the panel is down to about
+   two columns of fields, so below this it stops being a column and becomes the
+   page's masthead. Two bounded scrollers on a phone are a trap — the thumb
+   lands in one and the rest of the page will not move — so from here the page
+   is a single scroller and nothing inside it scrolls on its own. The footer
+   then follows the form rather than sitting on the bottom edge, which is where
+   every console page keeps its actions when the content is longer than the
+   window. */
+@media (max-width:1040px){
+  .ci-page{display:flex;flex-direction:column;overflow-y:auto}
+  .ci-rail{flex:none;overflow:visible;gap:var(--sp-4);
+    padding:var(--sp-5) var(--sp-5) var(--sp-4);
+    border-right:none;border-bottom:1px solid var(--shell-line)}
+  .ci-rail .cg-lockup{flex-direction:row;align-items:center;gap:11px}
+  .ci-main{flex:none;overflow:visible}
+  .ci-form{flex:none;min-height:0;overflow:visible}
+}
 @media (max-width:960px){
-  .ci-sec-b{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cdoc-h{padding:var(--sp-5) var(--sp-5) var(--sp-4)}
+  .cdoc-notice,.cdoc-body,.cdoc-f,.ci-form,.ci-foot{padding-left:var(--sp-5);padding-right:var(--sp-5)}
 }
 @media (max-width:820px){
-  .cg-main{padding:var(--sp-5) var(--sp-4) var(--sp-8)}
-  .ci-card{padding:var(--sp-5)}
-  .cdoc-h{padding:var(--sp-4)}
-  .cdoc-notice,.cdoc-body,.cdoc-f{padding-left:var(--sp-4);padding-right:var(--sp-4)}
+  .cg-top{padding:var(--sp-4) var(--sp-4) var(--sp-3);gap:var(--sp-3)}
+  .cg-main{padding:0 var(--sp-4) var(--sp-8)}
+  .cdoc-body{padding-top:var(--sp-5);padding-bottom:var(--sp-5)}
   .modal-scrim.ci-scrim{padding:var(--sp-3)}
-}
-@media (max-width:640px){
-  .ci-sec-b{grid-template-columns:minmax(0,1fr)}
+  /* One block under the other: side by side, the agreement's two sentences are
+     down to about twenty characters a line. */
+  .ci-tail{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:560px){
-  .cg-top{padding:10px var(--sp-4);flex-wrap:wrap}
-  /* The signed-in identity is repeated inside the notice, so the header drops
-     it rather than wrapping onto a second line for it. */
-  .cg-who{display:none}
-  .cg-main{padding:var(--sp-4) var(--sp-4) var(--sp-8)}
-  .cdoc-h{flex-wrap:wrap;gap:var(--sp-2) var(--sp-3)}
-  .cdoc-hm{order:3;flex-basis:100%}
-  .cdoc-ver{margin-left:auto}
+  /* The descriptor and the signed-in identity are both repeated inside the
+     notice, so the lockup drops them rather than wrapping twice for them. */
+  .cg-descriptor,.cg-who,.cg-top-sep{display:none}
+  .cg-logo{height:22px}
+  .ci-rail{padding:var(--sp-4) var(--sp-4) var(--sp-3)}
+  .cdoc-h{padding:var(--sp-4) var(--sp-4) var(--sp-3)}
+  .cdoc-notice,.cdoc-body,.cdoc-f,.ci-form,.ci-foot{padding-left:var(--sp-4);padding-right:var(--sp-4)}
+  .cdoc-title,.ci-rail-t{font-size:var(--t-h1);line-height:var(--t-h1-lh);letter-spacing:var(--t-h1-ls)}
   .cdoc-body{max-height:min(22rem,54vh)}
-  .cdoc-lang{flex:1;min-width:0}
-  .cdoc-lang .sel{flex:1;min-width:0}
-  .cg-actions .btn{flex:1 1 9rem;justify-content:center}
-  .ci-card{padding:var(--sp-4)}
-  .ci-head-t{font-size:var(--t-h1)}
-  .ci-actions .btn{flex:1 1 8rem;justify-content:center}
+  /* One column, stated rather than left to `auto-fill` to work out. The panel
+     is already too narrow for two tracks by this width, and on the narrowest
+     handsets it is narrower than the 15rem floor itself — a track floor wider
+     than its container is how a page grows a sideways scrollbar. */
+  .ci-sec-b{grid-template-columns:minmax(0,1fr)}
+  /* The language control keeps its base `flex:none` and its 11rem floor here on
+     purpose, so that it wraps onto a line of its own rather than being starved
+     on this one. It used to be stretched to `flex:1;min-width:0` at this width,
+     which held it on the instruction's line with ~90px of room; the <select>
+     then bottomed out at its padding and chevron, rendering as a bare arrow
+     with no visible language and spilling past the card, which clips it. */
+  .cg-actions .btn,.ci-foot .btn{flex:1 1 9rem;justify-content:center}
   .cg-out{padding:var(--sp-6) var(--sp-4) var(--sp-5)}
 }

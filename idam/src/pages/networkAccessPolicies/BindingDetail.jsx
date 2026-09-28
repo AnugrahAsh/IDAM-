@@ -7,11 +7,37 @@ import KeyValue from '../../components/primitives/KeyValue'
 import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue, SkeletonTable,
+} from '../../components/primitives/Skeleton'
 import { SSO_APPS, USERS } from '../../data/seed'
 import { num, statusTone } from '../../lib/format'
 import { LIST_PATH, rangeInfo, rangeRows } from './networkData'
 
-export default function BindingDetail({ binding, onEdit, onToggle, onDelete, onOpen }) {
+/* `loading` is the policy set's own flag, not a second one: the binding settles
+   as one thing with the register it was opened from. */
+export default function BindingDetail({ binding, onEdit, onToggle, onDelete, onOpen, loading = false }) {
+  if (loading) {
+    return (
+      <Skeleton label="Loading the network binding">
+        <SkeletonDetailHeader facts={5} actions={3} />
+        <div className="detail-body">
+          <div className="detail-cols">
+            {/* The stored record and the addresses it expands into on the left,
+                the identity it restricts on the right. */}
+            <div className="stack">
+              <SkeletonCard><SkeletonKeyValue rows={15} cols={2} /></SkeletonCard>
+              <SkeletonCard><SkeletonTable rows={4} cols={3} /></SkeletonCard>
+            </div>
+            <div className="stack">
+              <SkeletonCard><SkeletonKeyValue rows={3} cols={1} /></SkeletonCard>
+            </div>
+          </div>
+        </div>
+      </Skeleton>
+    )
+  }
+
   const range = rangeInfo(binding.ipAddress)
   const user = USERS.find((u) => u.username === binding.username)
   const app = SSO_APPS.find((a) => a.displayName === binding.application)

@@ -8,7 +8,12 @@ import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
 import EmptyState from '../../components/primitives/EmptyState'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
+import { Skeleton, SkeletonPageBar } from '../../components/primitives/Skeleton'
+// The summary band's stand-in lives beside the other register that draws one;
+// see the note in that file for why it is not in components/workbench.
+import SummarySkeleton from '../quickLinks/SummarySkeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num, serialColumn } from '../../lib/format'
 import { stampText } from '../../lib/clock'
 import { statusTone } from './announcementData'
@@ -54,6 +59,12 @@ export default function AnnouncementRegister({ segments = [] }) {
     () => (mode && mode !== 'add' ? all.find((r) => String(r.id) === String(mode)) : null),
     [mode, all],
   )
+  /* The register's own settle, keyed on where the operator is standing: coming
+     back to the collection from an announcement is the round trip a deployment
+     would make. The editor below is a form the operator types into, so it is
+     never held — a grey field is not a useful thing to show somebody who came
+     here to write an announcement. */
+  const loading = useLoading(mode || 'list')
 
   // The gate is checked here as well as on the button that reaches it, so a
   // pasted address cannot walk around the navigation.
@@ -162,39 +173,51 @@ export default function AnnouncementRegister({ segments = [] }) {
 
   return (
     <>
-      <PageBar
-        title="Notification Management"
-        sub="Everything published to the Notification Center, with audience, schedule and reach. Publishing here puts the announcement in the inbox."
-        crumbs={[{ label: 'Notification Center', to: 'notifications' }, { label: 'Notification Management' }]}
-        actions={
-          <>
-            <Button icon="chevL" onClick={() => navigate(INBOX_PATH)}>Back to notifications</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate(`${MANAGE_PATH}/add`)}>Add announcement</Button>
-          </>
-        }
-      />
+      {/* One announcing region for the screen; the register below keeps its own
+          panel and toolbar while the rows settle inside it. */}
+      {loading ? (
+        <Skeleton label="Loading announcements">
+          <SkeletonPageBar actions={2} crumbs={2} />
+          <SummarySkeleton facts={1} segments={3} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Notification Management"
+            sub="Everything published to the Notification Center, with audience, schedule and reach. Publishing here puts the announcement in the inbox."
+            crumbs={[{ label: 'Notification Center', to: 'notifications' }, { label: 'Notification Management' }]}
+            actions={
+              <>
+                <Button icon="chevL" onClick={() => navigate(INBOX_PATH)}>Back to notifications</Button>
+                <Button variant="pri" icon="plus" onClick={() => navigate(`${MANAGE_PATH}/add`)}>Add announcement</Button>
+              </>
+            }
+          />
 
-      <RegisterSummary
-        ariaLabel="Announcement register"
-        icon="bell"
-        label="Announcements"
-        value={all.length}
-        caption="authored in the console"
-        facts={[{ k: 'Total reach', v: all.reduce((a, r) => a + r.reach, 0) }]}
-        segments={[
-          { id: 'Published', icon: 'checkC', label: 'Published', value: published.length, sub: 'live in the inbox' },
-          { id: 'Scheduled', icon: 'calendar', label: 'Scheduled', value: scheduled.length, sub: 'waiting for their window' },
-          { id: 'Draft', icon: 'edit', label: 'Drafts', value: drafts.length, sub: 'not sent to anyone' },
-        ]}
-        active={status}
-        allId="All"
-        onSelect={setStatus}
-      />
+          <RegisterSummary
+            ariaLabel="Announcement register"
+            icon="bell"
+            label="Announcements"
+            value={all.length}
+            caption="authored in the console"
+            facts={[{ k: 'Total reach', v: all.reduce((a, r) => a + r.reach, 0) }]}
+            segments={[
+              { id: 'Published', icon: 'checkC', label: 'Published', value: published.length, sub: 'live in the inbox' },
+              { id: 'Scheduled', icon: 'calendar', label: 'Scheduled', value: scheduled.length, sub: 'waiting for their window' },
+              { id: 'Draft', icon: 'edit', label: 'Drafts', value: drafts.length, sub: 'not sent to anyone' },
+            ]}
+            active={status}
+            allId="All"
+            onSelect={setStatus}
+          />
+        </>
+      )}
 
       <DataWorkbench
         id="notification-management"
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by title, audience or channel…"
         onRowClick={(r) => navigate(`${MANAGE_PATH}/${r.id}`)}

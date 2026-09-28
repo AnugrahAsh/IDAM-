@@ -139,3 +139,73 @@
 .apptile:hover .apptile-del,
 .apptile-del:focus-visible{opacity:1}
 .apptile-del:hover{background:var(--bad-bg);color:var(--bad)}
+
+/* ---------- Skeletons: the identity record ----------
+   Every rule below states the height of something the shared kit draws to its
+   own generic proportions. The kit is frozen, and correctly so, but this record
+   prints taller type than its bars assume — so the difference is stated here,
+   beside the rules it is measured against, rather than left to move the page
+   when the record lands.
+
+   All of it is written from the tokens rather than as pixel totals, because the
+   Text size control in the header scales the root and a grey bar has no type in
+   it to follow. */
+
+/* `.card-h` stacks a --t-h3 title over a --t-xs sub-line; the kit draws an 11px
+   bar over a 9px one and lands short of the header the card actually prints.
+   Every folder holding skeletons carries this rule for its own region. */
+.skel-head-type .skel-card-h{
+  gap:calc(var(--t-h3) * var(--t-body-lh) + 1px + var(--t-xs) * var(--t-body-lh) - 20px);
+}
+/* `.card-f` prints one line of --t-xs inside 9px gutters. */
+.idu-skel .skel-card-f{min-height:calc(18px + var(--t-xs) * var(--t-body-lh))}
+/* A shape standing in for a `Card … flush`: what it holds — a table, a tile
+   grid, a feed — brings its own gutters, so the shape brings none. */
+.idu-skel-flush > .skel-card-b{padding:0}
+
+/* `.kv-row` prints a --t-micro label over a --t-sm value with the value's 2px
+   lead. The kit's two bars are 16px of that and the gap carries the rest, so
+   General details lands in the box its shape was holding. */
+.idu-skel .skel-kv-m{
+  gap:calc(var(--t-micro) * var(--t-body-lh) + 2px + var(--t-sm) * var(--t-body-lh) - 16px);
+}
+/* `.kv` goes to one column at 840px (components.css) where `.skel-kv` only does
+   so at 600px, so between the two the card printed every row in one column
+   while its shape still drew them in two — right row height, half the rows, and
+   General details landed at twice the height it had been holding. The shape
+   breaks where the card breaks. Attribute-qualified so it wins over the kit's
+   own `[data-cols]` rules whichever order the two sheets end up in. */
+@media(max-width:840px){
+  .idu-skel .skel-kv[data-cols]{grid-template-columns:minmax(0,1fr)}
+}
+
+/* The masthead. `.detail-meta` prints four lines — the eyebrow, the 1.375rem
+   title at 1.24, the sub-line at 1.45 and the fact row — where the kit draws
+   three bars totalling 41px inside two gaps, of which 13px is the fact row and
+   its 4px lead. The avatar is `size="xl"`: 76px and round, not a 52px tile. */
+.idu-skel .skel-dh-meta{
+  gap:calc((var(--t-micro) * var(--t-body-lh) + 1.375rem * 1.24 + var(--t-sm) * 1.45
+    + var(--t-xs) * var(--t-body-lh) - 28px) / 2);
+}
+.idu-skel .skel-dh-media{width:76px;height:76px;border-radius:50%}
+
+/* A flat `.tbl` row is `--row-h` and its head band is a flat 32px, which is
+   exactly what the kit's `.skel-row` and `.skel-row[data-head]` already state —
+   so neither needs a rule here, and the pixel literals that used to stand in
+   for them were wrong at every density but the `:root` fallback the console
+   never ships.
+
+   A cell printing a name over a sub-line is the one row the kit cannot know
+   about. `.tbl` sets --t-sm on the inherited body line height, `.cell-sub` adds
+   --t-xs at 1.35 with `--cell-gap` above it, and the cell's own `--td-py`
+   gutters and the row's hairline sit around the pair — all four of which move
+   with the density control. */
+.idu-skel-tbl[data-stacked] .skel-row:not([data-head="true"]){
+  height:calc(var(--td-py) * 2 + 1px + var(--t-sm) * var(--t-body-lh)
+    + var(--cell-gap) + var(--t-xs) * 1.35);
+}
+
+/* The figure strip is a row of buttons that filter the record. The shape
+   holding its place is not, so it offers neither the pointer nor the hover. */
+.idu-kpis[data-skel] .idu-kpi{cursor:default}
+.idu-kpis[data-skel] .idu-kpi:hover{background:var(--surface)}

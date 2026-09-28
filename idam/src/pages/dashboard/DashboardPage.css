@@ -99,3 +99,103 @@
   .dash-tiles{grid-template-columns:minmax(0,1fr)}
   .dash-posture{flex-direction:column;align-items:flex-start}
 }
+
+/* --- Skeleton --------------------------------------------------------------
+   The shapes the dashboard holds the page with while it settles.
+
+   Every size below is copied from the rule it stands in for a few lines above
+   — the tile's padding and its 2.375rem mark, the meter row's label and value
+   columns, the gauge's diameter — and the chart blocks are drawn at the `h`
+   each chart is rendered at. A chart skeleton that is a line of text rather
+   than a plot-sized block drops the panel under it by most of its height the
+   moment the series lands, which on the console's first screen reads as the
+   page breaking rather than as the page arriving. */
+.dash-skel-tile{display:flex;align-items:flex-start;gap:11px;min-width:0;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 14px 22px}
+.dash-skel-tile > .skel{width:2.375rem;height:2.375rem;border-radius:var(--r-lg);flex:none}
+/* .dash-tile-m's own gap, over the three line boxes it stacks. */
+.dash-skel-tile-m{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.dash-skel-tile-m > .skel{display:block}
+/* --t-display at line-height 1.1 is the figure .dash-tile-v prints. */
+.dash-skel-fig{height:calc(var(--t-display) * 1.1);border-radius:var(--r-sm)}
+/* .dash-tile-k and .dash-tile-s are both --t-xs and neither states a line
+   height, so both take the body's. Flat 8px bars under a 2px gap left the tile
+   11px short of the one it holds space for, and every tile on the strip is a
+   single grid row — so the whole page under the headline lifted at once when
+   the figures landed. */
+.dash-skel-cap{height:calc(var(--t-xs) * var(--t-body-lh))}
+
+/* A chart. AreaChart and BarChart are both 760-wide viewBoxes, and
+   `.chart-box svg` draws them `width:100%;height:auto` — so the height that
+   lands is the column width times h/760, which equals `h` only on a 760px
+   column and the card is never that wide. The block takes the svg's ratio
+   instead, and so tracks the column through `.grid-23`'s collapse the way the
+   svg will. */
+.dash-skel-plot{display:block;width:100%;aspect-ratio:760 / var(--plot-h, 190);border-radius:var(--r-sm)}
+
+/* The figure strips: five above the sign-in chart, three on Operations. */
+.dash-skel-figs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.dash-skel-figs[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+.dash-skel-figs > span{display:flex;flex-direction:column;gap:5px;min-width:0}
+.dash-skel-figs > span > .skel{display:block}
+
+/* A meter row keeps .meter-row's three columns: label, bar, value. */
+.dash-skel-meters{display:flex;flex-direction:column;gap:10px}
+.dash-skel-meters[data-lead]{margin-top:16px}
+.dash-skel-meter{display:flex;align-items:center;gap:12px}
+.dash-skel-meter > .skel:first-child{width:10.625rem;max-width:52%;height:9px;flex:none}
+.dash-skel-meter > .skel:nth-child(2){flex:1;height:5px;border-radius:var(--r-pill)}
+.dash-skel-meter > .skel:last-child{width:3rem;height:9px;flex:none}
+
+.dash-skel-posture{display:flex;align-items:center;gap:16px}
+.dash-skel-ring{width:116px;height:116px;border-radius:50%;flex:none}
+.dash-skel-posture-m{display:flex;flex-direction:column;gap:9px;flex:1;min-width:0}
+.dash-skel-posture-m > .skel{display:block}
+.dash-skel-seg{height:10px;border-radius:var(--r-pill)}
+
+/* Insights and application health are flush lists, so their rows carry the
+   same padding and hairline the real ones do. */
+.dash-skel-insights,.dash-skel-apps{display:flex;flex-direction:column}
+.dash-skel-insight{display:flex;align-items:flex-start;gap:10px;padding:11px var(--sp-4);
+  border-top:1px solid var(--hair)}
+.dash-skel-app{display:flex;align-items:center;gap:10px;padding:8px var(--sp-4);
+  border-top:1px solid var(--hair)}
+.dash-skel-insight:first-child,.dash-skel-app:first-child{border-top:0}
+.dash-skel-insight > .skel:first-child{width:1.75rem;height:1.75rem;border-radius:var(--r);flex:none}
+.dash-skel-app > .skel:first-child{width:26px;height:26px;border-radius:var(--r-sm);flex:none}
+.dash-skel-rowm{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.dash-skel-rowm > .skel{display:block}
+
+.dash-skel-gov{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 24px}
+.dash-skel-sub-h{display:block;height:9px;width:58%;margin:14px 0 8px}
+.dash-skel-sub-h[data-lead]{margin-top:4px}
+
+/* The skeleton breaks where the page breaks. */
+@media(max-width:900px){
+  .dash-skel-figs{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .dash-skel-gov{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:480px){
+  .dash-skel-posture{flex-direction:column;align-items:flex-start}
+  .dash-skel-ring{width:96px;height:96px}
+}
+
+/* A flush panel: the rows inside carry the padding, exactly as they do on the
+   real card, so the body must not carry it as well. */
+.dash-skel-flush .skel-card-b{padding:0}
+
+/* --- A panel header, holding the height it will print -----------------------
+   `.card-h` stacks `.card-h-title` over `.card-h-sub`, so it runs past its own
+   42px floor; the kit's `.skel-card-h` draws a flat 11px bar over a flat 9px
+   one and lands about 13px short of it. The kit is shared and frozen, and its
+   bar heights are inline styles, so the gap between them is the only thing a
+   page can move. Neither title nor sub states a line height, so both take the
+   body's: --t-h3 at --t-body-lh over --t-xs at --t-body-lh with the sub-line's
+   1px lead, less the 20px the two bars already occupy. Written from the tokens
+   rather than as that number, because the header's Text size control scales the
+   root and the bars do not follow it. The skeletons in this folder mark their
+   announcing region with the class; ProfilePage.css carries the same rule for
+   its own. */
+.skel-head-type .skel-card-h{
+  gap:calc(var(--t-h3) * var(--t-body-lh) + 1px + var(--t-xs) * var(--t-body-lh) - 20px);
+}

@@ -9,9 +9,15 @@ import { num, serialColumn } from '../../lib/format'
 import { BASE, GROUP_TYPES, HIGH_IMPACT, countRules, groupList, groupPhrase, groupsOfType, matchUsers, parseExpression } from './policyPageData'
 import ImportForm from './ImportForm'
 import StatCards from '../../components/workbench/StatCards'
+import { useLoading } from '../../lib/useLoading'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
+import { PolicyListSkeleton } from './PoliciesSkeleton'
 
 export default function PolicyList({ rows, setRows, onDelete }) {
   const { toast, navigate, setDrawer } = useApp()
+  /* One flag for the screen: the masthead, the four figures and the rows are
+     one reading of the register and settle together. */
+  const loading = useLoading()
 
   const enriched = useMemo(() => rows.map((p) => {
     const model = parseExpression(p.condition)
@@ -153,19 +159,25 @@ export default function PolicyList({ rows, setRows, onDelete }) {
 
   return (
     <>
-      <PageBar
-        title="Dynamic Policies"
-        sub="Attribute rules that assign entitlements without a request. Every policy states a condition, a target group and the identities it currently reaches."
-        crumbs={[{ label: 'Groups' }, { label: 'Dynamic Policy' }]}
-        actions={
-          <>
-            <Button icon="upload" onClick={openImport}>Import policy</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/add`)}>Add Policy</Button>
-          </>
-        }
-      />
+      {/* One announcing region for the screen. The register below draws its own
+          rows from `loading`, and those shapes are decoration. */}
+      {loading ? <PolicyListSkeleton /> : (
+        <PageBar
+          title="Dynamic Policies"
+          sub="Attribute rules that assign entitlements without a request. Every policy states a condition, a target group and the identities it currently reaches."
+          crumbs={[{ label: 'Groups' }, { label: 'Dynamic Policy' }]}
+          actions={
+            <>
+              <Button icon="upload" onClick={openImport}>Import policy</Button>
+              <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/add`)}>Add Policy</Button>
+            </>
+          }
+        />
+      )}
 
       <div className="stack">
+        {/* In the tiles' own place, so the rows do not move when they land. */}
+        {loading ? <SkeletonStats count={4} /> : (
         <StatCards
           items={[
             { key: 'total', icon: 'policy', label: 'Policies', value: stats.total, chip: `${stats.active} active`, sub: 'membership rules' },
@@ -175,10 +187,12 @@ export default function PolicyList({ rows, setRows, onDelete }) {
           ]}
           label="Dynamic policy summary"
         />
+        )}
 
         <DataWorkbench
           id="policies"
           rows={enriched}
+          loading={loading}
           columns={columns}
           selectable
           searchPlaceholder="Search policies by name, condition or target group…"

@@ -2,6 +2,7 @@ import Card from '../../components/primitives/Card'
 import KeyValue from '../../components/primitives/KeyValue'
 import { num } from '../../lib/format'
 import { levelNames } from './data'
+import { CampaignOverviewSkeleton } from './RecertificationSkeleton'
 
 const share = (part, whole) => (whole ? (part / whole) * 100 : 0)
 
@@ -53,10 +54,15 @@ function Standing({ c, undecided, certified }) {
   )
 }
 
-export function OverviewTab({ c, scoped }) {
+export function OverviewTab({ c, scoped, loading = false }) {
   const certified = Math.max(0, c.decided - c.revoked)
   const undecided = Math.max(0, c.items - c.decided)
   const chain = levelNames(c.levels)
+
+  /* Both cards are the same campaign read two ways, so the panel settles as one
+     thing. Every figure on it is a count of what has not arrived yet, and a
+     "0% decided" shown for a beat is a statement, not a placeholder. */
+  if (loading) return <CampaignOverviewSkeleton campaign={c} />
 
   return (
     <div className="stack">

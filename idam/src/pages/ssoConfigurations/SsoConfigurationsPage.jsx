@@ -10,8 +10,12 @@ import PageBar from '../../components/shell/PageBar'
 import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
 import TextInput from '../../components/primitives/TextInput'
+import {
+  Skeleton, SkeletonCard, SkeletonForm, SkeletonKeyValue, SkeletonPageBar,
+} from '../../components/primitives/Skeleton'
 import { SSO_APPS } from '../../data/seed'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import './SsoConfigurationsPage.css'
 import Switch from '../../components/primitives/Switch'
 import AdminApplicationForm from './AdminApplicationForm'
@@ -65,6 +69,16 @@ export default function SsoConfigurationsPage() {
   const [dirty, setDirty] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const [adminApp, setAdminApp] = useState('workspace')
+
+  /* Everything on this screen is the tenant's submitted configuration read
+     back — the endpoints, the signing material, the metadata the provider is
+     given. It settles once, on arrival.
+
+     Changing the method deliberately does not settle again. The three methods
+     are three faces of one record the page already holds, and re-running the
+     wait would blank fields an administrator may be part way through typing
+     into for the sake of a round trip that never happened. */
+  const loading = useLoading()
 
   const active = useMemo(() => METHODS.find((m) => m.id === method), [method])
   const admin = useMemo(() => SSO_APPS.find((a) => a.name === adminApp), [adminApp])
@@ -141,6 +155,54 @@ export default function SsoConfigurationsPage() {
       />
     ),
   })
+
+  if (loading) {
+    return (
+      /* One announcing region for the screen; every shape inside it is
+         decoration and says nothing of its own. */
+      <Skeleton label="Loading the single sign-on configuration" className="sso-skel">
+        <SkeletonPageBar actions={3} crumbs={1} />
+        {/* The rail of facts under the title. The shared masthead shape has no
+            rail, and without this row the skeleton is a tag shorter than the
+            bar it stands in for. */}
+        <div className="sso-skel-rail" aria-hidden="true">
+          <span className="skel" style={{ width: 148 }} />
+          <span className="skel" style={{ width: 172 }} />
+          <span className="skel" style={{ width: 196 }} />
+          <span className="skel" style={{ width: 164 }} />
+        </div>
+
+        <div className="stack">
+          {/* Authentication method: a pill over the three switch rows. Neither
+              shape is in the kit, so they are drawn at the heights
+              components.css gives .pill and .switch. */}
+          <SkeletonCard>
+            <div className="sso-skel-body">
+              <div><span className="skel sso-skel-pill" /><span className="skel" style={{ width: '46%', height: 9 }} /></div>
+              <div><span className="skel sso-skel-sw" /><span className="skel" style={{ width: '38%', height: 9 }} /></div>
+              <div><span className="skel sso-skel-sw" /><span className="skel" style={{ width: '52%', height: 9 }} /></div>
+              <div><span className="skel sso-skel-sw" /><span className="skel" style={{ width: '44%', height: 9 }} /></div>
+            </div>
+          </SkeletonCard>
+
+          {/* The endpoint editor. SAML opens by default and is the taller of
+              the two, so the shape is drawn to it: three stacked fields, the
+              last one the certificate box. */}
+          <SkeletonCard>
+            <SkeletonForm fields={2} cols={1} actions={false} />
+            <div className="sso-skel-cert">
+              <span className="skel" style={{ width: '32%', height: 8 }} />
+              <span className="skel sso-skel-pem" />
+            </div>
+          </SkeletonCard>
+
+          <SkeletonCard foot>
+            <SkeletonKeyValue cols={1} rows={6} />
+          </SkeletonCard>
+        </div>
+      </Skeleton>
+    )
+  }
 
   return (
     <>

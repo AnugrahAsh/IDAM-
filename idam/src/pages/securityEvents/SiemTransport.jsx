@@ -6,6 +6,7 @@ import TextInput from '../../components/primitives/TextInput'
 import Button from '../../components/primitives/Button'
 import Banner from '../../components/primitives/Banner'
 import Pill from '../../components/primitives/Pill'
+import { SkeletonCard, SkeletonForm, SkeletonLine } from '../../components/primitives/Skeleton'
 import Toggle from '../settings/Toggle'
 import { DirtyPill } from '../settings/SectionFooter'
 import { changeMetaFor, recordChange, useSettings, writeSection } from '../settings/settingsStore'
@@ -40,7 +41,7 @@ const numberOr = (v, fallback) => {
  * The value itself stays in the settings store, so it survives a reload and
  * the tenant configuration export still carries it.
  */
-export default function SiemTransport() {
+export default function SiemTransport({ loading = false }) {
   const { toast } = useApp()
   const settings = useSettings()
   const saved = settings.siem
@@ -63,6 +64,26 @@ export default function SiemTransport() {
   const reload = () => {
     setDraft(saved)
     toast('ok', 'Transport reloaded', 'The form was reloaded from the configuration the transport is running with.')
+  }
+
+  /* This is a form, but it is not a blank one: every field arrives holding the
+     configuration the transport is running with, and the status pill beside
+     the title states whether it is delivering. Both are answers a deployment
+     goes and gets, so the card waits as a whole rather than painting empty
+     inputs that fill in underneath the reader. Four groups, in the order the
+     real form has them, so nothing moves when they land. */
+  if (loading) {
+    return (
+      <SkeletonCard head foot>
+        <div className="stack" style={{ gap: 'var(--sp-5)' }}>
+          <SkeletonLine width="100%" height={52} />
+          <SkeletonForm fields={5} cols={3} actions={false} />
+          <SkeletonForm fields={2} cols={2} actions={false} />
+          <SkeletonForm fields={5} cols={2} actions={false} />
+          <SkeletonForm fields={5} cols={3} actions={false} />
+        </div>
+      </SkeletonCard>
+    )
   }
 
   return (

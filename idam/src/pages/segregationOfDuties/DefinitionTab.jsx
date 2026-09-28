@@ -7,6 +7,9 @@ import Tag from '../../components/primitives/Tag'
 import { num } from '../../lib/format'
 import { applicationOf, combinationOf, groupRecord, listLabel, memberCount } from './sodData'
 import { sodSeverityBadge } from '../settings/settingsStore'
+import {
+  Skeleton, SkeletonCard, SkeletonKeyValue, SkeletonTable, SkeletonText,
+} from '../../components/primitives/Skeleton'
 
 /**
  * What a segregation-of-duties rule is, and where it currently stands.
@@ -16,10 +19,37 @@ import { sodSeverityBadge } from '../settings/settingsStore'
  * machinery, and the link rail. A rule is a combination of application groups,
  * a grade and a scope, and this page shows exactly that.
  */
-export default function DefinitionTab({ rule, meta, violations }) {
+export default function DefinitionTab({ rule, meta, violations, loading = false }) {
   const combination = combinationOf(rule)
   const open = violations.filter((v) => v.status === 'Open').length
   const pairs = Math.max(0, (combination.length * (combination.length - 1)) / 2)
+
+  /* The panel settles as one thing: the definition on the left and the two
+     fact panels on the right are the same rule read three ways. The columns
+     are the real `.detail-cols` grid, so nothing moves sideways on arrival. */
+  if (loading) {
+    return (
+      <Skeleton label={`Loading ${rule.name}`} className="detail-cols">
+        <div className="stack">
+          <SkeletonCard>
+            <div className="stack">
+              {/* Description, the four defining facts, and the banner that
+                  reads the combination back in words. */}
+              <SkeletonText lines={2} />
+              <SkeletonKeyValue rows={4} cols={2} />
+              <span className="skel" style={{ display: 'block', height: 58 }} aria-hidden="true" />
+            </div>
+          </SkeletonCard>
+          {/* The entitlement combination table: one row per application group. */}
+          <SkeletonCard><SkeletonTable rows={Math.max(2, combination.length)} cols={3} /></SkeletonCard>
+        </div>
+        <div className="stack">
+          <SkeletonCard><SkeletonKeyValue rows={4} cols={1} /></SkeletonCard>
+          <SkeletonCard><SkeletonKeyValue rows={4} cols={1} /></SkeletonCard>
+        </div>
+      </Skeleton>
+    )
+  }
 
   return (
     <div className="detail-cols">

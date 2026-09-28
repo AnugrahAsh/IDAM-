@@ -12,7 +12,9 @@ import Banner from '../../../components/primitives/Banner'
 import Tag from '../../../components/primitives/Tag'
 import EmptyState from '../../../components/primitives/EmptyState'
 import KeyValue from '../../../components/primitives/KeyValue'
+import { SkeletonLine } from '../../../components/primitives/Skeleton'
 import { useApp } from '../../../store/AppContext'
+import SectionSkeleton, { TableSkeleton } from './SectionSkeleton'
 import { ORGANIZATIONS } from '../../../data/seed'
 import {
   BINDING_SCOPES, FLOWS_BY_WORKFLOW, PRECEDENCE, WORKFLOWS, regionInUse, resolveFlow, writeSection,
@@ -32,7 +34,7 @@ const nextId = (rows) => rows.reduce((m, r) => Math.max(m, r.id), 0) + 1
  * the foot resolves a real workflow through the precedence rule so the
  * ordering is demonstrated rather than asserted.
  */
-export default function Regions({ regions, regionFlows, settings }) {
+export default function Regions({ regions, regionFlows, settings, loading = false }) {
   const { toast, confirm } = useApp()
   const [region, setRegion] = useState({ key: '', name: '' })
   const [binding, setBinding] = useState({ workflow: '', scope: 'Global (default)', region: '', org: '', flow: '', priority: 50 })
@@ -114,6 +116,27 @@ export default function Regions({ regions, regionFlows, settings }) {
     if (b.scope === 'Region') return `Region · ${b.region}`
     if (b.scope === 'Organization') return `Organization · ${b.org}`
     return `${b.org} · ${b.region}`
+  }
+
+/* Held while Settings settles. This section is a register of stored rows, not
+   a form the operator arrives already typing into: the add row above the table
+   appends to rows that are still on their way, so it holds its place with
+   them. */
+  if (loading) {
+    return (
+      <div className="stack">
+        {/* Four cards, in the order they land, and three different registers
+            rather than one shape repeated: the regions, the organization
+            overrides under the master switch, and the flow bindings. Each is
+            drawn at the rows and the columns it actually holds — the settings
+            document is in hand before the settle starts, so none of the three
+            has to be guessed at. */}
+        <SectionSkeleton><TableSkeleton rows={regions.length || 4} cols={5} /></SectionSkeleton>
+        <SectionSkeleton><TableSkeleton rows={regionFlows.overrides.length || 1} cols={4} /></SectionSkeleton>
+        <SectionSkeleton><TableSkeleton rows={regionFlows.bindings.length || 4} cols={6} /></SectionSkeleton>
+        <SectionSkeleton><SkeletonLine height={132} /></SectionSkeleton>
+      </div>
+    )
   }
 
   return (

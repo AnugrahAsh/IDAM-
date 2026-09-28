@@ -9,7 +9,9 @@ import Tag from '../../../components/primitives/Tag'
 import Banner from '../../../components/primitives/Banner'
 import SeverityBadge from '../../../components/primitives/SeverityBadge'
 import EmptyState from '../../../components/primitives/EmptyState'
+import { SkeletonLine } from '../../../components/primitives/Skeleton'
 import { useApp } from '../../../store/AppContext'
+import SectionSkeleton, { LevelListSkeleton } from './SectionSkeleton'
 import { writeSection } from '../settingsStore'
 
 /**
@@ -36,7 +38,7 @@ const BLANK = { label: '', badge: 'medium' }
 
 const slug = (label) => `sod-sev-${label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`
 
-export default function SodSeverities({ value }) {
+export default function SodSeverities({ value, loading = false }) {
   const { toast, confirm } = useApp()
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState(BLANK)
@@ -141,6 +143,26 @@ export default function SodSeverities({ value }) {
           <IconButton icon="edit" size="sm" label={`Edit ${x.label}`} onClick={() => { setAdding(false); setEditing({ ...x }) }} />
           <IconButton icon="trash" size="sm" label={`Delete ${x.label}`} onClick={() => remove(x)} />
         </div>
+      </div>
+    )
+  }
+
+/* Held while Settings settles. This section is a register of stored rows, not
+   a form the operator arrives already typing into: the add row above the table
+   appends to rows that are still on their way, so it holds its place with
+   them. */
+  if (loading) {
+    return (
+      <div className="stack">
+        {/* The note above the card is one line of standing guidance, so it is
+            a bar of that height rather than a card of its own. */}
+        <SkeletonLine height={46} />
+        {/* Read from the stored grades rather than matched to them by hand: the
+            seed is four today, and a count written out here is a count that
+            stops being true the first time a tenant adds a fifth. */}
+        <SectionSkeleton foot>
+          <LevelListSkeleton rows={levels.length || 4} />
+        </SectionSkeleton>
       </div>
     )
   }

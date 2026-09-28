@@ -1,20 +1,34 @@
 /**
- * The four calls the module makes, and the data behind them.
+ * The calls the module makes, and the data behind them.
  *
  *   services/get              the catalogue — schema, defaults, metadata
  *   scripts/get               the approved script registry
  *   schedulers/get            the register, searched and paged server-side
  *   service/job/progress/get  live progress for whatever is running
+ *   logs/get                  the runs of one service, newest first
+ *   service/logs/get          the per-item results of one run
  *
  * They are synchronous here because the console runs on a fixed dataset, but
  * they are the module's only door to its data: a screen reads through these and
  * never reaches past them, so pointing the module at a live API is an edit to
- * this file alone.
+ * this file alone. The last two answer in the envelope the server uses —
+ * totalCount, page, limit, display_timezone, totalResults — so a screen written
+ * against them is already written against the real response.
  */
 
 import { NOW_MS } from '../../lib/clock'
 import { CATALOG, defaultConfig, serviceFor } from './serviceCatalog'
+import { MODELLED_SERVICES, resultRowsFor } from './resultLogs'
 import { executionDefaults, nextRunAt, scheduleDescription, stamp } from './schedulerModel'
+
+/**
+ * The zone every scheduler timestamp is reported in.
+ *
+ * The response carries it — a deployment reports in the zone its operators
+ * work in, not in the zone each scheduler happens to be evaluated in — and the
+ * screens convert into it exactly once. See `schedulerTime` in schedulerModel.
+ */
+export const DISPLAY_TIMEZONE = 'Asia/Kolkata'
 
 // ---------------------------------------------------------------------------
 // GET /apis/api/v1/schedulers/services/get
@@ -281,9 +295,14 @@ const SEED = [
     last_run_at: at(6, 4),
     last_status: 'Succeeded',
     last_execution_id: 'exec-49-0044',
+    /* Only the per-item logs are cleaned. The execution rows are small and are
+       what every run history is read from; the per-item rows underneath them
+       are the bulk, and dropping those at 90 days keeps a year of history
+       legible at a fraction of the size. It is also why a run older than that
+       has a summary but no results — see `getServiceLogs`. */
     service_config: {
       retentionValue: 90, retentionUnit: 'days', mode: 'ARCHIVE_AND_DELETE',
-      targets: ['SCHEDULER_EXECUTIONS', 'SCHEDULER_EXECUTION_LOGS'],
+      targets: ['SCHEDULER_EXECUTION_LOGS'],
       batchSize: 2000, interBatchSleepMs: 200, maxRuntimeSeconds: 3600,
     },
   }),
@@ -337,6 +356,168 @@ const SEED = [
     last_execution_id: 'exec-52-0007',
     service_config: { skipIfRunning: true },
   }),
+
+  /* -------------------------------------------------------------------------
+     The four add-on services.
+
+     They are seeded because their result screens are the work: without a
+     scheduler bound to each, the run history for Approval Escalation, Approval
+     Reminder, Audit Log Cleanup and Recertification Campaign opens on an empty
+     register and none of the four column sets is reachable.
+
+     Escalation and cleanup carry two schedulers each, which is how a deployment
+     that takes either seriously actually runs them: one doing the work, one
+     rehearsing. The rehearsal is where the dry-run banner is read.
+
+     The deployment has no approval-specific email template yet, so the
+     notification fields point at the closest one written — the same thing an
+     administrator does on the day, and the reason A3 lists what a template is
+     rather than letting one be typed.
+     --------------------------------------------------------------------- */
+
+  record({
+    id: 53,
+    name: 'Approval escalation sweep',
+    description: 'Moves approvals that have sat three days with the same approver up the escalation path.',
+    service_code: 'APPROVAL_ESCALATION',
+    schedule_type: 'recurring',
+    frequency: 'daily',
+    time_of_day: '07:30',
+    timezone: 'Asia/Kolkata',
+    start_date: iso(at(45, 0)),
+    active_status: true,
+    last_run_at: at(0, 7, 30),
+    last_execution_id: 'exec-53-0141',
+    service_config: {
+      escalationPath: ['NEXT_LEVEL', 'MANAGER', 'ORG_CERTIFIER', 'ADMINISTRATOR'],
+      fallbackAdministrators: ['security_team', 'it_ops'],
+      skipWhenApproverActive: true,
+      notifyNewApprover: true, newApproverTemplate: 'Recertification reminder',
+      notifyPreviousApprover: false,
+      dryRun: false,
+    },
+  }),
+  record({
+    id: 54,
+    name: 'Emergency access escalation (rehearsal)',
+    description: 'Added for emergency access requests and still in dry run while the path is settled.',
+    service_code: 'APPROVAL_ESCALATION',
+    schedule_type: 'periodic',
+    interval_type: 'hours',
+    run_between: 12,
+    timezone: 'Asia/Kolkata',
+    start_date: iso(at(12, 0)),
+    active_status: true,
+    last_run_at: at(0, 6),
+    last_execution_id: 'exec-54-0022',
+    service_config: {
+      pendingHours: 24,
+      /* No administrator fallback, on purpose: this is the path being settled,
+         and a request nobody above the manager can take is exactly what the
+         rehearsal is meant to surface before the service is switched on. */
+      escalationPath: ['NEXT_LEVEL', 'MANAGER'],
+      notifyNewApprover: false,
+      maxRequestsPerRun: 40,
+      dryRun: true,
+    },
+  }),
+  record({
+    id: 55,
+    name: 'Pending approval reminders',
+    description: 'Chases approvers daily about the requests still waiting on them.',
+    service_code: 'APPROVAL_REMINDER',
+    schedule_type: 'recurring',
+    frequency: 'daily',
+    time_of_day: '09:30',
+    timezone: 'Asia/Kolkata',
+    start_date: iso(at(70, 0)),
+    active_status: true,
+    last_run_at: at(0, 9, 30),
+    last_execution_id: 'exec-55-0318',
+    service_config: {
+      approverTemplate: 'Recertification reminder',
+      notifyRequester: true, requesterTemplate: 'Recertification reminder',
+      notifyAdminsWhenNoApprover: true,
+      fallbackAdministrators: ['security_team'],
+      maxReminders: 3,
+      dryRun: false,
+    },
+  }),
+  record({
+    id: 56,
+    name: 'Audit retention enforcement',
+    description: 'Applies the configured retention policies, archiving before anything is removed.',
+    service_code: 'AUDIT_LOG_CLEANUP',
+    schedule_type: 'recurring',
+    frequency: 'weekly',
+    days: ['SUNDAY'],
+    time_of_day: '02:30',
+    timezone: 'Asia/Kolkata',
+    start_date: iso(at(110, 0)),
+    active_status: true,
+    last_run_at: at(2, 2, 30),
+    last_execution_id: 'exec-56-0071',
+    service_config: {
+      policyScope: 'AUTOMATIC',
+      excludedLogTypes: ['SIGNIN_FAILURE'],
+      skipComplianceLocked: false,
+      mode: 'APPLY',
+      /* Above the number of log types this deployment captures, so one run
+         covers the whole register rather than leaving the tail of it to the
+         next one and reporting a different set of policies every week. */
+      maxPoliciesPerRun: 50,
+      continueOnPolicyFailure: true,
+    },
+  }),
+  record({
+    id: 57,
+    name: 'Retention preview',
+    description: 'Reports what the retention policies would remove, without removing anything.',
+    service_code: 'AUDIT_LOG_CLEANUP',
+    schedule_type: 'recurring',
+    frequency: 'weekly',
+    days: ['THURSDAY'],
+    time_of_day: '06:00',
+    timezone: 'Asia/Kolkata',
+    start_date: iso(at(110, 0)),
+    active_status: true,
+    last_run_at: at(5, 6),
+    last_execution_id: 'exec-57-0064',
+    service_config: {
+      policyScope: 'AUTOMATIC',
+      mode: 'DRY_RUN',
+      maxPoliciesPerRun: 20,
+    },
+  }),
+  record({
+    id: 58,
+    name: 'Quarterly access review opener',
+    description: 'Opens the quarter’s recertification campaign on the first run inside the period.',
+    service_code: 'RECERTIFICATION_CAMPAIGN',
+    schedule_type: 'recurring',
+    frequency: 'weekly',
+    days: ['WEDNESDAY'],
+    time_of_day: '04:00',
+    timezone: 'Asia/Kolkata',
+    /* Weekly, for a quarterly campaign. The cadence is deliberate: the
+       scheduler runs often so that a quarter is never missed, and the duplicate
+       check is what stops it opening a second campaign on every run after the
+       first. That is the outcome the result screen spends most of its rows on. */
+    start_date: iso(at(51, 0)),
+    active_status: true,
+    last_run_at: at(0, 4),
+    last_execution_id: 'exec-58-0009',
+    service_config: {
+      campaignName: 'Quarterly review',
+      campaignPeriod: 'QUARTERLY',
+      population: 'ALL_USERS',
+      auditor: 'grc_team',
+      reviewLevels: ['user', 'manager', 'auditor'],
+      duplicateCheck: 'PERIOD',
+      countClosedCampaigns: true,
+      dryRun: false,
+    },
+  }),
 ]
 
 /**
@@ -355,7 +536,23 @@ export const getSchedulers = (rows, { search = '', page = 1, limit = 10 } = {}) 
   return { records: matched.slice(start, start + limit), totalCount: matched.length, page, limit }
 }
 
-export const seedSchedulers = () => SEED.map((r) => ({ ...r }))
+/**
+ * The register.
+ *
+ * A scheduler whose runs are modelled row by row takes its last result from its
+ * own most recent run rather than from a value seeded beside it. The two used to
+ * be written out independently, which is the one place the register and the run
+ * history could contradict each other — a row reporting "Succeeded" over a run
+ * whose results are half failures.
+ */
+export const seedSchedulers = () => SEED.map((r) => {
+  const row = { ...r }
+  if (MODELLED_SERVICES.has(row.service_code)) {
+    const latest = executionsFor([row], 1)[0]
+    if (latest) row.last_status = latest.status
+  }
+  return row
+})
 
 // ---------------------------------------------------------------------------
 // GET /apis/api/v1/schedulers/service/job/progress/get
@@ -398,25 +595,40 @@ const CADENCE_MS = (r) => {
 
 const OUTCOMES = ['Succeeded', 'Succeeded', 'Succeeded', 'Succeeded', 'Partial', 'Succeeded', 'Failed']
 
+/* A run's status, read off what its rows actually say. Every row succeeded is a
+   clean run; some did not is a partial one; none did is a failure. */
+const statusOfRows = (items) => {
+  const failed = items.filter((i) => i.success === false).length
+  if (!items.length || failed === 0) return 'Succeeded'
+  return failed === items.length ? 'Failed' : 'Partial'
+}
+
 export const executionsFor = (rows, count = 8) => {
   const out = []
   rows.forEach((r) => {
     const base = parseStampMs(r.last_run_at) ?? NOW_MS
     const step = CADENCE_MS(r)
+    /* A scheduler has no history from before it existed. Without this the
+       register invented eight runs for a scheduler registered last week, and a
+       monthly one claimed runs from before the deployment. */
+    const from = parseStampMs(r.start_date)
+    const modelled = MODELLED_SERVICES.has(r.service_code)
+    const service = serviceFor(r.service_code)
     for (let k = 0; k < count; k += 1) {
-      const seed = (Number(r.id) * 7 + k * 13) % OUTCOMES.length
-      const status = k === 0 && r.last_status ? r.last_status : OUTCOMES[seed]
       const started = base - k * step
+      if (from != null && started < from) break
+      const seed = (Number(r.id) * 7 + k * 13) % OUTCOMES.length
+      let status = k === 0 && r.last_status ? r.last_status : OUTCOMES[seed]
       const running = status === 'Running'
       const durationMs = running
         ? NOW_MS - started
         : Math.max(2000, Math.round((r.timeout_ms || 900000) * (0.04 + ((Number(r.id) * 3 + k * 5) % 17) / 100)))
-      const processed = 40 + ((Number(r.id) * 31 + k * 97) % 960)
+      let processed = 40 + ((Number(r.id) * 31 + k * 97) % 960)
       /* Only a failed run loses the whole batch. A stopped one is checkpointed
          and a running one has not lost anything yet, so quoting every record as
          failed on either of those reads as a far worse incident than it is. */
-      const failed = status === 'Failed' ? processed : status === 'Partial' ? 1 + (k % 9) : 0
-      out.push({
+      let failed = status === 'Failed' ? processed : status === 'Partial' ? 1 + (k % 9) : 0
+      const execution = {
         id: r.last_execution_id && k === 0 ? r.last_execution_id : `exec-${r.id}-${1000 + (Number(r.id) * 17 + k * 41) % 9000}`,
         scheduler_id: r.id,
         scheduler_name: r.name,
@@ -431,7 +643,24 @@ export const executionsFor = (rows, count = 8) => {
         records_processed: processed,
         records_failed: failed,
         timezone: r.timezone,
-      })
+        /* What the run needs to be read with: the cadence it sits on, the
+           configuration it executed under, and whether that configuration made
+           it a rehearsal. A run records the mode it ran in — changing the
+           scheduler afterwards does not rewrite what it did. */
+        cadence_ms: step,
+        config: r.service_config || {},
+        dry_run: (r.service_config || {}).mode === 'DRY_RUN' || !!(r.service_config || {}).dryRun,
+      }
+      if (modelled) {
+        const items = resultRowsFor(execution, service, r)
+        processed = items.length
+        failed = items.filter((i) => i.success === false).length
+        /* A run still in flight keeps its own status: nothing has finished, so
+           what its rows say so far is not a verdict on it. */
+        status = running ? status : statusOfRows(items)
+        Object.assign(execution, { records_processed: processed, records_failed: failed, status })
+      }
+      out.push(execution)
     }
   })
   return out.sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)))
@@ -443,21 +672,152 @@ function parseStampMs(v) {
   return Number.isNaN(t) ? null : t
 }
 
-/** Per-item rows, for services that declare `producesItemLogs`. */
-export const itemLogsFor = (execution, service) => {
-  if (!service?.metadata?.producesItemLogs) return []
-  const n = Math.min(12, Math.max(3, execution.records_processed % 13))
-  return Array.from({ length: n }, (_, i) => {
-    const bad = execution.records_failed > 0 && i % 4 === 1
+// ---------------------------------------------------------------------------
+// POST /apis/api/v1/schedulers/logs/get
+// ---------------------------------------------------------------------------
+
+/**
+ * The runs of one service, or of one scheduler on it.
+ *
+ * The envelope is the server's — `display_timezone` included, because the
+ * screen converts into it and must not guess. A caller that wants every run
+ * asks for a limit larger than the history; the server never answers unbounded.
+ */
+export const getSchedulerLogs = (rows, { service, schedulerId, page = 1, limit = 200, search = '' } = {}) => {
+  const scoped = schedulerId != null
+    ? rows.filter((r) => String(r.id) === String(schedulerId))
+    : rows.filter((r) => r.service_code === service)
+  const runs = executionsFor(scoped)
+  const needle = String(search || '').trim().toLowerCase()
+  const matched = needle
+    ? runs.filter((e) => `${e.id} ${e.scheduler_name} ${e.status} ${e.trigger}`.toLowerCase().includes(needle))
+    : runs
+  const start = (page - 1) * limit
+  return {
+    ok: true,
+    status: 200,
+    totalCount: matched.length,
+    page,
+    limit,
+    display_timezone: DISPLAY_TIMEZONE,
+    totalResults: matched.slice(start, start + limit),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /apis/api/v1/schedulers/service/logs/get
+// ---------------------------------------------------------------------------
+
+/**
+ * How long a run's per-item results survive.
+ *
+ * Read off the Scheduler Log Cleanup scheduler rather than written down here:
+ * that service is what removes them, and a number repeated in two places is a
+ * number that will disagree with itself the first time one of them is changed.
+ * A run older than this has a summary and no results, which is a refusal with a
+ * reason rather than an empty table.
+ */
+const ITEM_LOG_RETENTION = (() => {
+  const cleaner = SEED.find((r) => r.service_code === 'SCHEDULER_LOG_CLEANUP')
+  const config = cleaner?.service_config || {}
+  if (!cleaner?.active_status || !(config.targets || []).includes('SCHEDULER_EXECUTION_LOGS')) {
+    return { days: null, ms: Infinity }
+  }
+  const unit = { days: 1, weeks: 7, months: 30 }[config.retentionUnit] || 1
+  const days = (Number(config.retentionValue) || 90) * unit
+  return { days, ms: days * 86400000 }
+})()
+
+/**
+ * The per-item results of one run.
+ *
+ * A real server is handed `jobId` and looks the rest up; here the caller passes
+ * the run and the scheduler it belongs to, because the configuration a run
+ * executed under is what decides what its rows say. `allowed` is the answer to
+ * the permission the server checks before it reads the log at all — a refusal
+ * is a response, not an absence, and the screen renders it as one.
+ */
+export const getServiceLogs = ({
+  execution, scheduler, service, page = 1, limit = 500, search = '', onlyFailures = false, allowed = true,
+} = {}) => {
+  const envelope = {
+    ok: false, status: 200, message: null,
+    totalCount: 0, page, limit, display_timezone: DISPLAY_TIMEZONE, totalResults: [],
+  }
+
+  if (!allowed) {
     return {
-      id: `${execution.id}-${i}`,
-      subject: `${service.serviceCode === 'DATA_EXPORT' ? 'row' : 'user'}-${1000 + (i * 37) % 8000}`,
-      outcome: bad ? 'Failed' : 'Applied',
-      detail: bad
-        ? 'Target rejected the change — attribute is read-only on the connector.'
-        : 'Change applied and acknowledged by the target.',
+      ...envelope,
+      status: 403,
+      message: 'Forbidden: reading the per-item results of a scheduler run requires the View Scheduler service logs permission, which is not granted to your role.',
     }
-  })
+  }
+
+  if (!execution) {
+    return { ...envelope, status: 404, message: 'No run was found for that execution id.' }
+  }
+
+  const age = NOW_MS - (parseStampMs(execution.started_at) ?? NOW_MS)
+  if (age > ITEM_LOG_RETENTION.ms) {
+    return {
+      ...envelope,
+      status: 410,
+      message: `The per-item results of this run are no longer retained: the Scheduler Log Cleanup service keeps them for ${ITEM_LOG_RETENTION.days} days and this run is older than that. The run summary above is kept.`,
+    }
+  }
+
+  const rows = resultRowsFor(execution, service, scheduler)
+  const needle = String(search || '').trim().toLowerCase()
+  const matched = rows
+    .filter((r) => (onlyFailures ? r.success === false : true))
+    .filter((r) => (needle ? `${r.entity_ref} ${r.operation_type} ${r.message}`.toLowerCase().includes(needle) : true))
+  const start = (page - 1) * limit
+
+  return {
+    ...envelope,
+    ok: true,
+    totalCount: matched.length,
+    totalResults: matched.slice(start, start + limit),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Service permissions
+// ---------------------------------------------------------------------------
+
+/**
+ * The permission each add-on service needs on top of the scheduler ones.
+ *
+ * The server enforces these and answers 403 when they are missing; this is the
+ * console's stand-in for that answer. A role reaches one of them by holding
+ * "Start or stop" on Schedulers *and* being able to see the register the
+ * service acts on — there is no point granting somebody the right to escalate
+ * approvals they cannot read.
+ *
+ * The control it gates stays on screen and goes disabled. Hiding it tells a
+ * reader nothing; disabling it tells them the capability exists and that they
+ * are not the one who holds it.
+ */
+export const SERVICE_PERMISSIONS = {
+  APPROVAL_ESCALATION: { permission: 'run_approval_escalation', module: 'Approval', anyOf: ['View Approvals List', 'View Approval Details'] },
+  APPROVAL_REMINDER: { permission: 'run_approval_reminders', module: 'Approval', anyOf: ['View Approvals List', 'View Approval Details'] },
+  AUDIT_LOG_CLEANUP: { permission: 'run_audit_log_cleanup', module: 'Security Events', anyOf: ['View System Logs'] },
+  RECERTIFICATION_CAMPAIGN: { permission: 'run_recertification_campaigns', module: 'Recertification', anyOf: ['Add Campaign', 'Modify Campaign'] },
+}
+
+export const checkServicePermission = (serviceCode, can) => {
+  const rule = SERVICE_PERMISSIONS[serviceCode]
+  if (!rule) return { required: false, granted: true, status: 200, message: null, permission: null }
+  const granted = !!can && can('Schedulers', 'Start or stop') && can(rule.module, rule.anyOf)
+  return {
+    required: true,
+    permission: rule.permission,
+    granted,
+    status: granted ? 200 : 403,
+    message: granted
+      ? null
+      : `Forbidden: this service requires the ${rule.permission} permission, which is not granted to your role.`,
+  }
 }
 
 /** Worker output for one execution. */
@@ -469,6 +829,12 @@ export const workerLines = (execution, service) => {
     { tone: 'lg-ok', text: `${at}  connected to the platform queue` },
     { tone: 'lg-dim', text: `${at}  claimed ${execution.records_processed} records` },
   ]
+  /* A rehearsal says so in its own output too. The banner above the results is
+     the loud statement; a log that then reads "records applied" quietly
+     contradicts it, and the log is what gets pasted into a ticket. */
+  if (execution.dry_run) {
+    lines.splice(2, 0, { tone: 'lg-warn', text: `${at}  dry run — nothing will be written` })
+  }
   if (execution.status === 'Failed') {
     lines.push(
       { tone: 'lg-warn', text: `${at}  attempt ${Math.max(1, execution.attempt - 1)}/${execution.attempt} failed — upstream timeout` },
@@ -490,7 +856,7 @@ export const workerLines = (execution, service) => {
     )
   } else {
     lines.push(
-      { tone: 'lg-dim', text: `${at}  ${execution.records_processed} records applied, 0 errors` },
+      { tone: 'lg-dim', text: `${at}  ${execution.records_processed} records ${execution.dry_run ? 'evaluated' : 'applied'}, 0 errors` },
       { tone: 'lg-ok', text: `${at}  execution finished with status SUCCEEDED` },
     )
   }

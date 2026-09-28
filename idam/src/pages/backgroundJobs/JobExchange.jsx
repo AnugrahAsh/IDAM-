@@ -2,6 +2,8 @@ import Card from '../../components/primitives/Card'
 import Pill from '../../components/primitives/Pill'
 import JsonView from '../../components/primitives/JsonView'
 import EmptyState from '../../components/primitives/EmptyState'
+import { Skeleton, SkeletonCard, SkeletonText } from '../../components/primitives/Skeleton'
+import { useLoading } from '../../lib/useLoading'
 
 const toneFor = (code) => {
   if (code == null) return 'mut'
@@ -21,6 +23,30 @@ const toneFor = (code) => {
  */
 export default function JobExchange({ payload, response, sub }) {
   const status = response ? response.status : null
+
+  /* The exchange is retained beside the run, not inside it, so opening a record
+     is its own round trip. Keyed on what was requested rather than on the
+     mount: the drawer keeps this component alive between records, and a wait
+     that only ran the first time would be the wrong answer on the second. */
+  const loading = useLoading(payload ? `${payload.method} ${payload.url}` : null)
+
+  if (loading) {
+    return (
+      <Skeleton label="Loading the payload and response">
+        <div className="stack">
+          {sub && <span className="skel" style={{ display: 'block', width: '72%', height: 8 }} />}
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <span className="skel skel-chip" style={{ display: 'block', width: 54 }} />
+            <span className="skel skel-chip" style={{ display: 'block', width: 88 }} />
+          </div>
+          <span className="skel" style={{ display: 'block', width: '100%', height: 30, borderRadius: 'var(--r-sm)' }} />
+          <SkeletonCard head><SkeletonText lines={8} /></SkeletonCard>
+          <SkeletonCard head><SkeletonText lines={8} /></SkeletonCard>
+        </div>
+      </Skeleton>
+    )
+  }
+
   return (
     <div className="stack">
       {sub && <div className="t-xs t-mut">{sub}</div>}

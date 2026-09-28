@@ -1,1 +1,17 @@
 /* Page-owned styles for PoliciesPage. Shared primitives remain in src/styles. */
+
+/* --- A panel header, holding the height it will print -----------------------
+   `.card-h` stacks `.card-h-title` over `.card-h-sub`, so it runs past its own
+   42px floor; the kit's `.skel-card-h` draws a flat 11px bar over a flat 9px
+   one and lands about 13px short of it. The kit is shared and frozen, and its
+   bar heights are inline styles, so the gap between them is the only thing a
+   page can move. Neither title nor sub states a line height, so both take the
+   body's: --t-h3 at --t-body-lh over --t-xs at --t-body-lh with the sub-line's
+   1px lead, less the 20px the two bars already occupy. Written from the tokens
+   rather than as that number, because the header's Text size control scales the
+   root and the bars do not follow it. The skeletons in this folder mark their
+   announcing region with the class; ProfilePage.css carries the same rule for
+   its own. */
+.skel-head-type .skel-card-h{
+  gap:calc(var(--t-h3) * var(--t-body-lh) + 1px + var(--t-xs) * var(--t-body-lh) - 20px);
+}

@@ -21,7 +21,9 @@ import StatCards from '../../components/workbench/StatCards'
 import RecordCard, { CardIcon } from '../../components/workbench/RecordCard'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
 import Tag from '../../components/primitives/Tag'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import { useLocalState } from '../../lib/useLocalState'
+import { useLoading } from '../../lib/useLoading'
 
 // What an approver needs to separate: what is waiting, what is late, and what
 // carries enough risk to read carefully before deciding.
@@ -39,6 +41,10 @@ function ApprovalQueue({ rows, stats, onApprove, onReject, onReassign, onExport 
   const { navigate, toast } = useApp()
   const levels = useApprovalLevels()
   const [facet, setFacet] = useState('all')
+  // One flag for the whole queue. The masthead, the tiles and the register are
+  // three readings of the same set of requests, so they settle together rather
+  // than each arriving on its own timer.
+  const loading = useLoading()
 
   const visible = useMemo(() => rows.filter(FACETS[facet] || FACETS.all), [rows, facet])
 
@@ -162,27 +168,40 @@ function ApprovalQueue({ rows, stats, onApprove, onReject, onReassign, onExport 
 
   return (
     <>
-      <PageBar
-        title="Approvals"
-        crumbs={[{ label: 'Access governance' }, { label: 'Approvals' }]}
-        sub="Every access decision waiting on a human. Open a request to read what it grants before deciding."
-        actions={
-          <>
-            <Button icon="download" onClick={() => onExport(rows.length)}>Export</Button>
-          </>
-        }
-      />
+      {/* The register draws its own body skeleton from the `loading` prop, and
+          that skeleton is decoration — so the one announcing region here covers
+          the whole wait rather than one shape announcing per band. */}
+      {loading ? (
+        <Skeleton label="Loading the approval queue">
+          <SkeletonPageBar actions={1} crumbs={2} />
+          <SkeletonStats count={cards.length} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Approvals"
+            crumbs={[{ label: 'Access governance' }, { label: 'Approvals' }]}
+            sub="Every access decision waiting on a human. Open a request to read what it grants before deciding."
+            actions={
+              <>
+                <Button icon="download" onClick={() => onExport(rows.length)}>Export</Button>
+              </>
+            }
+          />
 
-      <StatCards
-        items={cards}
-        value={facet}
-        onChange={(id) => setFacet(id === facet && id !== 'all' ? 'all' : id)}
-        label="Filter the approval queue"
-      />
+          <StatCards
+            items={cards}
+            value={facet}
+            onChange={(id) => setFacet(id === facet && id !== 'all' ? 'all' : id)}
+            label="Filter the approval queue"
+          />
+        </>
+      )}
 
       <DataWorkbench
         id="approvals"
         rows={visible}
+        loading={loading}
         columns={columns}
         selectable
         searchPlaceholder="Search by request id, requester, identity, entitlement or approver…"

@@ -10,8 +10,10 @@ import AppLogo from '../../components/primitives/AppLogo'
 import { AreaChart, BarChart, RingGauge, SegBar, Sparkline } from '../../components/viz/Charts'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
 import { ME } from '../../data/seed'
 import { brandFor } from '../shared/provisioning/shared'
+import DashboardSkeleton from './DashboardSkeleton'
 import {
   appStats, governanceStats, greetingFor, identityStats, insights, jobStats, licenceStats, longDate,
   requestStats, signinStats, threatStats,
@@ -75,6 +77,12 @@ function Legend({ items }) {
  */
 export default function DashboardPage() {
   const { navigate } = useApp()
+  /* The dashboard is the console's first screen and every figure on it comes
+     from a different register, so it is the screen where arriving at a page
+     that is already complete reads as a flicker. One flag for the whole thing:
+     masthead, tiles and every chart resolve on the same tick, because a page
+     whose panels each appeared as they were ready would settle in pieces. */
+  const loading = useLoading()
   const data = useMemo(() => ({
     id: identityStats(),
     sig: signinStats(),
@@ -92,6 +100,8 @@ export default function DashboardPage() {
   const orphanMax = Math.max(1, ...gov.orphansByRisk.map((s) => s.value))
   const reqMax = Math.max(1, ...req.rows.map((r) => r.value))
   const ruleMax = Math.max(1, ...th.perRule.map((r) => r.value))
+
+  if (loading) return <DashboardSkeleton />
 
   return (
     <>

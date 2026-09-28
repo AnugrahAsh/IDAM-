@@ -8,6 +8,7 @@ import Icon from '../../components/primitives/Icon'
 import Pill from '../../components/primitives/Pill'
 import Switch from '../../components/primitives/Switch'
 import TextInput from '../../components/primitives/TextInput'
+import { SkeletonCard, SkeletonList, SkeletonStats } from '../../components/primitives/Skeleton'
 import StatCards from '../../components/workbench/StatCards'
 import { num } from '../../lib/format'
 import { useApp } from '../../store/AppContext'
@@ -29,7 +30,7 @@ const tone = (on, total) => (on === total ? 'ok' : on === 0 ? 'mut' : 'warn')
  * "Users / Export" tells an administrator nothing about what stops being
  * recorded when it goes off.
  */
-export default function AuditLogConfig() {
+export default function AuditLogConfig({ loading = false }) {
   const { toast } = useApp()
   const [rows, setRows] = useState(auditRows)
   const [open, setOpen] = useState(() => new Set([AUDIT_GROUPS[0].id]))
@@ -104,6 +105,25 @@ export default function AuditLogConfig() {
       hint: 'Changes to data that would leave no trace. Reads and exports are excluded.',
     },
   ]
+
+  /* The whole card waits, footer included: it prints how many operations are
+     logged, and a count is exactly the kind of figure that should not be on
+     screen a moment before the list it was counted from. The shapes stand for
+     the summary tiles, the section that opens by default, and the sections
+     still folded under it. */
+  if (loading) {
+    return (
+      <SkeletonCard head foot>
+        <div className="stack" style={{ gap: 'var(--sp-4)' }}>
+          <SkeletonStats count={4} />
+          <SkeletonCard head><SkeletonList rows={5} media={false} /></SkeletonCard>
+          <SkeletonCard head lines={1} />
+          <SkeletonCard head lines={1} />
+          <SkeletonCard head lines={1} />
+        </div>
+      </SkeletonCard>
+    )
+  }
 
   return (
     <Card

@@ -12,6 +12,7 @@ import Select from '../../components/primitives/Select'
 import Tag from '../../components/primitives/Tag'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { num, serialColumn } from '../../lib/format'
 import { since } from '../../lib/clock'
 import { USERS } from '../../data/seed'
@@ -105,7 +106,11 @@ function CorrelateForm({ row, onCancel, onLink }) {
   )
 }
 
-export default function TrustUsers({ sources = [], source: only }) {
+// `loading` is the settling flag of the screen this panel is mounted in — the
+// module overview or a trust source's record — handed down rather than started
+// again here. A register running its own timer would land at a different moment
+// from the figures above it, which is the flicker being removed.
+export default function TrustUsers({ sources = [], source: only, loading = false }) {
   const { toast, confirm, navigate, setDrawer } = useApp()
   const list = only ? [only] : sources
   const [sourceId, setSourceId] = useState(list.length ? String(list[0].id) : '')
@@ -255,21 +260,23 @@ export default function TrustUsers({ sources = [], source: only }) {
           />
         )}
       >
-        <StatCards
-          items={[
-            { key: 'total', icon: 'users', label: 'Reconciled total', value: all.length, chip: source.lastRun || 'not yet run', sub: 'records read from the source' },
-            ...BUCKETS.map((b) => ({
-              key: b.id,
-              icon: b.icon,
-              label: b.label,
-              value: counts[b.id],
-              chip: b.id === 'FailedUsers' && counts[b.id] > 0 ? 'needs attention' : undefined,
-              chipTone: b.id === 'FailedUsers' && counts[b.id] > 0 ? 'bad' : undefined,
-              sub: b.sub,
-            })),
-          ]}
-          label="Reconciliation summary"
-        />
+        {loading ? <SkeletonStats count={4} /> : (
+          <StatCards
+            items={[
+              { key: 'total', icon: 'users', label: 'Reconciled total', value: all.length, chip: source.lastRun || 'not yet run', sub: 'records read from the source' },
+              ...BUCKETS.map((b) => ({
+                key: b.id,
+                icon: b.icon,
+                label: b.label,
+                value: counts[b.id],
+                chip: b.id === 'FailedUsers' && counts[b.id] > 0 ? 'needs attention' : undefined,
+                chipTone: b.id === 'FailedUsers' && counts[b.id] > 0 ? 'bad' : undefined,
+                sub: b.sub,
+              })),
+            ]}
+            label="Reconciliation summary"
+          />
+        )}
       </Card>
 
       <div className="seg" role="radiogroup" aria-label="Which users to show">
@@ -291,6 +298,7 @@ export default function TrustUsers({ sources = [], source: only }) {
         id={`trust-users-${source.id}-${bucket}`}
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable={!isFailed}
         scrollBody
         searchPlaceholder={`Search ${def.label.toLowerCase()} by name, username or email…`}

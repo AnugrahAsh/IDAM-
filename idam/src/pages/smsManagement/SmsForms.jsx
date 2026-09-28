@@ -48,11 +48,20 @@ function FormShell({ children, saveLabel, onSave, onCancel, dirty = true, messag
 
 /* A group inside a card, for the rare case where one card holds two questions
    that are not the same question. The card header carries the name of the
-   group; this carries the name of the part. */
-function Section({ icon, title, children }) {
+   group; this carries the name of the part.
+
+   Exported because the health accordions reuse it: a client's panel has to be
+   the same two sections, drawn the same way, as the default gateway's cards
+   above it, and a second copy of this markup would stop being the same the
+   first time either was edited. The heading row is always present so a section
+   with a control and one without still line up. */
+export function Section({ icon, title, actions, children }) {
   return (
     <section className="sms-fs">
-      <h3 className="sms-fs-h"><Icon name={icon} size={13} />{title}</h3>
+      <div className="sms-fs-hr">
+        <h3 className="sms-fs-h"><Icon name={icon} size={13} />{title}</h3>
+        {actions && <div className="sms-fs-a">{actions}</div>}
+      </div>
       <div className="stack">{children}</div>
     </section>
   )

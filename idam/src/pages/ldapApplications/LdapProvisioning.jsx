@@ -10,6 +10,7 @@ import Tag from '../../components/primitives/Tag'
 import TextInput from '../../components/primitives/TextInput'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
 import { USERS } from '../../data/seed'
@@ -190,7 +191,11 @@ function RuleForm({ app, catalog, initial, onChange }) {
   )
 }
 
-export default function LdapProvisioning({ app, rules, setRules, mappings }) {
+// `loading` is the directory record's own settling flag, handed down rather
+// than started again here: this panel is one of that record's tabs, and a
+// register running its own timer would land at a different moment from the
+// masthead above it.
+export default function LdapProvisioning({ app, rules, setRules, mappings, loading = false }) {
   const { toast, confirm, setDrawer } = useApp()
   const draft = useState(() => ({ current: null }))[0]
 
@@ -336,47 +341,49 @@ export default function LdapProvisioning({ app, rules, setRules, mappings }) {
 
   return (
     <div className="stack">
-      <StatCards
-        label="Provisioning rule summary"
-        items={[
-          {
-            key: 'rules',
-            icon: 'policy',
-            label: 'Rules on this directory',
-            value: mine.length,
-            chip: mine.length ? 'active' : 'none yet',
-            sub: `writing into ${app.displayName}`,
-          },
-          {
-            key: 'matched',
-            icon: 'users',
-            label: 'Identities routed',
-            value: totalMatched,
-            chip: 'matched now',
-            chipTone: 'ok',
-            sub: `of ${num(USERS.length)} in the identity store`,
-          },
-          {
-            key: 'dead',
-            icon: 'warn',
-            label: 'Rules matching nothing',
-            value: dead,
-            chip: dead ? 'check the condition' : 'all matching',
-            chipTone: dead ? 'warn' : undefined,
-            sub: 'no identity satisfies them',
-          },
-          {
-            key: 'ous',
-            icon: 'directory',
-            label: 'Target OUs',
-            value: new Set(mine.map((r) => r.ouDn)).size,
-            chip: 'destinations',
-            sub: `under ${app.baseDn}`,
-          },
-        ]}
-      />
+      {loading ? <SkeletonStats count={4} /> : (
+        <StatCards
+          label="Provisioning rule summary"
+          items={[
+            {
+              key: 'rules',
+              icon: 'policy',
+              label: 'Rules on this directory',
+              value: mine.length,
+              chip: mine.length ? 'active' : 'none yet',
+              sub: `writing into ${app.displayName}`,
+            },
+            {
+              key: 'matched',
+              icon: 'users',
+              label: 'Identities routed',
+              value: totalMatched,
+              chip: 'matched now',
+              chipTone: 'ok',
+              sub: `of ${num(USERS.length)} in the identity store`,
+            },
+            {
+              key: 'dead',
+              icon: 'warn',
+              label: 'Rules matching nothing',
+              value: dead,
+              chip: dead ? 'check the condition' : 'all matching',
+              chipTone: dead ? 'warn' : undefined,
+              sub: 'no identity satisfies them',
+            },
+            {
+              key: 'ous',
+              icon: 'directory',
+              label: 'Target OUs',
+              value: new Set(mine.map((r) => r.ouDn)).size,
+              chip: 'destinations',
+              sub: `under ${app.baseDn}`,
+            },
+          ]}
+        />
+      )}
 
-      {unmappedNames.length > 0 && (
+      {!loading && unmappedNames.length > 0 && (
         <Banner tone="warn">
           <b>
             {new Set(unmappedNames).size} attribute
@@ -394,6 +401,7 @@ export default function LdapProvisioning({ app, rules, setRules, mappings }) {
         id={`ldap-rules-${app.id}`}
         rows={rows}
         columns={columns}
+        loading={loading}
         rowActions={rowActions}
         onRowClick={openForm}
         searchPlaceholder="Search by rule, organizational unit or condition…"

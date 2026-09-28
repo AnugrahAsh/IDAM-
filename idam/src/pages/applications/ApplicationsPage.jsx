@@ -11,9 +11,11 @@ import AppCard from './AppCard'
 import RegisterHeader from '../../components/workbench/RegisterHeader'
 import AppDetail from './AppDetail'
 import AppWizard from './AppWizard'
+import { AppsListSkeleton, SkeletonRegisterHeader } from './ApplicationsSkeleton'
 import { openImageEditor } from './ImageField'
 import { BASE, brandOf, buildSeed, capabilitiesOf, healthOf } from './appModel'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { useLocalState } from '../../lib/useLocalState'
 import { num, serialColumn } from '../../lib/format'
 import { nextId } from '../../data/seed'
@@ -60,6 +62,10 @@ function AppsList({ rows, onDelete, onBulkDelete, onPatch }) {
   // Dismissal is keyed to the finding itself, so the line comes back when a
   // different connector breaks rather than staying hidden for good.
   const [mutedAlert, setMutedAlert] = useState(null)
+  /* One flag for the register: the masthead, the headline figures and the rows
+     resolve together. Faceting does not settle again — the estate is already in
+     hand, and filtering rows the operator can see is not a round trip. */
+  const loading = useLoading()
 
   const shown = useMemo(() => rows.filter((r) => matchesFacet(r, facet)), [rows, facet])
 
@@ -194,27 +200,32 @@ function AppsList({ rows, onDelete, onBulkDelete, onPatch }) {
 
   return (
     <>
-      <PageBar
-        title="Applications"
-        crumbs={[{ label: 'Applications' }]}
-        sub="Every connected application in one register — provisioning connectors, federated sign-in, or both on a single record."
-        actions={(
-          <>
-            {/* Attribute definitions are shared by every relying party, so they
-                are reached from the register they serve rather than from a
-                section of their own. Reconciliation has its own screen and a
-                tab on each connector record; a third entry point here only
-                made the toolbar longer. */}
-            <Button icon="swap" onClick={() => navigate('attributeConfigurations')}>Attribute Configurations</Button>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Application inventory export is being generated.')}>Export</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/new`)}>Add Application</Button>
-          </>
-        )}
-      />
+      {/* One announcing region for the screen. The register header and the row
+          skeleton inside the workbench are both decoration and stay silent, so
+          the wait is described once. */}
+      {loading ? <AppsListSkeleton /> : (
+        <PageBar
+          title="Applications"
+          crumbs={[{ label: 'Applications' }]}
+          sub="Every connected application in one register — provisioning connectors, federated sign-in, or both on a single record."
+          actions={(
+            <>
+              {/* Attribute definitions are shared by every relying party, so they
+                  are reached from the register they serve rather than from a
+                  section of their own. Reconciliation has its own screen and a
+                  tab on each connector record; a third entry point here only
+                  made the toolbar longer. */}
+              <Button icon="swap" onClick={() => navigate('attributeConfigurations')}>Attribute Configurations</Button>
+              <Button icon="download" onClick={() => toast('ok', 'Export queued', 'Application inventory export is being generated.')}>Export</Button>
+              <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE}/new`)}>Add Application</Button>
+            </>
+          )}
+        />
+      )}
 
       <DataWorkbench
         id="applications"
-        header={(
+        header={loading ? <SkeletonRegisterHeader tabs={kpis.length} /> : (
           <RegisterHeader
             items={kpis.map((k) => ({ ...k, ...FACETS.find((f) => f.id === k.id) }))}
             value={facet}
@@ -232,6 +243,7 @@ function AppsList({ rows, onDelete, onBulkDelete, onPatch }) {
         )}
         rows={shown}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by application, system name or organization…"
         bulkActions={bulkActions}

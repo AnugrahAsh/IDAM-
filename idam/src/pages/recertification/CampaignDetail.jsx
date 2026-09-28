@@ -7,6 +7,7 @@ import Tag from '../../components/primitives/Tag'
 import Tabs from '../../components/primitives/Tabs'
 import EmptyState from '../../components/primitives/EmptyState'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num } from '../../lib/format'
 import { REVIEWER_POOL, levelNames } from './data'
 import { OverviewTab } from './CampaignInsights'
@@ -22,6 +23,11 @@ export default function CampaignDetail({
   const setTab = (t) => navigate(t === 'overview' ? `/iam/recertification/${id}` : `/iam/recertification/${id}/${t}`, { replace: true })
   const c = campaigns.find((x) => String(x.id) === String(id))
   const scoped = useMemo(() => items.filter((r) => String(r.campaignId) === String(id)), [items, id])
+  /* One flag for the record, keyed on the campaign and the tab it is read
+     through. The masthead carries the tab strip, so it is chrome that stays
+     put; what settles is the panel under it. A user opened from Items is a
+     screen of its own and keeps its own flag. */
+  const loading = useLoading(`${id}:${tab}`)
 
   if (!c) {
     return (
@@ -104,11 +110,12 @@ export default function CampaignDetail({
       />
 
       <div className="detail-body">
-        {tab === 'overview' && <OverviewTab c={c} scoped={scoped} />}
-        {tab === 'items' && <ItemsTab c={c} users={users} />}
+        {tab === 'overview' && <OverviewTab c={c} scoped={scoped} loading={loading} />}
+        {tab === 'items' && <ItemsTab c={c} users={users} loading={loading} />}
         {tab === 'reviewers' && (
           <ReviewersTab
             c={c}
+            loading={loading}
             onResendReviewer={(r) => toast('ok', 'Reminder sent', `${r.name} · ${num(r.remaining)} outstanding items, mail delivered to their review queue.`)}
             onEscalate={(r, kind) => (kind === 'reassign'
               ? toast('info', 'Queue reassigned', `${r.name}'s ${num(r.remaining)} outstanding items moved to the delegated reviewer queue.`)

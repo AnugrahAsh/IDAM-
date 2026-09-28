@@ -28,7 +28,7 @@ const expiryFor = (minutes) => (minutes === 'permanent' ? null : stampText(new D
  * Automatic blocks come from a rule's automatic response and lift after 24
  * hours on their own; a manual block lasts as long as the operator chose.
  */
-export default function BlockedIps({ blocks, setBlocks, onBlockIp }) {
+export default function BlockedIps({ blocks, setBlocks, onBlockIp, loading = false }) {
   const { toast, setDrawer, confirm } = useApp()
   const [status, setStatus] = useState('all')
 
@@ -176,6 +176,7 @@ export default function BlockedIps({ blocks, setBlocks, onBlockIp }) {
   return (
     <DataWorkbench
       id="itdr-blocked"
+      loading={loading}
       rows={visible}
       columns={columns}
       selectable

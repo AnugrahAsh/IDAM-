@@ -7,7 +7,10 @@ import Button from '../../components/primitives/Button'
 import Tag from '../../components/primitives/Tag'
 import Pill from '../../components/primitives/Pill'
 import EmptyState from '../../components/primitives/EmptyState'
+import { Skeleton, SkeletonPageBar } from '../../components/primitives/Skeleton'
+import SummarySkeleton from './SummarySkeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { serialColumn } from '../../lib/format'
 import { stamp } from '../shared/comms/commsData'
 import { useLinks, writeLinks } from './linksStore'
@@ -44,6 +47,10 @@ export default function QuickLinksRegister({ segments = [] }) {
   /* A row opens the read-only view; editing is a deliberate second step from
      there, at /manage/{id}/edit. */
   const editing = segments[1] === 'edit'
+  /* The register's own settle, keyed on where the operator is standing: coming
+     back to the collection from a link is the round trip a deployment would
+     make, and the record screens below carry settles of their own. */
+  const loading = useLoading(mode || 'list')
   const record = useMemo(
     () => (mode && mode !== 'add' ? all.find((r) => String(r.id) === String(mode)) : null),
     [mode, all],
@@ -187,37 +194,49 @@ export default function QuickLinksRegister({ segments = [] }) {
 
   return (
     <>
-      <PageBar
-        title="Quick Links Management"
-        sub="Every shortcut in the collection, in the order users see them. Publishing here puts the link on the Quick Links page."
-        crumbs={[{ label: 'Quick Links', to: 'usefullinks' }, { label: 'Quick Links Management' }]}
-        actions={
-          <>
-            <Button icon="chevL" onClick={() => navigate(LIST_PATH)}>Back to quick links</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate(`${MANAGE_PATH}/add`)}>Add link</Button>
-          </>
-        }
-      />
+      {/* One announcing region for the screen; the register keeps its own panel
+          and toolbar while the rows settle inside it. */}
+      {loading ? (
+        <Skeleton label="Loading the quick link collection">
+          <SkeletonPageBar actions={2} crumbs={2} />
+          <SummarySkeleton segments={2} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Quick Links Management"
+            sub="Every shortcut in the collection, in the order users see them. Publishing here puts the link on the Quick Links page."
+            crumbs={[{ label: 'Quick Links', to: 'usefullinks' }, { label: 'Quick Links Management' }]}
+            actions={
+              <>
+                <Button icon="chevL" onClick={() => navigate(LIST_PATH)}>Back to quick links</Button>
+                <Button variant="pri" icon="plus" onClick={() => navigate(`${MANAGE_PATH}/add`)}>Add link</Button>
+              </>
+            }
+          />
 
-      <RegisterSummary
-        ariaLabel="Quick link register"
-        icon="link"
-        label="Links"
-        value={all.length}
-        caption="in the collection"
-        segments={[
-          { id: 'Published', icon: 'checkC', label: 'Published', value: publishedCount, sub: 'shown to users in scope' },
-          { id: 'Hidden', icon: 'eyeoff', label: 'Hidden', value: hiddenCount, sub: 'held back from users' },
-        ]}
-        active={status}
-        allId="All"
-        onSelect={setStatus}
-      />
+          <RegisterSummary
+            ariaLabel="Quick link register"
+            icon="link"
+            label="Links"
+            value={all.length}
+            caption="in the collection"
+            segments={[
+              { id: 'Published', icon: 'checkC', label: 'Published', value: publishedCount, sub: 'shown to users in scope' },
+              { id: 'Hidden', icon: 'eyeoff', label: 'Hidden', value: hiddenCount, sub: 'held back from users' },
+            ]}
+            active={status}
+            allId="All"
+            onSelect={setStatus}
+          />
+        </>
+      )}
 
       <DataWorkbench
         id="useful-links-mgmt"
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by title, URL or description…"
         onRowClick={(r) => navigate(`${MANAGE_PATH}/${r.id}`)}

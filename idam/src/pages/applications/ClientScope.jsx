@@ -7,6 +7,7 @@ import Pill from '../../components/primitives/Pill'
 import SeverityBadge from '../../components/primitives/SeverityBadge'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
+import { SkeletonCard, SkeletonStats } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { ROLES } from '../../data/seed'
 import { num } from '../../lib/format'
@@ -21,7 +22,9 @@ const riskLabel = (r) => r.risk[0].toUpperCase() + r.risk.slice(1)
  * roles are one register: filter it, select rows, and assign or remove them
  * one at a time or in bulk.
  */
-export default function ClientScope({ value, onChange, appName, protocol = 'OIDC' }) {
+// `loading` is the application record's own settling flag, handed down rather
+// than started again here — see AttributesTab for the same argument.
+export default function ClientScope({ value, onChange, appName, protocol = 'OIDC', loading = false }) {
   const { toast } = useApp()
   const [facet, setFacet] = useState('all')
   const carrier = protocol === 'SAML' ? 'assertion' : 'token'
@@ -84,45 +87,50 @@ export default function ClientScope({ value, onChange, appName, protocol = 'OIDC
 
   return (
     <div className="stack">
-      <Card
-        title="Scope"
-        sub={`Which of the identity’s roles this application is allowed to see in its ${carrier}.`}
-        actions={<Pill tone={full ? 'warn' : 'ok'} dot>{full ? 'Full scope' : 'Restricted'}</Pill>}
-      >
-        <div className="row-between" style={{ gap: 16 }}>
-          <div style={{ minWidth: 0 }}>
-            <div className="t-sm" style={{ fontWeight: 600 }}>Full scope allowed</div>
-            <div className="t-xs t-mut">
-              On, the {carrier} carries every role the identity holds. Off, it carries only the roles assigned below.
+      {loading ? <SkeletonCard lines={4} /> : (
+        <Card
+          title="Scope"
+          sub={`Which of the identity’s roles this application is allowed to see in its ${carrier}.`}
+          actions={<Pill tone={full ? 'warn' : 'ok'} dot>{full ? 'Full scope' : 'Restricted'}</Pill>}
+        >
+          <div className="row-between" style={{ gap: 16 }}>
+            <div style={{ minWidth: 0 }}>
+              <div className="t-sm" style={{ fontWeight: 600 }}>Full scope allowed</div>
+              <div className="t-xs t-mut">
+                On, the {carrier} carries every role the identity holds. Off, it carries only the roles assigned below.
+              </div>
             </div>
+            <Switch checked={full} label="Full scope allowed" onChange={(v) => onChange({ fullScopeAllowed: v })} />
           </div>
-          <Switch checked={full} label="Full scope allowed" onChange={(v) => onChange({ fullScopeAllowed: v })} />
-        </div>
-        <div style={{ marginTop: 14 }}>
-          <Banner tone={full ? 'warn' : 'info'}>
-            {full
-              ? `${appName} currently receives all ${num(ROLES.length)} platform roles in every ${carrier}. Turn full scope off to send only the assigned roles.`
-              : `${appName} receives ${num(stats.assigned)} ${stats.assigned === 1 ? 'role' : 'roles'}. Any other role the identity holds is invisible to it.`}
-          </Banner>
-        </div>
-      </Card>
+          <div style={{ marginTop: 14 }}>
+            <Banner tone={full ? 'warn' : 'info'}>
+              {full
+                ? `${appName} currently receives all ${num(ROLES.length)} platform roles in every ${carrier}. Turn full scope off to send only the assigned roles.`
+                : `${appName} receives ${num(stats.assigned)} ${stats.assigned === 1 ? 'role' : 'roles'}. Any other role the identity holds is invisible to it.`}
+            </Banner>
+          </div>
+        </Card>
+      )}
 
-      <StatCards
-        items={[
-          { id: 'all', icon: 'roles', label: 'Platform roles', value: stats.total, sub: 'available to scope' },
-          { id: 'assigned', icon: 'checkC', label: 'Assigned', value: stats.assigned, chipTone: 'ok', chip: full ? 'not consulted' : `in the ${carrier}`, sub: 'sent to this application' },
-          { id: 'available', icon: 'plus', label: 'Not assigned', value: stats.available, sub: 'withheld from the application' },
-          { icon: 'warn', label: 'High-risk assigned', value: stats.critical, chip: stats.critical ? 'review' : 'none', chipTone: stats.critical ? 'warn' : undefined, sub: 'critical or high risk' },
-        ]}
-        value={facet}
-        onChange={setFacet}
-        label="Filter roles"
-      />
+      {loading ? <SkeletonStats count={4} /> : (
+        <StatCards
+          items={[
+            { id: 'all', icon: 'roles', label: 'Platform roles', value: stats.total, sub: 'available to scope' },
+            { id: 'assigned', icon: 'checkC', label: 'Assigned', value: stats.assigned, chipTone: 'ok', chip: full ? 'not consulted' : `in the ${carrier}`, sub: 'sent to this application' },
+            { id: 'available', icon: 'plus', label: 'Not assigned', value: stats.available, sub: 'withheld from the application' },
+            { icon: 'warn', label: 'High-risk assigned', value: stats.critical, chip: stats.critical ? 'review' : 'none', chipTone: stats.critical ? 'warn' : undefined, sub: 'critical or high risk' },
+          ]}
+          value={facet}
+          onChange={setFacet}
+          label="Filter roles"
+        />
+      )}
 
       <DataWorkbench
         id={`client-scope-${appName}`}
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search roles by name, description or scope…"
         bulkActions={(ids, clear) => {

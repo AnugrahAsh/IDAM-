@@ -1,194 +1,103 @@
 import './ExternalUserFederationPage.css'
 import { useState } from 'react'
-import PageBar from '../../components/shell/PageBar'
 import Button from '../../components/primitives/Button'
 import EmptyState from '../../components/primitives/EmptyState'
+import PageBar from '../../components/shell/PageBar'
 import { useApp } from '../../store/AppContext'
 import { nextId } from '../../data/seed'
-import { probeConnection } from '../applications/appModel'
-import ConnectorHub from './ConnectorHub'
-import FederationForm from './FederationForm'
-import FederationRegister from './FederationRegister'
-import { BASE, FEDERATIONS, fullConnection, hubConnector, isTracked, ldapAppById, recordOf } from './federationData'
-
-function NotFound({ title, body, crumb, backTo, backLabel }) {
-  const { navigate } = useApp()
-  return (
-    <>
-      <PageBar title={title} crumbs={[{ label: 'External User Federation', to: BASE }, { label: crumb }]} />
-      <EmptyState
-        icon="plug"
-        title={title}
-        body={body}
-        actions={<Button variant="pri" icon="chevL" onClick={() => navigate(backTo)}>{backLabel}</Button>}
-      />
-    </>
-  )
-}
+import ProviderList from './ProviderList'
+import EditProvider, { AddProvider } from './ProviderForm'
+import { BASE, recordOf } from './federationData'
+import { FEDERATIONS } from './federationSeed'
 
 /* ---------------------------------------------------------------------------
    External User Federation.
 
-   /iam/externalUserFederation            the register of federated applications
-   /iam/externalUserFederation/new        the Connector Hub
-   /iam/externalUserFederation/new/:id    the setup form for one connector
-   /iam/externalUserFederation/:id        a federated application, on the same form
+   /iam/externalUserFederation          the provider list
+   /iam/externalUserFederation/new      Add Provider
+   /iam/externalUserFederation/:id      Edit Provider
+
+   The route ids are the ones the console registers and the ones the legacy
+   redirects in data/nav.js land on, so /iam/connectorHub still resolves —
+   it now reaches Add Provider rather than a hub of connectors.
    ------------------------------------------------------------------------- */
 export default function ExternalUserFederationPage({ segments = [] }) {
-  const { toast, confirm, navigate } = useApp()
+  const { toast, navigate } = useApp()
   const [rows, setRows] = useState(() => FEDERATIONS.map((r) => ({ ...r })))
-
-  const patch = (id, changes) => setRows((rs) => rs.map((r) => (String(r.id) === String(id)
-    ? { ...r, ...(typeof changes === 'function' ? changes(r) : changes) }
-    : r)))
 
   const create = (draft) => {
     const rec = recordOf(draft, nextId(rows))
-    setRows((rs) => [rec, ...rs])
-    const directory = ldapAppById(rec.ldapAppId)
-    toast('ok', 'Application created', isTracked(rec.connector)
-      ? `${rec.displayName} is tracked against ${directory.displayName}.`
-      : `${rec.displayName} · its first sync into ${directory.displayName} is queued.`)
+    setRows((rs) => [...rs, rec])
+    toast('ok', 'Provider added', `${rec.name} · federating users from ${rec.connectionUrl}.`)
+    /* Back to the list. Add asks for everything the provider needs, so there is
+       nothing left to send the operator into the form for — the card they just
+       created is the thing worth showing them. */
     navigate(BASE)
   }
 
-  // The form remounts on the new revision, so it reopens clean on what was saved.
+  /* The revision is what tells the open form that its draft has been committed;
+     the form rebases on the saved record itself, without being remounted, so
+     the sections the operator opened and the test they just ran stay put. */
   const save = (id, draft) => {
-    patch(id, (r) => ({
-      name: draft.name.trim(),
-      displayName: draft.displayName.trim(),
-      description: draft.description.trim(),
-      ldapAppId: Number(draft.ldapAppId),
-      ouDn: draft.ouDn,
-      operations: { ...draft.operations },
-      connection: { ...draft.connection },
-      schedule: draft.schedule,
-      matchKey: draft.matchKey,
-      rev: (r.rev || 0) + 1,
+    setRows((rs) => rs.map((r) => {
+      if (String(r.id) !== String(id)) return r
+      const { bindCredentials, ...rest } = draft
+      return {
+        ...r,
+        ...rest,
+        name: String(draft.name || '').trim(),
+        // A blank credential field means "keep the stored one", never "clear it".
+        credentialStored: r.credentialStored || !!String(bindCredentials || '').trim(),
+        rev: (r.rev || 0) + 1,
+      }
     }))
-    toast('ok', 'Changes saved', draft.displayName.trim())
+    toast('ok', 'Changes saved', String(draft.name || '').trim())
   }
 
-  const remove = (r) => confirm({
-    title: `Delete ${r.displayName}?`,
-    body: 'The federation stops and its record is removed. Users already written into the directory stay where they are. This cannot be undone.',
-    confirmLabel: 'Delete application',
-    onConfirm: () => {
-      setRows((rs) => rs.filter((x) => x.id !== r.id))
-      toast('ok', 'Application deleted', r.displayName)
-      navigate(BASE)
-    },
-  })
-
-  const removeMany = (ids, clear) => confirm({
-    title: `Delete ${ids.length} federated applications?`,
-    body: 'The selected federations stop and their records are removed. Users already written into the directories stay where they are.',
-    confirmLabel: `Delete ${ids.length}`,
-    onConfirm: () => {
-      const set = new Set(ids.map(String))
-      setRows((rs) => rs.filter((r) => !set.has(String(r.id))))
-      if (clear) clear()
-      toast('ok', 'Applications deleted', `${ids.length} removed from the register.`)
-    },
-  })
-
-  const sync = (r) => {
-    if (r.status === 'Failed') {
-      toast('warn', 'Sync failed', `${r.displayName} · ${r.lastError}`)
-      return
-    }
-    // A first sync reads the source's whole population; later ones pick up
-    // whatever joined since the last run.
-    const added = r.status === 'Pending' ? 18 + ((r.id * 13) % 60) : (r.id * 3) % 7
-    patch(r.id, { status: 'Healthy', lastError: undefined, lastSyncMins: 0, users: (r.users || 0) + added })
-    toast('ok', 'Sync complete', `${r.displayName} · ${added} ${added === 1 ? 'user' : 'users'} added.`)
-  }
-
-  const test = (r) => {
-    if (r.status === 'Failed') {
-      toast('warn', 'Connection failed', `${r.displayName} · ${r.lastError}`)
-      return
-    }
-    const p = probeConnection(r.connector, fullConnection(r))
-    if (p.ok) toast('ok', 'Connection succeeded', `${r.displayName} · ${p.steps.filter((s) => s.state !== 'skip').length} checks in ${p.ms}ms`)
-    else toast('warn', 'Connection failed', `${r.displayName} · ${(p.steps.find((s) => s.state === 'fail') || {}).detail || p.summary}`)
-  }
-
-  const togglePause = (r) => {
-    if (r.status === 'Paused') {
-      patch(r.id, { status: r.pausedFrom || 'Healthy', pausedFrom: undefined })
-      toast('ok', 'Federation resumed', `${r.displayName} syncs on its schedule again.`)
-    } else {
-      patch(r.id, { status: 'Paused', pausedFrom: r.status })
-      toast('ok', 'Federation paused', `${r.displayName} stops syncing until it is resumed.`)
-    }
-  }
-
-  const [mode, sub] = segments
-
-  if (mode === 'new' && !sub) return <ConnectorHub />
-
-  if (mode === 'new') {
-    const hub = hubConnector(sub)
-    if (!hub) {
-      return (
-        <NotFound
-          title="Connector not found"
-          crumb={String(sub)}
-          body={`The Connector Hub has no connector called “${sub}”. Choose one from the hub to set up an application.`}
-          backTo={`${BASE}/new`}
-          backLabel="Open the Connector Hub"
-        />
-      )
-    }
-    return (
-      <FederationForm
-        key={`new-${hub.id}`}
-        mode="create"
-        hub={hub}
-        rows={rows}
-        onCreate={create}
-        onCancel={() => navigate(BASE)}
-      />
+  const toggleEnabled = (p) => {
+    setRows((rs) => rs.map((r) => (r.id === p.id ? { ...r, enabled: !r.enabled } : r)))
+    toast(
+      'ok',
+      p.enabled ? 'Provider disabled' : 'Provider enabled',
+      p.enabled
+        ? `${p.name} stops answering for its users until it is enabled again.`
+        : `${p.name} answers for its users again.`,
     )
   }
+
+  const [mode] = segments
+
+  if (mode === 'new') return <AddProvider rows={rows} onCreate={create} />
 
   if (mode) {
-    const r = rows.find((x) => String(x.id) === String(mode))
-    const hub = r && hubConnector(r.connector)
-    if (!r || !hub) {
+    const record = rows.find((r) => String(r.id) === String(mode))
+    if (!record) {
       return (
-        <NotFound
-          title="Federated application not found"
-          crumb={String(mode)}
-          body={`No federated application has id ${mode}. It may have been deleted, or the link may be stale.`}
-          backTo={BASE}
-          backLabel="Back to federated applications"
-        />
+        <>
+          <PageBar
+            title="Provider not found"
+            crumbs={[{ label: 'External User Federation', to: BASE }, { label: String(mode) }]}
+          />
+          <EmptyState
+            icon="plug"
+            title="Provider not found"
+            body={`No provider has id ${mode}. It may have been removed, or the link may be stale.`}
+            actions={<Button variant="pri" icon="chevL" onClick={() => navigate(BASE)}>Back to providers</Button>}
+          />
+        </>
       )
     }
+    /* Keyed on the provider alone: moving to a different provider is a
+       different form and starts clean, but saving this one is not. */
     return (
-      <FederationForm
-        key={`${r.id}-${r.rev || 0}`}
-        mode="edit"
-        hub={hub}
-        record={r}
+      <EditProvider
+        key={record.id}
+        record={record}
         rows={rows}
         onSave={save}
-        onDelete={remove}
-        onSync={sync}
       />
     )
   }
 
-  return (
-    <FederationRegister
-      rows={rows}
-      onDelete={remove}
-      onBulkDelete={removeMany}
-      onSync={sync}
-      onTest={test}
-      onTogglePause={togglePause}
-    />
-  )
+  return <ProviderList rows={rows} onToggle={toggleEnabled} />
 }

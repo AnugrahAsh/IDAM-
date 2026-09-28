@@ -10,6 +10,12 @@ import Field from '../../components/primitives/Field'
 import Select from '../../components/primitives/Select'
 import TextInput from '../../components/primitives/TextInput'
 import EmptyState from '../../components/primitives/EmptyState'
+import { Skeleton, SkeletonPageBar } from '../../components/primitives/Skeleton'
+import {
+  ReportActiveSkeleton, ReportCardSkeleton, ReportQuickSkeleton, ReportRailSkeleton,
+  ReportRowSkeleton, ReportTableRowSkeleton, ReportTileSkeleton,
+} from './ReportsSkeleton'
+import { useLoading } from '../../lib/useLoading'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
 import { CATEGORIES, REPORTS, reportById } from './reportDefs'
@@ -95,6 +101,10 @@ function ReportCatalog({ onOpen }) {
   const [layout, setLayout] = useLocalState('tf-idam-reports-layout', 'grid')
   const [recent] = useLocalState(RECENT_KEY, [])
   const [pins, setPins] = useLocalState(PIN_KEY, [])
+  /* One flag for the catalogue. Searching it and changing category are not
+     round trips — the reports are already here — so neither is keyed on, and
+     the chips, the search box and the layout switch stay usable throughout. */
+  const loading = useLoading()
 
   /* One fact per report, read from its own rows on mount and not again: when
      it last moved. Everything else the catalogue used to count is gone, so
@@ -209,13 +219,22 @@ function ReportCatalog({ onOpen }) {
     )
   }
 
-  return (
+  /* The catalogue's shape is known before its contents are — which categories
+     exist, how many reports sit under each — so the skeleton is drawn through
+     the same groups the real cards come out of rather than from a guessed
+     count. Nothing a card prints is a figure, and nothing here stands for one:
+     a mark, a name and two lines of prose. */
+  const body = (
     <>
-      <PageBar
-        title="Reports"
-        sub="Every governed activity in the platform, published as an evidence-grade report — filter it, drill into it and export it."
-        crumbs={[{ label: 'Reports' }]}
-      />
+      {loading ? (
+        <SkeletonPageBar actions={0} crumbs={1} />
+      ) : (
+        <PageBar
+          title="Reports"
+          sub="Every governed activity in the platform, published as an evidence-grade report — filter it, drill into it and export it."
+          crumbs={[{ label: 'Reports' }]}
+        />
+      )}
 
       {/* The catalog is filtered from the top of the page rather than from a
           rail down its left: the reports then have the full width of the
@@ -280,14 +299,20 @@ function ReportCatalog({ onOpen }) {
           <div className="rep-quick">
             {shelf.length > 0 && (
               <div className="rep-quick-g" aria-label="Pinned reports">
+                {/* The two keys are fixed copy and stay put; only the reports
+                    beside them wait, in the count the strip will hold. */}
                 <span className="rep-quick-k"><Icon name="star" size={11} />Pinned</span>
-                {shelf.map(quickItem)}
+                {loading
+                  ? shelf.map((m, i) => <ReportQuickSkeleton key={m.report.id} width={82 + (i % 3) * 26} />)
+                  : shelf.map(quickItem)}
               </div>
             )}
             {recentStrip.length > 0 && (
               <div className="rep-quick-g" data-recent="" aria-label="Recently viewed reports">
                 <span className="rep-quick-k"><Icon name="history" size={11} />Recent</span>
-                {recentStrip.map(quickItem)}
+                {loading
+                  ? recentStrip.map((m, i) => <ReportQuickSkeleton key={m.report.id} width={90 + (i % 3) * 22} />)
+                  : recentStrip.map(quickItem)}
               </div>
             )}
           </div>
@@ -328,7 +353,7 @@ function ReportCatalog({ onOpen }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {g.items.map((m) => (
+                    {loading ? g.items.map((m) => <ReportTableRowSkeleton key={m.report.id} />) : g.items.map((m) => (
                       <tr
                         key={m.report.id}
                         className="rep-tr"
@@ -362,8 +387,20 @@ function ReportCatalog({ onOpen }) {
                 </table>
                 </div>
               ) : layout === 'grid'
-                ? <div className="rep-grid">{g.items.map(reportCard)}</div>
-                : <div className="rep-list">{g.items.map(reportRow)}</div>}
+                ? (
+                  <div className="rep-grid">
+                    {loading
+                      ? g.items.map((m) => <ReportCardSkeleton key={m.report.id} />)
+                      : g.items.map(reportCard)}
+                  </div>
+                )
+                : (
+                  <div className="rep-list">
+                    {loading
+                      ? g.items.map((m) => <ReportRowSkeleton key={m.report.id} category={cat !== 'all'} />)
+                      : g.items.map(reportRow)}
+                  </div>
+                )}
             </section>
           ))}
         </div>
@@ -376,6 +413,10 @@ function ReportCatalog({ onOpen }) {
       </section>
     </>
   )
+
+  // One announcing region for the screen; every shape inside it is aria-hidden
+  // decoration and says nothing of its own.
+  return loading ? <Skeleton label="Loading the report catalog">{body}</Skeleton> : body
 }
 
 /**
@@ -528,6 +569,11 @@ function ReportView({ report, onBack }) {
   const [f, setF] = useState(() => blankValues(specs))
   const [zone, setZone] = useLocalState('tf-idam-report-zone', 'app')
 
+  /* One flag for the report. Applying a filter is not keyed on: the rows are
+     already here and narrowing a table you can see by blanking it first is a
+     worse answer than narrowing it. */
+  const loading = useLoading(report.id)
+
   const all = useMemo(() => report.rows(), [report])
   const rows = useMemo(() => applyReportFilters(specs, all, f), [specs, all, f])
   const stats = useMemo(() => report.stats(rows), [report, rows])
@@ -621,7 +667,11 @@ function ReportView({ report, onBack }) {
     })
   }
 
-  return (
+  /* The masthead is not waited on. A report's name, blurb and category are
+     known from the route — it is the rows, and every figure counted from them,
+     that a deployment goes and gets. So the bar stays and its rail, which
+     prints those figures, is what holds space. */
+  const view = (
     <>
       <PageBar
         title={report.name}
@@ -640,20 +690,21 @@ function ReportView({ report, onBack }) {
             </Button>
           </>
         }
-        rail={
+        rail={loading ? <ReportRailSkeleton count={stats.length} /> : (
           <>
             {stats.map((s) => (
               <span className="chip" key={s.k}><Icon name={s.icon} size={12} />{s.v} {s.k.toLowerCase()}</span>
             ))}
             {dateWindow && <span className="chip"><Icon name="calendar" size={12} />{rangeLabel(dateWindow.from, dateWindow.to)}</span>}
           </>
-        }
+        )}
       />
 
       <div className="stack">
         {/* The active-filter row. It renders whether or not anything is set, so
             the report data starts at the same place on every report and the
             answer to "what am I looking at" is always in the same spot. */}
+        {loading ? <ReportActiveSkeleton /> : (
         <section className="rep-active" aria-label="Active filters">
           <span className="rep-active-k">
             <Icon name="filter" size={12} />
@@ -687,18 +738,19 @@ function ReportView({ report, onBack }) {
           </span>
           {nActive > 0 && <Button size="sm" icon="x" onClick={reset}>Clear all</Button>}
         </section>
+        )}
 
         <div className="grid grid-4">
-          {stats.map((s) => (
+          {stats.map((s) => (loading ? <ReportTileSkeleton key={s.k} /> : (
             <div className="tile" key={s.k}>
               <div className="tile-k"><Icon name={s.icon} size={12} />{s.k}</div>
               <div className="tile-v">{s.v}</div>
               <div className="tile-f">{nActive === 0 ? 'Across the full result set' : 'Within the current filters'}</div>
             </div>
-          ))}
+          )))}
         </div>
 
-        {rows.length === 0 ? (
+        {rows.length === 0 && !loading ? (
           <Card>
             <EmptyState
               icon={report.icon}
@@ -710,6 +762,7 @@ function ReportView({ report, onBack }) {
         ) : (
           <DataWorkbench
             id={`report-${report.id}`}
+            loading={loading}
             rows={rows}
             columns={columns}
             pageSize={10}
@@ -736,6 +789,9 @@ function ReportView({ report, onBack }) {
       </div>
     </>
   )
+
+  // One announcing region, named for the report the reader asked for.
+  return loading ? <Skeleton label={`Loading ${report.name}`}>{view}</Skeleton> : view
 }
 
 /**

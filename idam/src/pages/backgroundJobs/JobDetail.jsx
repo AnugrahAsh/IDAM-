@@ -9,6 +9,8 @@ import Tabs from '../../components/primitives/Tabs'
 import Tag from '../../components/primitives/Tag'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
+import { useLoading } from '../../lib/useLoading'
+import { JobRecordSkeleton } from './JobsSkeleton'
 import { duration, num, serialColumn, statusTone } from '../../lib/format'
 import {
   appliedPct, completedAt, hrMinSec, jobResponseFor, meterTone, operationFor,
@@ -32,6 +34,10 @@ const outcomeTone = (o) => (o === 'Failed' ? 'bad' : o === 'Pending' ? 'warn' : 
  */
 export default function JobDetail({ job, onCancel, onRemove, onDownload, navigate, setModal, setDrawer }) {
   const [tab, setTab] = useState('information')
+  /* One flag for the record, keyed on the execution. Both tabs are readings of
+     the same per-record outcomes, so moving between them is not a round trip
+     and does not settle again — only opening a different execution does. */
+  const loading = useLoading(job.jobId)
   const records = useMemo(() => recordsFor(job), [job])
   const exchange = useMemo(() => jobResponseFor(job), [job])
   const op = operationFor(job)
@@ -103,6 +109,8 @@ export default function JobDetail({ job, onCancel, onRemove, onDownload, navigat
       ),
     },
   ]
+
+  if (loading) return <JobRecordSkeleton tab={tab} />
 
   return (
     <>

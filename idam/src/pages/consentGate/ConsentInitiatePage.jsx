@@ -2,13 +2,11 @@ import { useCallback, useMemo, useState } from 'react'
 import Button from '../../components/primitives/Button'
 import Icon from '../../components/primitives/Icon'
 import Modal from '../../components/primitives/Modal'
-import { useDialogFocus } from '../../lib/useDialogFocus'
 import { useApp } from '../../store/AppContext'
 import { BASE } from '../../data/nav'
 import { USERS, nextId } from '../../data/seed'
-import wordmarkDark from '../../assets/tanflow-wordmark-dark.png'
 import wordmarkWhite from '../../assets/tanflow-wordmark-white.png'
-import ConsentDocument from './ConsentDocument'
+import ConsentDocumentOverlay from './ConsentDocumentOverlay'
 import RegistrationForm from './RegistrationForm'
 import { REGISTRATION_DOCUMENT, resolveInvitation } from './consentGateData'
 import './ConsentGate.css'
@@ -28,43 +26,6 @@ function Outcome({ icon, tone, title, children, actions }) {
 }
 
 /**
- * The consent document, over the form.
- *
- * A separate component because it owns the focus trap, and a trap must be
- * mounted and unmounted with the thing it traps focus inside. Escape leaves
- * without acknowledging — which is correct, since an overlay dismissed by
- * accident must not count as having read anything.
- */
-function DocumentOverlay({ doc, lang, onLang, onUnderstand, onClose }) {
-  const ref = useDialogFocus(onClose)
-  return (
-    <div className="modal-scrim ci-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div
-        ref={ref}
-        tabIndex={-1}
-        className="ci-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label={doc.title}
-      >
-        <ConsentDocument
-          doc={doc}
-          lang={lang}
-          onLang={onLang}
-          titleAs="h2"
-          footer={(
-            <div className="cg-actions">
-              <Button onClick={onClose}>Close</Button>
-              <Button variant="pri" icon="check" onClick={onUnderstand}>I Understand</Button>
-            </div>
-          )}
-        />
-      </div>
-    </div>
-  )
-}
-
-/**
  * Tokenised registration with consent.
  *
  * The recipient half of Consent Management's User Consent Initiative: the
@@ -78,7 +39,7 @@ function DocumentOverlay({ doc, lang, onLang, onUnderstand, onClose }) {
  * then fails at submit, which is the worst of both.
  */
 export default function ConsentInitiatePage() {
-  const { theme, toast } = useApp()
+  const { toast } = useApp()
   const doc = REGISTRATION_DOCUMENT
   const invitation = useMemo(() => resolveInvitation(window.location.search), [])
 
@@ -104,12 +65,24 @@ export default function ConsentInitiatePage() {
     toast('ok', 'Registration submitted', `Reference ${reference}. An administrator reviews it before an identity is created.`)
   }
 
+  /* The field and lockup the post-login gate stands on, kept for the five
+     screens that are a single short notice: a link that expired, one already
+     used, one that cannot be read, and the two ways this one ends. A notice of
+     four sentences wants a centred card and nothing else, which is exactly what
+     the gate gives it. The form is the one view that does not fit that shape,
+     and it gets a layout of its own below. */
   const shell = (children) => (
     <div className="cg-page">
       <header className="cg-top">
-        <img src={theme === 'dark' ? wordmarkWhite : wordmarkDark} alt="Tanflow" className="cg-logo" />
+        <span className="cg-lockup">
+          <img src={wordmarkWhite} alt="Tanflow" className="cg-logo" />
+          <span className="cg-descriptor">Identity &amp; access management</span>
+        </span>
         <span className="cg-top-sep" aria-hidden="true" />
-        <span className="t-sm t-mut">User registration</span>
+        <span className="cg-context">
+          <Icon name="user" size={13} />
+          User registration
+        </span>
       </header>
       <main className="cg-main">{children}</main>
     </div>
@@ -208,19 +181,48 @@ export default function ConsentInitiatePage() {
     )
   }
 
-  return shell(
-    <>
-      <div className="ci-card">
-        <header className="ci-head">
-          <h1 className="ci-head-t">User registration</h1>
-          <p className="ci-head-s">Please fill the below details to register yourself.</p>
-          <p className="ci-head-m">
-            <Icon name="mail" size={13} />
-            Invited by {invitation.invitedBy} for <b>{invitation.email}</b> on {invitation.sentOn} · this
-            link is single-use and expires on <b>{invitation.expiresOn}</b>.
-          </p>
-        </header>
+  /* Two columns, the height of the window: the invitation on the left, the form
+     on the right.
 
+     It was one 960px card centred on the field, which is the shape the original
+     Keycloak page was traced from — and on a 1440x900 window that left about
+     400px of empty brand either side while the form ran a little over 100px
+     past the bottom, so the checkbox and Submit had to be scrolled to. The
+     two faults were the same fault: a long form pinned into a column narrower
+     than the screen has nowhere to go but down.
+
+     Self-enrollment — the other page in this console written for someone who
+     has never seen it — already answers this: a rail that says what is being
+     asked and why, and a panel beside it that asks. This is that layout, with
+     the sign-in's field as the rail so the one screen an invited stranger sees
+     of Tanflow still looks like the one they will sign in to. Nothing is said
+     here that the card header did not say; it is said beside the form instead
+     of above it. */
+  return (
+    <div className="ci-page">
+      <aside className="ci-rail">
+        <span className="cg-lockup">
+          <img src={wordmarkWhite} alt="Tanflow" className="cg-logo" />
+          <span className="cg-descriptor">Identity &amp; access management</span>
+        </span>
+
+        {/* The context chip the other views carry says "User registration" too,
+            so on this one it would sit four lines above a heading with the same
+            words in it. The heading is the one that stays. */}
+        <div className="ci-rail-m">
+          <span className="ci-eyebrow">Invitation</span>
+          <h1 className="ci-rail-t">User registration</h1>
+          <p className="ci-rail-s">Please fill the below details to register yourself.</p>
+        </div>
+
+        <p className="ci-invite">
+          <Icon name="mail" size={13} />
+          Invited by {invitation.invitedBy} for <b>{invitation.email}</b> on {invitation.sentOn} · this
+          link is single-use and expires on <b>{invitation.expiresOn}</b>.
+        </p>
+      </aside>
+
+      <main className="ci-main">
         <RegistrationForm
           invitation={invitation}
           doc={doc}
@@ -229,10 +231,10 @@ export default function ConsentInitiatePage() {
           onSubmit={submit}
           onCancel={() => setConfirmCancel(true)}
         />
-      </div>
+      </main>
 
       {docOpen && (
-        <DocumentOverlay
+        <ConsentDocumentOverlay
           doc={doc}
           lang={lang}
           onLang={setLang}
@@ -253,6 +255,6 @@ export default function ConsentInitiatePage() {
           onClose={() => setConfirmCancel(false)}
         />
       )}
-    </>,
+    </div>
   )
 }

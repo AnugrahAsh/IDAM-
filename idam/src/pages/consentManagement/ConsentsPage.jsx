@@ -10,6 +10,7 @@ import Tag from '../../components/primitives/Tag'
 import Meter from '../../components/primitives/Meter'
 import EmptyState from '../../components/primitives/EmptyState'
 import Menu from '../../components/primitives/Menu'
+import { SkeletonStats } from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
 import { CONSENT_RECORDS, AUDIENCES, stamp } from '../shared/comms/commsData'
@@ -27,7 +28,11 @@ const blank = () => ({
   allowWithdrawal: false, allowEvidenceDownload: true, allowViewConsent: true,
 })
 
-export default function ConsentsPage({ segments = [], embedded, templates = [], rows, setRows, mapped, setMapped }) {
+/* `loading` comes from Consent Management above: the section owns one settle
+   for the page bar, the tabs and whichever panel is under them, so the tiles
+   and the register here land with the rest of the screen rather than a frame
+   after it. */
+export default function ConsentsPage({ segments = [], embedded, templates = [], rows, setRows, mapped, setMapped, loading = false }) {
   const { navigate, toast, confirm, setDrawer } = useApp()
   const [initiative, setInitiative] = useState(null)
   const [initMenu, setInitMenu] = useState(null)
@@ -184,6 +189,7 @@ export default function ConsentsPage({ segments = [], embedded, templates = [], 
       <ConsentDetail
         record={record}
         templates={templates}
+        loading={loading}
         onInitiateMenu={(e) => openInitMenu(e, [record])}
         onCancel={() => navigate('/iam/consent')}
         onSave={(v) => { setRows((rs) => rs.map((r) => (r.id === v.id ? v : r))); toast('ok', 'Consent saved', v.name); navigate('/iam/consent') }}
@@ -249,6 +255,7 @@ export default function ConsentsPage({ segments = [], embedded, templates = [], 
       />
       )}
 
+      {loading ? <SkeletonStats count={4} /> : (
       <StatCards
         items={[
           { key: 'total', icon: 'consent', label: 'Consents', value: rows.length, chip: `${rows.filter((r) => r.mandatory).length} mandatory`, sub: 'published to identities' },
@@ -258,11 +265,13 @@ export default function ConsentsPage({ segments = [], embedded, templates = [], 
         ]}
         label="Consent summary"
       />
+      )}
 
       <DataWorkbench
         id="consents"
         rows={rows}
         columns={columns}
+        loading={loading}
         selectable
         searchPlaceholder="Search by code, name or owner…"
         onRowClick={(r) => navigate(`/iam/consent/${r.id}`)}

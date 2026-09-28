@@ -7,22 +7,52 @@ import Switch from '../../components/primitives/Switch'
 import Banner from '../../components/primitives/Banner'
 import Icon from '../../components/primitives/Icon'
 import { REMOTE_SOURCES } from './schedulerApi'
+import { CONFIG_SOURCES } from './schedulerModel'
 
 /**
  * One field of a service's configuration schema.
  *
- * Eight declared types, one control each. Nothing here knows which service it
- * is rendering for — a service that wants a new control declares a new type and
+ * Nine declared types, one control each. Nothing here knows which service it is
+ * rendering for — a service that wants a new control declares a new type and
  * this is the only file that learns about it.
  *
  * A `string-list` is a free-entry comma-separated list rather than a picker,
  * because the values are addresses, column names and key=value pairs: sets the
- * server cannot enumerate in advance.
+ * server cannot enumerate in advance. Everything the server *can* enumerate —
+ * applications, organisations, email templates, date attributes — is a
+ * `remote-enum` or a `multi-remote-enum`, so a value that does not exist cannot
+ * be typed in the first place.
  */
 
 const listToText = (v) => (Array.isArray(v) ? v.join(', ') : String(v || ''))
 const textToList = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean)
 const sameList = (a, b) => a.length === b.length && a.every((x, i) => x === b[i])
+
+/* Every comma-separated field says so the same way, and a field that carries
+   its own example keeps it: "Comma separated, e.g. admin, security_team" tells
+   an operator both the format and what belongs in this particular list. */
+const listPlaceholder = (example) =>
+  `Comma separated, e.g. ${example || 'first_name, last_name, email'}`
+
+/* A remote source may be declared beside the call that fetches it, or beside
+   the register it reads from; the descriptor only names it. */
+const sourceFor = (name) => REMOTE_SOURCES[name] || CONFIG_SOURCES[name] || null
+
+/**
+ * The options, plus whatever is currently stored that is no longer among them.
+ *
+ * A template that was renamed, an organisation that was removed, an attribute
+ * that was typed in free text before this field became a dropdown: dropping any
+ * of them would clear the field silently, and a blank field reads as lost
+ * configuration rather than as a value that needs revisiting. It stays
+ * selected, and it says why it is marked.
+ */
+const withCurrent = (options, value) => {
+  const held = Array.isArray(value) ? value : (value == null || value === '' ? [] : [value])
+  const missing = held.filter((v) => !options.some((o) => String(o.value) === String(v)))
+  if (!missing.length) return options
+  return [...options, ...missing.map((v) => ({ value: v, label: `${v} (no longer available)` }))]
+}
 
 /* The input keeps exactly what was typed. Re-rendering the parsed list on every
    keystroke stripped a trailing comma the moment it was entered, so a second
@@ -45,8 +75,26 @@ function StringListInput({ id, value, placeholder, onChange }) {
   )
 }
 
-export default function ConfigField({ field, value, onChange, idPrefix = 'svc-cfg' }) {
-  const id = `${idPrefix}-${field.key}`
+export default function ConfigField({ field, value, config = {}, onChange, idPrefix = 'svc-cfg' }) {
+  const control = renderControl(field, value, onChange, `${idPrefix}-${field.key}`)
+  /* A field may declare a preview: a line under the control showing what the
+     values entered above will produce. It is presentation only — the server
+     derives the real thing — so it is read from the descriptor rather than
+     hand-placed here for one service. */
+  const preview = typeof field.preview === 'function' ? field.preview(config) : null
+  if (!preview) return control
+  return (
+    <div className="cfg-field">
+      {control}
+      <div className="cfg-preview">
+        <Icon name="eye" size={11} />
+        <span className="trunc">{preview}</span>
+      </div>
+    </div>
+  )
+}
+
+function renderControl(field, value, onChange, id) {
   const common = { label: field.label, required: field.required, hint: field.help, htmlFor: id, keepHint: true }
 
   switch (field.type) {
@@ -62,6 +110,7 @@ export default function ConfigField({ field, value, onChange, idPrefix = 'svc-cf
       )
 
     case 'integer':
+    case 'number':
       return (
         <Field
           {...common}
@@ -85,12 +134,19 @@ export default function ConfigField({ field, value, onChange, idPrefix = 'svc-cf
         </Field>
       )
 
+    case 'time':
+      return (
+        <Field {...common}>
+          <TextInput id={id} type="time" value={value || ''} onChange={(e) => onChange(e.target.value)} />
+        </Field>
+      )
+
     case 'enum': {
-      const opts = field.options || []
+      const opts = withCurrent(field.options || [], value)
       return (
         <Field {...common}>
           {opts.length > 8 ? (
-            <SearchSelect id={id} value={value ?? ''} options={opts} placeholder={`Select ${field.label.toLowerCase()}`} onChange={(e) => onChange(e.target.value)} />
+            <SearchSelect id={id} value={value ?? ''} options={opts} placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} onChange={(e) => onChange(e.target.value)} />
           ) : (
             <Select id={id} value={value ?? ''} options={opts} onChange={(e) => onChange(e.target.value)} />
           )}
@@ -105,18 +161,18 @@ export default function ConfigField({ field, value, onChange, idPrefix = 'svc-cf
             id={id}
             multiple
             value={Array.isArray(value) ? value : []}
-            options={field.options || []}
-            placeholder={`Select ${field.label.toLowerCase()}`}
+            options={withCurrent(field.options || [], value)}
+            placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`}
             onChange={(e) => onChange(e.target.value)}
           />
         </Field>
       )
 
-    case 'remote-enum': {
-      const source = REMOTE_SOURCES[field.source]
-      const options = source ? source.options() : []
-      const configured = source ? source.configured() : false
-      if (!configured) {
+    case 'remote-enum':
+    case 'multi-remote-enum': {
+      const multiple = field.type === 'multi-remote-enum'
+      const source = sourceFor(field.source)
+      if (!(source && source.configured())) {
         /* An empty remote source behind a required field is not an empty
            dropdown — it is a service that cannot be saved. Say so instead of
            leaving an operator clicking a picker with nothing in it. */
@@ -130,10 +186,11 @@ export default function ConfigField({ field, value, onChange, idPrefix = 'svc-cf
         <Field {...common}>
           <SearchSelect
             id={id}
-            value={value ?? ''}
-            options={options}
-            placeholder={`Select ${field.label.toLowerCase()}`}
-            searchPlaceholder="Search the registry…"
+            multiple={multiple}
+            value={multiple ? (Array.isArray(value) ? value : []) : (value ?? '')}
+            options={withCurrent(source.options(), value)}
+            placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`}
+            searchPlaceholder={field.searchPlaceholder || 'Search…'}
             onChange={(e) => onChange(e.target.value)}
           />
         </Field>
@@ -153,7 +210,7 @@ export default function ConfigField({ field, value, onChange, idPrefix = 'svc-cf
             <StringListInput
               id={id}
               value={value}
-              placeholder={field.placeholder || 'value, value, value'}
+              placeholder={listPlaceholder(field.placeholder)}
               onChange={onChange}
             />
             {list.length > 0 && (
@@ -186,8 +243,10 @@ export default function ConfigField({ field, value, onChange, idPrefix = 'svc-cf
 export function configValueText(field, value) {
   if (value == null || value === '') return '—'
   if (field.type === 'boolean') return value ? 'Yes' : 'No'
-  if (field.type === 'enum' || field.type === 'multi-enum') {
-    const label = (v) => (field.options || []).find((o) => String(o.value) === String(v))?.label || v
+  if (field.type === 'enum' || field.type === 'multi-enum' || field.type === 'remote-enum' || field.type === 'multi-remote-enum') {
+    const remote = field.type.endsWith('remote-enum') ? sourceFor(field.source) : null
+    const opts = remote ? remote.options() : (field.options || [])
+    const label = (v) => opts.find((o) => String(o.value) === String(v))?.label || v
     return Array.isArray(value) ? (value.length ? value.map(label).join(', ') : '—') : label(value)
   }
   if (Array.isArray(value)) return value.length ? value.join(', ') : '—'

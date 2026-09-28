@@ -6,6 +6,9 @@ import Pill from '../../components/primitives/Pill'
 import Select from '../../components/primitives/Select'
 import Tabs from '../../components/primitives/Tabs'
 import Tag from '../../components/primitives/Tag'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonForm,
+} from '../../components/primitives/Skeleton'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import RecordCard, { CardIcon } from '../../components/workbench/RecordCard'
 import DetailHeader from '../../components/shell/DetailHeader'
@@ -40,7 +43,11 @@ const TEMPLATE_VIEWS = [
 
 const statusPill = (r) => <Pill tone={r.status === 'Active' ? 'ok' : 'mut'} dot>{r.status}</Pill>
 
-export default function SmsClientConfiguration({ tab, onTab, messages, onMessagesChange, openId }) {
+/* The settling state arrives from the page above rather than being started
+   here: this component is mounted by two routes, each of which owns the page
+   bar over it, and a second timer of its own would settle the panel a frame
+   away from the masthead. One flag, one page, one arrival. */
+export default function SmsClientConfiguration({ tab, onTab, messages, onMessagesChange, openId, loading = false }) {
   const { toast, confirm, navigate, setDrawer } = useApp()
   const [providers, setProviders] = useState(() => SMS_PROVIDERS.map((p) => ({ ...p })))
   const [templates, setTemplates] = useState(() => SMS_TEMPLATES.map(withTemplateType))
@@ -232,6 +239,28 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
     const adding = openId === 'add'
     const record = adding ? null : cfg.list.find((x) => String(x.id) === String(openId))
 
+    /* A record editor is a detail page: the masthead is the first thing that
+       lands, so it is the first thing held. The cards below stand in for the
+       editor's field groups — a provider is five groups and a template three,
+       and a single card of bars would let the page grow by two screens when
+       the real form arrived. */
+    if (loading) {
+      return (
+        <Skeleton label={`Loading the ${cfg.eyebrow.toLowerCase()}`}>
+          <SkeletonDetailHeader facts={2} actions={0} />
+          <div className="detail-body">
+            <div className="sms-form">
+              {Array.from({ length: kind === 'providers' ? 4 : 3 }, (_, i) => (
+                <SkeletonCard key={i}>
+                  <SkeletonForm fields={i === 0 ? 4 : 6} actions={false} />
+                </SkeletonCard>
+              ))}
+            </div>
+          </div>
+        </Skeleton>
+      )
+    }
+
     if (!adding && !record) {
       return (
         <>
@@ -356,6 +385,7 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
         <DataWorkbench
           id="sms-providers"
           rows={providers}
+          loading={loading}
           columns={providerColumns}
           searchPlaceholder="Search providers by code, name or auth\u2026"
           toolbar={<Button size="sm" variant="pri" icon="plus" onClick={() => openProvider(null)}>Add Provider</Button>}
@@ -380,6 +410,7 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
         <DataWorkbench
           id="sms-templates"
           rows={templateRows}
+          loading={loading}
           columns={templateColumns}
           views={TEMPLATE_VIEWS}
           view={templateView}
@@ -420,6 +451,7 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
         <DataWorkbench
           id="sms-clients"
           rows={clients}
+          loading={loading}
           columns={clientColumns}
           searchPlaceholder="Search clients by code, name or provider\u2026"
           toolbar={<Button size="sm" variant="pri" icon="plus" onClick={() => editClient(null)}>Add Client</Button>}
@@ -437,9 +469,9 @@ export default function SmsClientConfiguration({ tab, onTab, messages, onMessage
         />
       )}
 
-      {tab === 'health' && <SmsHealth providers={providers} messages={messages} />}
+      {tab === 'health' && <SmsHealth providers={providers} messages={messages} loading={loading} />}
 
-      {tab === 'messages' && <SmsPage embedded rows={messages} onRowsChange={onMessagesChange} />}
+      {tab === 'messages' && <SmsPage embedded rows={messages} onRowsChange={onMessagesChange} loading={loading} />}
     </>
   )
 }

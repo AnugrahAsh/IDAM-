@@ -55,14 +55,20 @@
 .top-user:hover{background:rgba(255,255,255,.08)}
 @media(max-width:1180px){.brand-sub{display:none}}
 
-.nav-head{flex:none;padding:9px 9px 7px}
-.nav-filter{display:flex;align-items:center;gap:7px;height:30px;padding:0 9px;
+/* The head is a row: the filter takes whatever width is left and the collapse
+   handle sits beside it at a fixed size, outside the input's own box. */
+.nav-head{flex:none;display:flex;align-items:center;gap:6px;padding:9px 9px 7px}
+.nav-filter{flex:1;min-width:0;display:flex;align-items:center;gap:7px;height:30px;padding:0 9px;
   border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface-2);
   transition:border-color var(--dur-1) var(--ease),background var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
 .nav-filter:focus-within{border-color:var(--accent);box-shadow:var(--sh-focus);background:var(--surface)}
 .nav-filter svg{width:13px;height:13px;color:var(--faint);flex:none}
 .nav-filter input{flex:1;min-width:0;border:none;background:none;outline:none;font-size:var(--t-sm)}
+/* Collapsed, there is no room to filter by name — the rail is icons. The head
+   keeps its row so the handle that expands the console again stays exactly
+   where the reader last used it, centred over the icons below. */
 .app[data-nav="min"] .nav-filter{display:none}
+.app[data-nav="min"] .nav-head{justify-content:center;padding:9px 4px 7px}
 
 .nav{flex:1;overflow-y:auto;padding:2px 0 12px;scrollbar-width:thin;padding-bottom:var(--sp-4)}
 .nav::-webkit-scrollbar{width:6px}
@@ -138,16 +144,28 @@
 .nav-sect:not(:has(.nav-sect-n)) .nav-chev{margin-left:auto}
 .app[data-nav="min"] .nav-hidden-hint{display:none}
 
-/* The foot holds one control now — the collapse handle — so it is a row that
-   is only as tall as that control, and the navigation above it keeps the rest.
-   The identity chip that used to live here went with the account menu it
-   raised: the navbar carries both for the whole console. */
-.side-foot{flex:none;border-top:1px solid var(--line);padding:6px 7px;display:flex;align-items:center;justify-content:flex-end}
-.app[data-nav="min"] .side-foot{justify-content:center;padding:6px 4px}
-.side-min{width:28px;height:28px;flex:none;display:inline-flex;align-items:center;justify-content:center;
-  border-radius:var(--r-sm);color:var(--mut);transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
-.side-min:hover{background:var(--surface-3);color:var(--ink)}
+/* The collapse handle. It used to sit in a foot strip under the navigation;
+   the foot is gone and the navigation runs to the bottom edge, because a rule
+   and a 40px band under a scrolling list bought nothing but the band. The
+   handle is 30px square so it matches the filter input it sits beside and the
+   two read as one row rather than as a control parked next to a field. */
+.side-min{width:30px;height:30px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid transparent;border-radius:var(--r-sm);color:var(--mut);
+  transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease)}
+.side-min:hover{background:var(--surface-3);border-color:var(--line-2);color:var(--ink)}
 .side-min svg{width:15px;height:15px;transition:transform var(--dur-3) var(--ease)}
+/* Collapsed, it is the only control in the rail and the only way back, so it
+   takes the rail's width rather than hiding in the middle of it, and it wears
+   the resting box the filter input had beside it. Expanded, the row reads as a
+   field with a handle next to it and the handle needs no outline of its own;
+   collapsed, an unoutlined chevron alone in a strip of icons reads as one more
+   navigation glyph rather than as the way out. */
+.app[data-nav="min"] .side-min{
+  width:36px;border-color:var(--line-2);background:var(--surface-2);color:var(--ink-2);
+}
+/* Restated because the resting rule above outranks the plain `:hover` one and
+   would otherwise leave the rail's only control with no answer to the pointer. */
+.app[data-nav="min"] .side-min:hover{background:var(--surface-3);border-color:var(--line-2);color:var(--ink)}
 .app[data-nav="min"] .side-min svg{transform:rotate(180deg)}
 
 .skip{position:fixed;top:-48px;left:10px;z-index:var(--z-toast);background:var(--shell);color:#fff;
@@ -156,6 +174,12 @@
 .skip:focus{top:0}
 
 .nav-filter{position:relative}
+/* The clear button floats over the field rather than taking a column in it, so
+   the text has to be told where to stop: a filter long enough to fill the input
+   otherwise runs under the x, and the reader cannot read what they are about to
+   clear. The rule only applies while the button is there, so an empty field
+   still uses its whole width. */
+.nav-filter:has(.nav-filter-x) input{padding-right:19px}
 .nav-filter-x{
   position:absolute;top:50%;right:6px;transform:translateY(-50%);
   display:inline-flex;align-items:center;justify-content:center;

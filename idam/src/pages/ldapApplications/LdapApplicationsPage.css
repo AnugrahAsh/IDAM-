@@ -217,6 +217,79 @@
 .ldap-opt-m > span{font-size:var(--t-xs);color:var(--mut)}
 .ldap-opts > button > svg:last-child{flex:none;color:var(--faint)}
 
+/* --- Settling -------------------------------------------------------------- */
+/* The same option row, holding its place while the module settles. The padding,
+   the border and the mark's size are the button's own; the metadata column is
+   given the height the two lines of type occupy, stated in the tokens they are
+   set in, so the options land without the grid changing height under them. */
+.ldap-opts-skel > span{display:flex;align-items:center;gap:10px;min-width:0;
+  padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.ldap-opt-skel-ic{width:26px;height:26px;border-radius:var(--r-sm)}
+.ldap-opt-skel-m{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:6px;
+  min-height:calc((var(--t-sm) + var(--t-xs)) * var(--t-body-lh) + 1px)}
+.ldap-opt-skel-m > .skel{display:block}
+
+/* A register-header tab holding its place. `.reg-f` brings the padding and the
+   2px baseline the selected state reserves; all this adds is that the shape is
+   not a control and should not offer a pointer. The number bar is set to the
+   line box `.reg-f b` prints at. */
+.ldap-reg-skel-f{cursor:default}
+.ldap-reg-skel-f > .skel{height:18px}
+
+/* The record masthead greys in place rather than being swapped for the kit's
+   imitation of one. The crumb row, the gutters, the gaps and the tab strip are
+   then `DetailHeader`'s own and cannot drift from it, and the directory lands
+   in exactly the box that was holding it.
+
+   What is left is the bars that stand in for type, and each one has to state
+   the line box the type it replaces prints at — a bar carries no text to set
+   one, so a masthead built from bars alone comes up short and steps the whole
+   record up when the name arrives. The sizes below are `.detail-title`,
+   `.detail-sub`, `.detail-fact` and the 56px mark this page passes. */
+.dtl-skel-title{display:block;width:min(21rem,42%);height:calc(1.375rem * 1.24);
+  border-radius:var(--r-sm)}
+.dtl-skel-media{display:block;width:56px;height:56px;border-radius:var(--r-lg)}
+.dtl-skel-fact{display:inline-flex;align-items:center;min-width:0;
+  min-height:calc(var(--t-xs) * var(--t-xs-lh))}
+
+/* The sub is a paragraph, not a line. `.detail-sub` is capped at 100ch, and the
+   directory's sub — its description, then the bind DN, the entry count and the
+   base DN the platform reads under — runs past one line of that for every
+   directory in the estate. A single bar held one line box, so the tab strip and
+   the whole panel under it stepped down the height of the second line the moment
+   the sentence landed. One bar per line box holds what the paragraph occupies,
+   and the last is short so the block reads as prose rather than as a form. */
+.dtl-skel-sub{display:flex;flex-direction:column;width:min(44rem,76%)}
+.dtl-skel-sub > .skel{display:block;height:9px;
+  margin:calc((var(--t-sm) * 1.45 - 9px) / 2) 0}
+.dtl-skel-sub > .skel:last-child{width:88%}
+
+/* A panel shape standing in for a `Card … flush`. `.skel-card-b` pads its body
+   the way `.card-b` does, which is right for a body of prose or fields and wrong
+   for one whose body is a table or a list: `.card-b.flush` drops that padding,
+   and `SkeletonTable`/`SkeletonList` carry the row gutters themselves. Without
+   this the shape stands 32px taller than the card it holds space for and insets
+   its rows by a second gutter. */
+.dtl-skel-flush > .skel-card-b{padding:0}
+
+/* The standing note above the estate-wide rule register, holding its place.
+   `.banner` gives the tint, the border, the padding and the 1.5 line box the
+   note prints at; only the bars inside are ours, one per line the sentence
+   occupies, with the last one short so the block reads as prose. */
+.ldap-rules-skel-ic{width:15px;height:15px;margin-top:1px;flex:none;border-radius:var(--r-xs)}
+.ldap-rules-skel-note > div{display:flex;flex-direction:column;flex:1;min-width:0}
+.ldap-rules-skel-note > div > .skel{display:block;height:9px;
+  margin:calc((var(--t-sm) * 1.5 - 9px) / 2) 0}
+.ldap-rules-skel-note > div > .skel:last-child{width:52%}
+
+/* The figure strip a record opens with. `.stat-strip` and `.stat-cell` give the
+   grid and the tile; the two line boxes are the ones `.stat-k` and `.stat-v`
+   print at, so the figures do not shorten the strip when they land. A tile
+   holding space is not a control, so it does not light up under the pointer. */
+.ldap-skel-strip .stat-k{min-height:calc(var(--t-xs) * var(--t-body-lh))}
+.ldap-skel-strip .stat-v{min-height:calc(1.25rem * 1.1)}
+.ldap-skel-strip .stat-cell:hover{border-color:var(--line)}
+
 /* Attribute mapping, edited as a table of rows saved together. */
 .map-tbl.ldap-map-tbl{min-width:640px}
 .ldap-map-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px var(--sp-4);

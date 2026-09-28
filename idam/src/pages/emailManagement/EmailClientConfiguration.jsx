@@ -11,6 +11,9 @@ import TextInput from '../../components/primitives/TextInput'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import RecordCard, { CardIcon } from '../../components/workbench/RecordCard'
 import StickyActions from '../../components/shell/StickyActions'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonForm,
+} from '../../components/primitives/Skeleton'
 import { ME } from '../../data/seed'
 import { useApp } from '../../store/AppContext'
 import EmailsPage from './EmailsPage'
@@ -70,8 +73,150 @@ const TEMPLATE_VIEWS = [
 
 const statusPill = (r) => <Pill tone={r.status === 'Active' ? 'ok' : 'mut'} dot>{r.status}</Pill>
 
+/* A bar at the line box the text it stands in for is set in, the way the
+   Settings sections draw theirs — the height comes from the token the real type
+   carries rather than from a round number that looks close. */
+const LINE_XS = 'calc(var(--t-xs) * var(--t-body-lh))'
+const LINE_SM = 'calc(var(--t-sm) * var(--t-body-lh))'
+const LINE_MICRO = 'calc(var(--t-micro) * var(--t-body-lh))'
+
+/* One `.field` — its label, its control, and, where the real field carries one,
+   the hint line under it. The class is the form's own, so the 5px between the
+   three comes from the rule `Field` is drawn by rather than from here. */
+function SkelField({ label = '46%', hint, span }) {
+  return (
+    <div className="field" style={span ? { gridColumn: `span ${span}` } : undefined}>
+      <span className="skel" style={{ width: label, height: LINE_XS }} />
+      <span className="skel em-skel-inp" />
+      {hint && <span className="skel" style={{ width: hint, height: LINE_XS }} />}
+    </div>
+  )
+}
+
+/* One `Section` of `SmtpFields`: the heading line — which `SkeletonForm` has no
+   notion of, and which is most of the 500px the flat form skeleton was short by
+   once its five sections and their 20px rhythm are counted — then the rows. */
+function SkelSection({ head = '38%', children }) {
+  return (
+    <section className="em-fs">
+      <div className="em-fs-hr">
+        <h3 className="em-fs-h">
+          <span className="skel em-skel-fs-ic" />
+          <span className="skel" style={{ width: head, height: LINE_MICRO }} />
+        </h3>
+      </div>
+      <div className="stack">{children}</div>
+    </section>
+  )
+}
+
+/* One `SwitchRow`: the box, and the title over the sentence that says what
+   turning it off costs. A retry panel of four plain fields is barely half the
+   card without these three. */
+function SkelSwitch({ title = '38%', body = '78%' }) {
+  return (
+    <div className="em-sw em-skel-sw">
+      <span className="skel em-skel-check" />
+      <span className="em-sw-m">
+        <span className="skel" style={{ width: title, height: LINE_SM }} />
+        <span className="skel" style={{ width: body, height: LINE_XS }} />
+      </span>
+    </div>
+  )
+}
+
+/* The SMTP panel, holding its place.
+ *
+ * Configuration and Retry policy are forms, but they are forms filled from the
+ * stored relay — nothing in them is the operator's own typing until the record
+ * they were drawn from has arrived. Connection test and Test message are not
+ * here: a test log nobody has run yet and an address box waiting to be typed
+ * into have nothing to read, so they are drawn straight away rather than made
+ * to look like they are fetching something.
+ *
+ * Both panels are drawn from `EmailForms`' own markup rather than from the
+ * kit's flat field grid. The kit's grid knows nothing about the five headed
+ * sections `SmtpFields` is built from, the warning banner the seeded relay
+ * always renders, or the three switch rows under `DeliveryFields` — and this is
+ * the tab Email Management lands on, so anything the shape leaves out is the
+ * page growing by that much the moment the settle ends. */
+function SmtpSkeleton({ tab }) {
+  if (tab === 'retry') {
+    return (
+      <div className="grid grid-2">
+        <SkeletonCard>
+          {/* `DeliveryFields`: four fields, three of which carry a hint line —
+              the fourth puts its qualifier beside the label — then the three
+              behaviour switches, at the form's own 20px rhythm. */}
+          <div className="em-form">
+            <SkelField label="34%" hint="72%" />
+            <SkelField label="30%" hint="46%" />
+            <SkelField label="36%" hint="84%" />
+            <SkelField label="58%" />
+            <SkelSwitch title="32%" body="82%" />
+            <SkelSwitch title="38%" body="88%" />
+            <SkelSwitch title="34%" body="76%" />
+          </div>
+        </SkeletonCard>
+        {/* The consequences panel is the shorter of the pair, and grid items
+            stretch to the row, so the policy beside it sets the height. */}
+        <SkeletonCard lines={8} />
+      </div>
+    )
+  }
+  // Five field groups: basic info, runtime engine, authentication, encryption
+  // and sender identity, at the rows each one lands with.
+  return (
+    <SkeletonCard>
+      <div className="em-form">
+        <SkelSection head="30%">
+          <div className="grid grid-2">
+            <SkelField label="48%" />
+            <SkelField label="52%" />
+          </div>
+        </SkelSection>
+
+        <SkelSection head="40%">
+          <SkelField label="44%" />
+          <SkelField label="32%" />
+          <div className="grid grid-2">
+            <SkelField label="40%" />
+            <SkelField label="36%" />
+          </div>
+        </SkelSection>
+
+        {/* The banner under Auth Type renders for every auth type but NONE, and
+            the stored relay authenticates — so it is held rather than omitted. */}
+        <SkelSection head="44%">
+          <SkelField label="34%" />
+          <span className="skel em-skel-banner" />
+          <div className="grid grid-2">
+            <SkelField label="38%" />
+            <SkelField label="58%" />
+          </div>
+        </SkelSection>
+
+        {/* Encryption's own banner is the one that is not held: it appears only
+            when transport security is off, and the stored relay negotiates
+            STARTTLS. */}
+        <SkelSection head="32%">
+          <SkelField label="46%" />
+        </SkelSection>
+
+        <SkelSection head="42%">
+          <div className="grid grid-2">
+            <SkelField label="36%" span={2} />
+            <SkelField label="42%" />
+            <SkelField label="34%" />
+          </div>
+        </SkelSection>
+      </div>
+    </SkeletonCard>
+  )
+}
+
 export default function EmailClientConfiguration({
-  tab, onTab, messages, onMessagesChange, openTemplateId,
+  tab, onTab, messages, onMessagesChange, openTemplateId, loading = false,
 }) {
   const { toast, confirm, navigate } = useApp()
   /* One relay, not a list of them. The register carried several because the
@@ -216,6 +361,27 @@ export default function EmailClientConfiguration({
   /* A link into a single template renders that template's page rather than the
      register — the editor is a page now, not a dialog raised over one. */
   if (openTemplateId) {
+    /* A template is a record page: the masthead is the first thing that lands,
+       so it is the first thing held. The cards below stand in for the editor's
+       own four — identity, subject, body and addressing — because a single
+       card of bars would let the page grow by two screens when the real form
+       arrived. */
+    if (loading) {
+      return (
+        <Skeleton label="Loading the email template">
+          <SkeletonDetailHeader facts={3} actions={2} />
+          <div className="detail-body">
+            <div className="stack">
+              <SkeletonCard><SkeletonForm fields={2} cols={2} actions={false} /></SkeletonCard>
+              <SkeletonCard><SkeletonForm fields={1} cols={1} actions={false} /></SkeletonCard>
+              <SkeletonCard lines={12} />
+              <SkeletonCard><SkeletonForm fields={2} cols={2} actions={false} /></SkeletonCard>
+            </div>
+          </div>
+        </Skeleton>
+      )
+    }
+
     const found = templates.find((t) => String(t.id) === String(openTemplateId))
     return (
       <TemplateRecord
@@ -261,7 +427,15 @@ export default function EmailClientConfiguration({
                 : t))}
             />
 
-            {smtpTab === 'config' && (
+            {/* The sub-tabs are chrome and stay put; the panel under them is
+                the relay record, so that is what is held. No announcing region
+                of its own: the section above has already said the screen is
+                loading, and these shapes are decoration under it. */}
+            {loading && (smtpTab === 'config' || smtpTab === 'retry') && (
+              <SmtpSkeleton tab={smtpTab} />
+            )}
+
+            {!loading && smtpTab === 'config' && (
               <Card
                 title="SMTP configuration"
                 sub="The single relay every transactional message leaves through"
@@ -287,7 +461,7 @@ export default function EmailClientConfiguration({
               </Card>
             )}
 
-            {smtpTab === 'retry' && (
+            {!loading && smtpTab === 'retry' && (
               <div className="grid grid-2">
                 <Card title="Retry policy" sub="Applied to any message the relay rejects with a transient error">
                   <DeliveryFields d={draft} set={set} />
@@ -397,10 +571,12 @@ export default function EmailClientConfiguration({
               against it rather than against what was saved, and the bar's
               growth chain is anchored on the section's own stack. Hiding it on
               two of four tabs would hide a dirty draft. */}
-          <StickyActions dirty={dirty} message={dirty ? 'Unsaved changes to the relay' : `Saved · ${smtp.host}:${smtp.port}`}>
-            <Button icon="refresh" disabled={!dirty} onClick={revert}>Revert</Button>
-            <Button variant="pri" icon="save" disabled={!dirty} onClick={saveSmtp}>Save configuration</Button>
-          </StickyActions>
+          {!loading && (
+            <StickyActions dirty={dirty} message={dirty ? 'Unsaved changes to the relay' : `Saved · ${smtp.host}:${smtp.port}`}>
+              <Button icon="refresh" disabled={!dirty} onClick={revert}>Revert</Button>
+              <Button variant="pri" icon="save" disabled={!dirty} onClick={saveSmtp}>Save configuration</Button>
+            </StickyActions>
+          )}
         </>
       )}
 
@@ -417,6 +593,7 @@ export default function EmailClientConfiguration({
           onViewChange={setTemplateView}
           renderCard={renderTemplateCard}
           cardSize="compact"
+          loading={loading}
           searchPlaceholder="Search templates by name, code, subject or event…"
           onRowClick={openTemplate}
           actionsLabel="Actions"
@@ -437,9 +614,9 @@ export default function EmailClientConfiguration({
         </div>
       )}
 
-      {tab === 'health' && <EmailHealth smtp={smtp} messages={messages} />}
+      {tab === 'health' && <EmailHealth smtp={smtp} messages={messages} loading={loading} />}
 
-      {tab === 'messages' && <EmailsPage embedded rows={messages} onRowsChange={onMessagesChange} />}
+      {tab === 'messages' && <EmailsPage embedded rows={messages} onRowsChange={onMessagesChange} loading={loading} />}
     </>
   )
 }

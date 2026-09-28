@@ -54,6 +54,23 @@
   gap: var(--sp-3);
 }
 
+/* A section that carries a control keeps it on the heading line. The wrapper
+   is always present so a section with and without one line up: `.sms-fs` sets
+   the gap, and the row adds none of its own. */
+.sms-fs-hr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.sms-fs-a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
 /* A section label, set like every other label in the console (table headers,
    key/value keys, tile captions): micro caps in the muted ink. */
 .sms-fs-h {
@@ -350,4 +367,148 @@
   font-size: var(--t-xs);
   padding-top: 8px;
   border-top: 1px solid var(--hair);
+}
+
+/* --- Client health accordions -------------------------------------------------
+   One row per tenant binding, inside the card that names the set — rows rather
+   than cards, because a card of cards is two frames around one thing. The head
+   is the whole control, not a chevron beside a title: a strip this wide with a
+   14px hit target reads as decoration. Drawn to match the email side's client
+   accordions exactly, because the two screens answer the same question and an
+   operator who has read one has read both. */
+.sms-acc + .sms-acc {
+  border-top: 1px solid var(--hair);
+}
+
+.sms-acc-h {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 10px var(--sp-4);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+}
+
+.sms-acc-h:hover { background: var(--row-hover) }
+
+/* Inset, because the row runs to the card's own edge and a 2px ring offset
+   outward is clipped by it. */
+.sms-acc-h:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.sms-acc[data-open] > .sms-acc-h { border-bottom: 1px solid var(--hair) }
+
+.sms-acc-chev {
+  flex: none;
+  color: var(--mut);
+  transition: transform var(--dur-2) var(--ease);
+}
+
+.sms-acc[data-open] .sms-acc-chev { transform: rotate(90deg) }
+
+.sms-acc-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.sms-acc-t {
+  display: block;
+  font-size: var(--t-h3);
+  font-weight: var(--w-semi);
+  letter-spacing: var(--t-h3-ls);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sms-acc-s {
+  display: block;
+  font-size: var(--t-xs);
+  color: var(--mut);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What the head is for: the figures the state was read off, and the state.
+   Both thresholds are shown because either can be the reason — a client amber
+   for a deep queue and a client amber for undelivered receipts are different
+   mornings, and one figure cannot tell them apart. */
+.sms-acc-figs {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: none;
+}
+
+/* Right-aligned inside a floor wide enough for the seeded figures, so the two
+   columns line up down the card: a caption is a fixed width per column, so
+   equal boxes put every QUEUED under the last and leave the state pill starting
+   at the same x on every row. Content longer than the floor still grows. */
+.sms-acc-fig {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 92px;
+}
+
+.sms-acc-fig-v {
+  font-size: var(--t-h3);
+  font-weight: var(--w-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--mut);
+}
+
+.sms-acc-fig[data-tone="warn"] .sms-acc-fig-v { color: var(--warn) }
+
+.sms-acc-fig[data-tone="bad"] .sms-acc-fig-v { color: var(--bad) }
+
+.sms-acc-fig-k {
+  font-size: var(--t-micro);
+  letter-spacing: var(--t-micro-ls);
+  text-transform: uppercase;
+  font-weight: var(--w-semi);
+  color: var(--mut);
+}
+
+.sms-acc-b { padding: var(--sp-4) }
+
+/* The body is in the DOM whether or not it is open so `aria-controls` always
+   resolves, so the attribute has to be the thing that hides it. */
+.sms-acc-b[hidden] { display: none }
+
+/* The waiting head: the same row, the same padding, with bars where the name
+   and the figures will be. The chevron is a square of the icon's own size so
+   the name starts at the x it will start at once the rows land. */
+.sms-acc-skel .sms-acc-h { cursor: default }
+
+.sms-acc-skel-chev {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-xs);
+}
+
+.sms-acc-skel .sms-acc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Narrow: the chevron and the name keep the first line and the triage facts
+   drop to their own, indented to the name rather than the chevron. */
+@media (max-width: 640px) {
+  .sms-acc-h { flex-wrap: wrap }
+  .sms-acc-figs {
+    flex: 1 0 100%;
+    padding-left: calc(14px + var(--sp-3));
+  }
 }

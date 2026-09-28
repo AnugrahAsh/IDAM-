@@ -147,3 +147,21 @@
 /* Excluded users: the inline panel that adds from the directory or reads a
    CSV, opened from the table toolbar and closed once it has done its job. */
 .sop-panel{display:flex;flex-direction:column;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+
+/* --- The register header, holding its place ------------------------------
+   The facet is a button in the real rule, so a bar standing in for one has to
+   say the two things the button's own geometry gave it: no pointer, and the
+   height the number prints at. */
+.sop-reg-skel-f{cursor:default}
+.sop-reg-skel-f > .skel{height:18px}
+
+/* The tab row a record masthead lands with: the same padding as the real tab,
+   so the body under the header does not move when the policy arrives. */
+.sop-skel-tabs{border-bottom:none}
+
+/* The Rules tab's card is `flush` — the ladder runs to the card's own edge, and
+   `.skel-row` already carries the same gutter `.tbl td` does. `SkeletonCard`
+   has no flush option, so its body padding is given up here; left on, the
+   waiting card is 32px tall over the card that replaces it and every bar sits
+   a second gutter in from the column it is holding. */
+.sop-skel-flush .skel-card-b{padding:0}

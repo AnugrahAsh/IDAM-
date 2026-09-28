@@ -13,8 +13,10 @@ import Field from '../../components/primitives/Field'
 import Select from '../../components/primitives/Select'
 import { useApp } from '../../store/AppContext'
 import { num, statusTone } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
 import { ORGANIZATIONS, USERS } from '../../data/seed'
 import UnitUsersPanel from './UnitUsersPanel'
+import HierarchySkeleton from './HierarchySkeleton'
 import TreeNode from './TreeNode'
 import { MULTI_LOOKUPS, MULTI_ROWS } from '../configurations/configData'
 
@@ -89,6 +91,12 @@ export default function HierarchyPage() {
   const [tree, setTree] = useState(buildTree)
   const [selected, setSelected] = useState(() => `org-${(ORGANIZATIONS.find((o) => !o.parent) || ORGANIZATIONS[0]).id}`)
   const [q, setQ] = useState('')
+  /* One flag for the screen: the masthead, the tree and the unit record beside
+     it settle together. Selecting a unit does not settle again — the tree is
+     already on screen and reading a node out of it is not a round trip — but
+     rebuilding from a different hierarchy source is, so the source the tree is
+     projected from is what the wait is keyed on. */
+  const [rebuild, setRebuild] = useState(0)
   /**
    * The tree is built from a chained lookup, not invented here: which lookup,
    * and whether the levels are read as specific codes or as office levels,
@@ -102,6 +110,7 @@ export default function HierarchyPage() {
     type: 'Specific code',
     attribute: MULTI_LOOKUPS[0].levels[MULTI_LOOKUPS[0].levels.length - 1],
   })
+  const loading = useLoading(rebuild)
 
   const index = useMemo(() => {
     const byId = {}
@@ -333,6 +342,11 @@ export default function HierarchyPage() {
                 const next = ref.current
                 setSource(next)
                 setTree(buildTree())
+                /* A rebuild is the one thing on this screen a real deployment
+                   would go back for: the tree is re-projected from a different
+                   lookup, so the page settles again rather than swapping one
+                   structure for another under the reader. */
+                setRebuild((n) => n + 1)
                 setDrawer(null)
                 toast('ok', 'Hierarchy rebuilt', next.type === 'Specific code'
                   ? `The tree is now built from ${next.hierarchy}, read as specific code on ${next.attribute}.`
@@ -423,6 +437,8 @@ export default function HierarchyPage() {
     ),
     footer: <Button onClick={() => setDrawer(null)}>Close</Button>,
   })
+
+  if (loading) return <HierarchySkeleton />
 
   return (
     <>

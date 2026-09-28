@@ -1,5 +1,5 @@
 import './ConfigurationsPage.css'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import DataWorkbench from '../../components/workbench/DataWorkbench'
 import StatCards from '../../components/workbench/StatCards'
@@ -12,7 +12,12 @@ import Tabs from '../../components/primitives/Tabs'
 import Banner from '../../components/primitives/Banner'
 import EmptyState from '../../components/primitives/EmptyState'
 import KeyValue from '../../components/primitives/KeyValue'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
+import {
+  ConfigSplitSkeleton, EmployeeMatrixSkeleton, LookupWorkbenchSkeleton, MultiViewSkeleton,
+} from './ConfigurationsSkeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { num, serialColumn } from '../../lib/format'
 import { LOOKUPS, USERS, nextId } from '../../data/seed'
 import UsernameConfigPanel from './UsernameConfigPanel'
@@ -51,6 +56,18 @@ const seedLookups = () => Object.fromEntries(Object.entries(LOOKUPS).map(([key, 
  */
 const attrHasData = (id) => USERS.some((u) => u[id] != null && String(u[id]).trim() !== '')
 
+/* What the reader is told is on its way, in the words the tab itself uses. */
+const WAITING = {
+  attributes: 'Loading the identity attributes',
+  sections: 'Loading the form sections',
+  lookups: 'Loading the value sets',
+  multi: 'Loading the multi-level lookups',
+  smart: 'Loading the Smart Populate rules',
+  emptypes: 'Loading the employee-type matrix',
+  username: 'Loading the username configuration',
+  email: 'Loading the email configuration',
+}
+
 export default function ConfigurationsPage() {
   const { toast, confirm, setDrawer } = useApp()
   const [tab, setTab] = useState('attributes')
@@ -74,6 +91,16 @@ export default function ConfigurationsPage() {
   const [viewing, setViewing] = useState(null)
   const [viewMode, setViewMode] = useState('tree')
   const [treeQuery, setTreeQuery] = useState('')
+
+  /* One flag for the screen, keyed on what is under the tab bar. Each tab is a
+     different body of configuration and a deployment fetches it when it is
+     opened; opening a multi-level lookup's data is the same kind of trip, so
+     it is part of the key. `booted` only records that the masthead has been
+     painted once — re-drawing the page's identity every time someone moves
+     between tabs would blink it for no reason. */
+  const loading = useLoading(`${tab}|${viewing ?? ''}`)
+  const [booted, setBooted] = useState(false)
+  useEffect(() => { if (!loading) setBooted(true) }, [loading])
 
   const sectionName = useMemo(
     () => Object.fromEntries(sections.map((s) => [s.id, s.name])),
@@ -681,9 +708,234 @@ export default function ConfigurationsPage() {
   const prepopCount = attrs.filter((a) => a.type === 'prepopulate').length
   const smartAttrCount = attrs.filter((a) => a.type === 'smart-populate').length
 
+  const panel = (
+    <div className="stack">
+      {tab === 'attributes' && (
+        <>
+          {loading ? <SkeletonStats count={4} /> : (
+          <StatCards
+            items={[
+              { key: 'attrs', icon: 'sliders', label: 'Attributes', value: attrs.length, chip: `${sections.length} sections`, sub: 'fields the system knows about' },
+              { key: 'core', icon: 'lock', label: 'Default', value: attrs.filter((a) => a.core).length, chip: 'not removable', sub: 'shipped with the product' },
+              { key: 'auto', icon: 'bolt', label: 'Auto-filled', value: prepopCount + smartAttrCount, chip: `${prepopCount} pre · ${smartAttrCount} smart`, sub: 'system owns the value' },
+              { key: 'types', icon: 'users', label: 'Employee types', value: employeeTypes.length, chip: 'applicability', sub: 'each with its own rules' },
+            ]}
+            label="Configuration summary"
+          />
+          )}
+
+          <Banner tone="info">
+            Defining an attribute does not put it on anybody&#39;s form — turning it on for an employee type does.
+            After creating a field here, open <b>Employee Types</b> and decide, per type, whether it is enabled and
+            whether it is compulsory. Configure on <span className="mono">username</span>,{' '}
+            <span className="mono">email</span> and <span className="mono">employee_type</span> opens the screen that
+            owns that behaviour.
+          </Banner>
+
+          <DataWorkbench
+            id="cfg-attributes-v2"
+            loading={loading}
+            rows={attrs}
+            columns={attrColumns}
+            rowActions={attrActions}
+            onRowClick={(r) => (canOpenDefault(r) ? openAttrEditor(r) : attrDetail(r))}
+            searchPlaceholder="Search by display name, attribute name or section…"
+            emptyTitle="No attributes match"
+            emptyBody="Adjust the search to widen the result set."
+            emptyIcon="sliders"
+            footNote="Default attributes are protected and cannot be deleted"
+            pageSize={10}
+          />
+        </>
+      )}
+
+      {tab === 'sections' && (
+        <>
+          <Banner tone="info">
+            A section has to exist before an attribute can be assigned to it, so sections are the first thing to set
+            up on a new system. The section name is the internal identifier and is fixed once created; the display
+            name is the heading users see and can be changed at any time.
+          </Banner>
+          <DataWorkbench
+            id="cfg-sections-v2"
+            loading={loading}
+            rows={sectionRows}
+            columns={sectionColumns}
+            rowActions={sectionActions}
+            onRowClick={openSectionEditor}
+            searchPlaceholder="Search by section name…"
+            emptyTitle="No sections match"
+            emptyBody="Adjust the search to widen the result set."
+            emptyIcon="layers"
+            footNote="A default section, or one still holding attributes, cannot be deleted"
+            pageSize={10}
+          />
+        </>
+      )}
+
+      {tab === 'lookups' && (
+        <>
+          <Banner tone="info">
+            Every entry is a pair. The <b>value</b> is the label a person sees; <b>stored as</b> is what the system
+            keeps and matches on. Rename the label freely — the stored value is what user records and
+            smart-populate conditions depend on, and it must be unique within a set.
+          </Banner>
+          {loading ? <LookupWorkbenchSkeleton sets={lookupRows.length} /> : (
+          <LookupWorkbench
+            rows={lookupRows}
+            attrs={attrs}
+            selected={openLookup}
+            onSelect={setOpenLookup}
+            onCreate={() => openLookupEditor(null)}
+            onEdit={openLookupEditor}
+            onView={viewLookupOption}
+            onDownload={downloadLookup}
+            onDelete={deleteLookup}
+          />
+          )}
+        </>
+      )}
+
+      {tab === 'multi' && !viewed && (
+        <>
+          <Banner tone="info">
+            A multi-level lookup is a table of complete paths, not a list per level: one row per valid combination,
+            with an option and a value column for every level. The levels are declared at creation and cannot be
+            changed afterwards — to restructure a hierarchy you delete it and build a new one.
+          </Banner>
+          <DataWorkbench
+            id="cfg-multi-lookups-v2"
+            loading={loading}
+            rows={multi}
+            columns={multiColumns}
+            rowActions={multiActions}
+            onRowClick={(r) => openView(r.id)}
+            searchPlaceholder="Search by lookup name or level…"
+            emptyTitle="No multi-level lookups match"
+            emptyBody="Adjust the search, or declare a new hierarchy."
+            emptyIcon="hierarchy"
+            footNote="Deleting a multi-level lookup destroys its data rows for real"
+            pageSize={10}
+          />
+        </>
+      )}
+
+      {viewed && (loading ? <MultiViewSkeleton mode={viewMode} /> : (
+        <Card
+          flush
+          className="mll-card"
+          title="Lookup data"
+          sub={viewMode === 'tree'
+            ? 'The stored rows folded back into the cascade they describe. Each level narrows the one below it.'
+            : 'Every stored row is one complete path through the hierarchy, so a country repeats once per city beneath it.'}
+          actions={
+            <div className="row" style={{ gap: 6 }}>
+              <div className="seg" role="tablist" aria-label="Data view">
+                <button type="button" role="tab" aria-selected={viewMode === 'tree'} data-on={viewMode === 'tree'} onClick={() => setViewMode('tree')}>
+                  <Icon name="hierarchy" size={12} />Hierarchy
+                </button>
+                <button type="button" role="tab" aria-selected={viewMode === 'rows'} data-on={viewMode === 'rows'} onClick={() => setViewMode('rows')}>
+                  <Icon name="columns" size={12} />Rows
+                </button>
+              </div>
+            </div>
+          }
+          footer={<span>Read-only. Renaming the lookup and replacing its data are done from Edit.</span>}
+        >
+          {viewedRows.length === 0 ? (
+            <EmptyState
+              size="sm"
+              icon="upload"
+              title="No data rows"
+              body="Edit the lookup and upload a CSV with one row per complete path through the hierarchy."
+              actions={<Button icon="edit" onClick={() => openMultiEditor(viewed)}>Edit lookup</Button>}
+            />
+          ) : viewMode === 'rows' ? (
+            <DataWorkbench
+              id={`cfg-multi-view-${viewed.id}`}
+              loading={loading}
+              rows={viewedRows}
+              columns={viewedColumns}
+              searchPlaceholder="Search every option and value column…"
+              emptyTitle="No rows match"
+              emptyBody="Adjust the search to widen the result set."
+              emptyIcon="search"
+              footNote={`${num(viewedRows.length)} complete paths · ${levelColumns(viewed.levels).length} data columns built from the lookup's own levels`}
+              pageSize={10}
+            />
+          ) : (
+            <MultiLookupTree
+              rows={rowsOf(viewed.id)}
+              levels={viewed.levels}
+              query={treeQuery}
+              onQuery={setTreeQuery}
+            />
+          )}
+        </Card>
+      ))}
+
+      {tab === 'smart' && (
+        <>
+          <Banner tone="info">
+            A condition is written against the internal attribute name and against a lookup&#39;s <b>value</b>, never
+            its option label — <span className="mono">department = &#39;ENG&#39;</span>, not
+            <span className="mono"> department = &#39;Engineering&#39;</span>. A label parses cleanly and then never
+            matches. Every attribute a condition names must already exist on the Attributes tab.
+          </Banner>
+          <DataWorkbench
+            id="cfg-smart-populate"
+            loading={loading}
+            rows={smartRules}
+            columns={smartColumns}
+            rowActions={smartActions}
+            onRowClick={openSmartEditor}
+            searchPlaceholder="Search by rule set name…"
+            emptyTitle="No rule sets match"
+            emptyBody="Adjust the search, or write a new set of if-then rules."
+            emptyIcon="bolt"
+            footNote="A rule set cannot be deleted while an attribute still points at it"
+            pageSize={10}
+          />
+        </>
+      )}
+
+      {tab === 'emptypes' && (loading ? <EmployeeMatrixSkeleton rows={Math.min(12, attrs.length)} types={employeeTypes.length} /> : (
+        <EmployeeTypePanel
+          attrs={attrs}
+          sectionName={sectionName}
+          types={employeeTypes}
+          onAddType={(name) => setLookups((l) => ({
+            ...l,
+            employee_type: {
+              ...l.employee_type,
+              options: [...((l.employee_type || {}).options || []), { option: name, value: slug(name) }],
+            },
+          }))}
+          onRemoveType={(name) => setLookups((l) => ({
+            ...l,
+            employee_type: {
+              ...l.employee_type,
+              options: ((l.employee_type || {}).options || []).filter((o) => o.option !== name),
+            },
+          }))}
+        />
+      ))}
+
+      {tab === 'username' && (loading
+        ? <ConfigSplitSkeleton preview={employeeTypes.length} />
+        : <UsernameConfigPanel types={employeeTypes} />)}
+
+      {tab === 'email' && (loading
+        ? <ConfigSplitSkeleton preview={employeeTypes.length} />
+        : <EmailConfigPanel types={employeeTypes} />)}
+    </div>
+  )
+
   return (
     <>
-      {viewed ? (
+      {/* The masthead is painted once. Moving between tabs does not re-draw
+          the page's identity — only the body under the tab strip waits. */}
+      {!booted ? <SkeletonPageBar actions={viewed ? 3 : 2} crumbs={viewed ? 3 : 1} /> : viewed ? (
         <PageBar
           title={viewed.name}
           crumbs={[{ label: 'Configurations' }, { label: 'Multi-level lookups' }, { label: viewed.name }]}
@@ -723,222 +975,20 @@ export default function ConfigurationsPage() {
           value={tab}
           onChange={(t) => { setViewing(null); setTab(t) }}
           tabs={[
-            { id: 'attributes', label: 'Attributes', icon: 'sliders', count: attrs.length },
-            { id: 'sections', label: 'Sections', icon: 'layers', count: sections.length },
-            { id: 'lookups', label: 'Lookups', icon: 'tag', count: lookupKeys.length },
-            { id: 'multi', label: 'Multi-Level Lookups', icon: 'hierarchy', count: multi.length },
-            { id: 'smart', label: 'Smart Populate', icon: 'bolt', count: smartRules.length },
-            { id: 'emptypes', label: 'Employee Types', icon: 'users', count: employeeTypes.length },
+            /* The counts are left off until the first panel lands: a strip of
+               zeroes is a figure, and a wrong one. */
+            { id: 'attributes', label: 'Attributes', icon: 'sliders', count: booted ? attrs.length : undefined },
+            { id: 'sections', label: 'Sections', icon: 'layers', count: booted ? sections.length : undefined },
+            { id: 'lookups', label: 'Lookups', icon: 'tag', count: booted ? lookupKeys.length : undefined },
+            { id: 'multi', label: 'Multi-Level Lookups', icon: 'hierarchy', count: booted ? multi.length : undefined },
+            { id: 'smart', label: 'Smart Populate', icon: 'bolt', count: booted ? smartRules.length : undefined },
+            { id: 'emptypes', label: 'Employee Types', icon: 'users', count: booted ? employeeTypes.length : undefined },
             { id: 'username', label: 'Username', icon: 'user' },
             { id: 'email', label: 'User Email', icon: 'at' },
           ]}
         />}
 
-        {tab === 'attributes' && (
-          <>
-            <StatCards
-              items={[
-                { key: 'attrs', icon: 'sliders', label: 'Attributes', value: attrs.length, chip: `${sections.length} sections`, sub: 'fields the system knows about' },
-                { key: 'core', icon: 'lock', label: 'Default', value: attrs.filter((a) => a.core).length, chip: 'not removable', sub: 'shipped with the product' },
-                { key: 'auto', icon: 'bolt', label: 'Auto-filled', value: prepopCount + smartAttrCount, chip: `${prepopCount} pre · ${smartAttrCount} smart`, sub: 'system owns the value' },
-                { key: 'types', icon: 'users', label: 'Employee types', value: employeeTypes.length, chip: 'applicability', sub: 'each with its own rules' },
-              ]}
-              label="Configuration summary"
-            />
-
-            <Banner tone="info">
-              Defining an attribute does not put it on anybody&#39;s form — turning it on for an employee type does.
-              After creating a field here, open <b>Employee Types</b> and decide, per type, whether it is enabled and
-              whether it is compulsory. Configure on <span className="mono">username</span>,{' '}
-              <span className="mono">email</span> and <span className="mono">employee_type</span> opens the screen that
-              owns that behaviour.
-            </Banner>
-
-            <DataWorkbench
-              id="cfg-attributes-v2"
-              rows={attrs}
-              columns={attrColumns}
-              rowActions={attrActions}
-              onRowClick={(r) => (canOpenDefault(r) ? openAttrEditor(r) : attrDetail(r))}
-              searchPlaceholder="Search by display name, attribute name or section…"
-              emptyTitle="No attributes match"
-              emptyBody="Adjust the search to widen the result set."
-              emptyIcon="sliders"
-              footNote="Default attributes are protected and cannot be deleted"
-              pageSize={10}
-            />
-          </>
-        )}
-
-        {tab === 'sections' && (
-          <>
-            <Banner tone="info">
-              A section has to exist before an attribute can be assigned to it, so sections are the first thing to set
-              up on a new system. The section name is the internal identifier and is fixed once created; the display
-              name is the heading users see and can be changed at any time.
-            </Banner>
-            <DataWorkbench
-              id="cfg-sections-v2"
-              rows={sectionRows}
-              columns={sectionColumns}
-              rowActions={sectionActions}
-              onRowClick={openSectionEditor}
-              searchPlaceholder="Search by section name…"
-              emptyTitle="No sections match"
-              emptyBody="Adjust the search to widen the result set."
-              emptyIcon="layers"
-              footNote="A default section, or one still holding attributes, cannot be deleted"
-              pageSize={10}
-            />
-          </>
-        )}
-
-        {tab === 'lookups' && (
-          <>
-            <Banner tone="info">
-              Every entry is a pair. The <b>value</b> is the label a person sees; <b>stored as</b> is what the system
-              keeps and matches on. Rename the label freely — the stored value is what user records and
-              smart-populate conditions depend on, and it must be unique within a set.
-            </Banner>
-            <LookupWorkbench
-              rows={lookupRows}
-              attrs={attrs}
-              selected={openLookup}
-              onSelect={setOpenLookup}
-              onCreate={() => openLookupEditor(null)}
-              onEdit={openLookupEditor}
-              onView={viewLookupOption}
-              onDownload={downloadLookup}
-              onDelete={deleteLookup}
-            />
-          </>
-        )}
-
-        {tab === 'multi' && !viewed && (
-          <>
-            <Banner tone="info">
-              A multi-level lookup is a table of complete paths, not a list per level: one row per valid combination,
-              with an option and a value column for every level. The levels are declared at creation and cannot be
-              changed afterwards — to restructure a hierarchy you delete it and build a new one.
-            </Banner>
-            <DataWorkbench
-              id="cfg-multi-lookups-v2"
-              rows={multi}
-              columns={multiColumns}
-              rowActions={multiActions}
-              onRowClick={(r) => openView(r.id)}
-              searchPlaceholder="Search by lookup name or level…"
-              emptyTitle="No multi-level lookups match"
-              emptyBody="Adjust the search, or declare a new hierarchy."
-              emptyIcon="hierarchy"
-              footNote="Deleting a multi-level lookup destroys its data rows for real"
-              pageSize={10}
-            />
-          </>
-        )}
-
-        {viewed && (
-          <Card
-            flush
-            className="mll-card"
-            title="Lookup data"
-            sub={viewMode === 'tree'
-              ? 'The stored rows folded back into the cascade they describe. Each level narrows the one below it.'
-              : 'Every stored row is one complete path through the hierarchy, so a country repeats once per city beneath it.'}
-            actions={
-              <div className="row" style={{ gap: 6 }}>
-                <div className="seg" role="tablist" aria-label="Data view">
-                  <button type="button" role="tab" aria-selected={viewMode === 'tree'} data-on={viewMode === 'tree'} onClick={() => setViewMode('tree')}>
-                    <Icon name="hierarchy" size={12} />Hierarchy
-                  </button>
-                  <button type="button" role="tab" aria-selected={viewMode === 'rows'} data-on={viewMode === 'rows'} onClick={() => setViewMode('rows')}>
-                    <Icon name="columns" size={12} />Rows
-                  </button>
-                </div>
-              </div>
-            }
-            footer={<span>Read-only. Renaming the lookup and replacing its data are done from Edit.</span>}
-          >
-            {viewedRows.length === 0 ? (
-              <EmptyState
-                size="sm"
-                icon="upload"
-                title="No data rows"
-                body="Edit the lookup and upload a CSV with one row per complete path through the hierarchy."
-                actions={<Button icon="edit" onClick={() => openMultiEditor(viewed)}>Edit lookup</Button>}
-              />
-            ) : viewMode === 'rows' ? (
-              <DataWorkbench
-                id={`cfg-multi-view-${viewed.id}`}
-                rows={viewedRows}
-                columns={viewedColumns}
-                searchPlaceholder="Search every option and value column…"
-                emptyTitle="No rows match"
-                emptyBody="Adjust the search to widen the result set."
-                emptyIcon="search"
-                footNote={`${num(viewedRows.length)} complete paths · ${levelColumns(viewed.levels).length} data columns built from the lookup's own levels`}
-                pageSize={10}
-              />
-            ) : (
-              <MultiLookupTree
-                rows={rowsOf(viewed.id)}
-                levels={viewed.levels}
-                query={treeQuery}
-                onQuery={setTreeQuery}
-              />
-            )}
-          </Card>
-        )}
-
-        {tab === 'smart' && (
-          <>
-            <Banner tone="info">
-              A condition is written against the internal attribute name and against a lookup&#39;s <b>value</b>, never
-              its option label — <span className="mono">department = &#39;ENG&#39;</span>, not
-              <span className="mono"> department = &#39;Engineering&#39;</span>. A label parses cleanly and then never
-              matches. Every attribute a condition names must already exist on the Attributes tab.
-            </Banner>
-            <DataWorkbench
-              id="cfg-smart-populate"
-              rows={smartRules}
-              columns={smartColumns}
-              rowActions={smartActions}
-              onRowClick={openSmartEditor}
-              searchPlaceholder="Search by rule set name…"
-              emptyTitle="No rule sets match"
-              emptyBody="Adjust the search, or write a new set of if-then rules."
-              emptyIcon="bolt"
-              footNote="A rule set cannot be deleted while an attribute still points at it"
-              pageSize={10}
-            />
-          </>
-        )}
-
-        {tab === 'emptypes' && (
-          <EmployeeTypePanel
-            attrs={attrs}
-            sectionName={sectionName}
-            types={employeeTypes}
-            onAddType={(name) => setLookups((l) => ({
-              ...l,
-              employee_type: {
-                ...l.employee_type,
-                options: [...((l.employee_type || {}).options || []), { option: name, value: slug(name) }],
-              },
-            }))}
-            onRemoveType={(name) => setLookups((l) => ({
-              ...l,
-              employee_type: {
-                ...l.employee_type,
-                options: ((l.employee_type || {}).options || []).filter((o) => o.option !== name),
-              },
-            }))}
-          />
-        )}
-
-        {tab === 'username' && <UsernameConfigPanel types={employeeTypes} />}
-
-        {tab === 'email' && <EmailConfigPanel types={employeeTypes} />}
+        {loading ? <Skeleton label={WAITING[tab]}>{panel}</Skeleton> : panel}
       </div>
     </>
   )

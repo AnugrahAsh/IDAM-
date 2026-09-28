@@ -1,21 +1,19 @@
 import { useEffect, useState } from 'react'
 import Icon from '../primitives/Icon'
-import Avatar from '../primitives/Avatar'
 import NavLink from './NavLink'
-/* The account panel is defined beside the header chip that owns it. The kebab
-   below is the same menu on a second anchor — the sidebar is where the chip is
-   reachable once the header collapses to an avatar — and two copies of an
-   account menu would drift apart within a release. */
+/* The sidebar is navigation and nothing else. The identity chip and the account
+   menu it raised belong to the header, which carries one account control for
+   the whole console; the collapse handle that used to sit in a foot below the
+   navigation now shares the filter row at the top. Everything between the head
+   and the bottom edge is links. */
 import { NAV, NAV_BADGES, BY_ID, moduleFor } from '../../data/nav'
 import { useApp } from '../../store/AppContext'
 import { useLocalState } from '../../lib/useLocalState'
-import { ME } from '../../data/seed'
 import { useBadges } from '../../lib/useBadges'
 
 
 export default function Sidebar() {
-  const { route, navigate, navMin, setNavMin, toast, can,
-    role, roleId, setRoleId, theme, toggleTheme, signOut } = useApp()
+  const { route, navMin, setNavMin, can } = useApp()
   const [q, setQ] = useState('')
   const [closed, setClosed] = useLocalState('tf-idam-nav-closed', {})
   const [openParents, setOpenParents] = useLocalState('tf-idam-nav-open', {})
@@ -121,6 +119,10 @@ export default function Sidebar() {
 
   return (
     <aside className="side">
+      {/* The collapse handle is a sibling of the filter, never a control inside
+          its field: the input owns its own trailing clear button, and a handle
+          sharing that box would collapse the console on a mis-aimed click at
+          the edge of a field someone was typing in. */}
       <div className="nav-head">
         <div className="nav-filter">
           <Icon name="search" size={13} />
@@ -143,9 +145,27 @@ export default function Sidebar() {
             </button>
           )}
         </div>
+
+        <button
+          type="button"
+          className="side-min"
+          onClick={() => {
+            // Collapsing takes the field the filter was typed into off screen.
+            // A filter left behind would go on hiding links from a rail that no
+            // longer shows what is doing the hiding, so it goes with the field.
+            if (!navMin) setQ('')
+            setNavMin(!navMin)
+          }}
+          aria-label={navMin ? 'Expand navigation' : 'Collapse navigation'}
+          aria-expanded={!navMin}
+          aria-controls="nav-primary"
+          title={navMin ? 'Expand navigation' : 'Collapse navigation'}
+        >
+          <Icon name="chevL" size={15} />
+        </button>
       </div>
 
-      <nav className="nav" aria-label="Primary">
+      <nav className="nav" id="nav-primary" aria-label="Primary">
         {NAV.map((group) => {
           const flat = (group.items || []).filter((id) => hit(id, group.label))
           const parents = (group.parents || [])
@@ -207,16 +227,6 @@ export default function Sidebar() {
           </div>
         )}
       </nav>
-
-      {/* Only the collapse handle. The identity chip and its account menu that
-          used to sit here are gone: the navbar carries one account control for
-          the whole console, and the row they occupied is navigation now. */}
-      <div className="side-foot">
-        <button type="button" className="side-min" onClick={() => setNavMin(!navMin)}
-          aria-label={navMin ? 'Expand navigation' : 'Collapse navigation'} title={navMin ? 'Expand' : 'Collapse'}>
-          <Icon name="chevL" size={15} />
-        </button>
-      </div>
     </aside>
   )
 }

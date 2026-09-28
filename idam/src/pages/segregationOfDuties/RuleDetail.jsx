@@ -9,6 +9,7 @@ import { useMemo } from 'react'
 import Tabs from '../../components/primitives/Tabs'
 import { BASE, exceptionsFor, metaFor, ruleLabel } from './sodData'
 import { sodSeverityBadge, useSodSeverities } from '../settings/settingsStore'
+import { useLoading } from '../../lib/useLoading'
 import DefinitionTab from './DefinitionTab'
 import ExceptionTab from './ExceptionTab'
 
@@ -20,6 +21,12 @@ export default function RuleDetail({ rule, tab, violations, onDelete }) {
   const open = violations.filter((v) => v.status === 'Open').length
   const active = tab === 'exception' ? 'exception' : 'information'
   const exceptions = useMemo(() => exceptionsFor(rule), [rule])
+  /* One flag, keyed on the rule and the tab it is being read through. The
+     masthead is chrome — it carries the tab bar the reader is steering with,
+     and the kit's header skeleton has no tab row, so swapping it in would drop
+     the panel by the height of that row the moment the rule landed. What
+     settles is the panel under the tabs. */
+  const loading = useLoading(`${rule.id}:${active}`)
   const goTab = (t) => navigate(t === 'information' ? `${BASE}/${rule.id}` : `${BASE}/${rule.id}/${t}`, { replace: true })
 
   return (
@@ -79,8 +86,8 @@ export default function RuleDetail({ rule, tab, violations, onDelete }) {
 
       <div className="detail-body">
         {active === 'information'
-          ? <DefinitionTab rule={rule} meta={meta} violations={violations} />
-          : <ExceptionTab rule={rule} />}
+          ? <DefinitionTab rule={rule} meta={meta} violations={violations} loading={loading} />
+          : <ExceptionTab rule={rule} loading={loading} />}
       </div>
     </>
   )

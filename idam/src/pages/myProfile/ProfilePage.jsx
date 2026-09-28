@@ -1,5 +1,5 @@
 import './ProfilePage.css'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import { Fact } from '../../components/shell/DetailHeader'
 import StickyActions from '../../components/shell/StickyActions'
@@ -17,14 +17,21 @@ import TextInput from '../../components/primitives/TextInput'
 import Switch from '../../components/primitives/Switch'
 import Meter from '../../components/primitives/Meter'
 import Banner from '../../components/primitives/Banner'
+import {
+  Skeleton, SkeletonCard, SkeletonPageBar, SkeletonTile,
+} from '../../components/primitives/Skeleton'
+import { useLoading } from '../../lib/useLoading'
 import { useLocalState } from '../../lib/useLocalState'
 import FileDrop from '../../components/primitives/FileDrop'
 import IconButton from '../../components/primitives/IconButton'
 import { useApp } from '../../store/AppContext'
 import { statusTone } from '../../lib/format'
-import { ME, MFA_METHODS, GROUPS, MY_APPS, LOGS, ATTRS, LOOKUPS, ORGS } from '../../data/seed'
+/* The groups, applications and log slices this page shows are derived in
+   profileData, so the seed is only read here for the identity itself, the
+   attribute catalogue and the factor list. */
+import { ME, MFA_METHODS, ATTRS } from '../../data/seed'
 import UserConsentPanel from '../consentManagement/UserConsentPanel'
-import { consentsFor } from '../consentManagement/userConsentData'
+import { consentSummary, consentsFor } from '../consentManagement/userConsentData'
 import { DATE_FORMATS, EDITABLE, FACTOR_IDS, HIDDEN_ATTRS, LANGUAGES, MY_ASSIGNED_APPS, MY_EVENTS, MY_GROUPS, NOTIFY_ROWS, PASSWORD_AGE_DAYS, PASSWORD_CHANGED, PREF_DEFAULTS, PROFILE_INITIAL, PROFILE_SECTIONS, SESSIONS, STRENGTH, TIMEZONES, attrOptions, locationText, pwScore } from './profileData'
 
 // Default Strong Policy expires a password after 90 days, so the window left is
@@ -33,10 +40,154 @@ const PASSWORD_POLICY_DAYS = 90
 const PASSWORD_EXPIRES_IN = Math.max(0, PASSWORD_POLICY_DAYS - PASSWORD_AGE_DAYS)
 
 const MY_CONSENTS = consentsFor(ME.username)
+/* The consent panel leads with a warning when a notice this identity accepted
+   has since been republished. Whether that row exists is a property of the
+   record, not of the wait, so the skeleton asks the same question the panel
+   asks rather than guessing that the space is or is not needed. */
+const MY_CONSENT_SUMMARY = consentSummary(MY_CONSENTS)
 
-export default function ProfilePage() {
+/* What the screen says it is waiting for when a tab is changed. The tab's own
+   label is written for a tab strip; this is written to be read out mid
+   sentence. */
+const TAB_LOADING = {
+  personal: 'your personal information',
+  security: 'your security settings',
+  access: 'your access',
+  privacy: 'your privacy and consent record',
+  preferences: 'your preferences',
+  activity: 'your account activity',
+}
+
+/* --- The shapes this screen waits behind ---------------------------------
+ *
+ * The kit in components/primitives/Skeleton carries the console's shared
+ * geometry — the card, the stat tile, the field grid. This profile is built
+ * from a handful of shapes that exist nowhere else: the identity hero, the KPI
+ * strip that doubles as a tab switch, the feed rows in the security and access
+ * panels, the consent summary's captionless stat tiles, the activity timeline
+ * and the two summary rails. Each of those is
+ * drawn here from the real element's own classes, so the grid, the padding and
+ * the rules are the ones the content lands in rather than an imitation of
+ * them. A bar has no line box of its own, which is the one thing the classes
+ * cannot supply: ProfilePage.css states each row's real height beside the rule
+ * it was taken from.
+ */
+
+/* A single bar. `h` and `r` take any CSS length, because most of these are
+   stated in rem to match the type they stand in for. */
+const Bar = ({ w = '100%', h = 9, r }) => (
+  <span className="skel" style={{ width: w, height: h, borderRadius: r }} />
+)
+
+/* A `.field` box: the label line, the control, and — where the real field is
+   governed and says "Managed by HR" — the hint under it. Governed fields are
+   the majority of the personal tab, and leaving their hint out lands the grid
+   a fifth shorter than the space it was holding.
+   `h` is the control's own height: `.inp` and `.sel` are 1.9375rem, and a
+   `textarea.inp` is its stated 4.75rem floor — `span` widens that field to
+   both columns but says nothing about how tall it is. */
+const SkelField = ({ hint = false, span, h = '1.9375rem' }) => (
+  <div className="pf-skel-field" style={span ? { gridColumn: `span ${span}` } : undefined}>
+    <span className="pf-skel-line"><Bar w="46%" h={8} /></span>
+    <Bar h={h} r="var(--r-sm)" />
+    {hint && <span className="pf-skel-line"><Bar w="32%" h={8} /></span>}
+  </div>
+)
+
+/* The consent summary's stat tiles, drawn from `.scards` / `.scard` rather
+   than from the kit's `SkeletonStats`: the kit's tile always carries the chip
+   row a register's tiles have, and these six are a plain label over a figure,
+   so the real footer collapses to nothing. See ProfilePage.css for the two
+   line boxes. */
+const SkelStatCards = ({ count = 6 }) => (
+  <div className="scards pf-skel-stats" aria-hidden="true">
+    {Array.from({ length: count }, (_, i) => (
+      <div className="scard pf-skel-stat" data-static="true" key={i}>
+        <span className="pf-skel-stat-k"><Bar w={i % 2 ? '58%' : '70%'} h={8} /></span>
+        <span className="pf-skel-stat-v"><Bar w={62} h={17} r="var(--r-sm)" /></span>
+        <span className="scard-f" />
+      </div>
+    ))}
+  </div>
+)
+
+/* `.feed` rows — the shape the factors, sessions, entitlements and application
+   lists all share: a square mark, a title, `lines` sub-lines, and whatever the
+   row carries on its right. */
+const SkelFeed = ({ rows = 3, lines = 1, trail = { w: 72, h: '1.625rem', r: 'var(--r-sm)' } }) => (
+  <div className="feed" aria-hidden="true">
+    {Array.from({ length: rows }, (_, i) => (
+      <div className="feed-it" key={i}>
+        <span className="skel feed-ic" />
+        <div className="feed-m">
+          <span className="pf-skel-feed-t"><Bar w={i % 2 ? '34%' : '42%'} h={9} /></span>
+          {Array.from({ length: lines }, (_, l) => (
+            <span className="pf-skel-feed-s" key={l}><Bar w={l ? '38%' : '64%'} h={8} /></span>
+          ))}
+        </div>
+        {trail && <Bar w={trail.w} h={trail.h} r={trail.r} />}
+      </div>
+    ))}
+  </div>
+)
+
+/* The activity timeline. The dot is the real `.tl-dot` position, so the rail
+   the entries hang off is already drawn when they arrive. */
+const SkelTimeline = ({ rows = 6 }) => (
+  <div className="tl" aria-hidden="true">
+    {Array.from({ length: rows }, (_, i) => (
+      <div className="tl-it" key={i}>
+        <span className="skel tl-dot" style={{ borderRadius: '50%' }} />
+        <span className="pf-skel-tl-t"><Bar w={i % 2 ? '38%' : '46%'} h={9} /></span>
+        <span className="pf-skel-tl-s"><Bar w="58%" h={8} /></span>
+        <span className="pf-skel-tl-time"><Bar w={148} h={8} /></span>
+      </div>
+    ))}
+  </div>
+)
+
+/* A summary rail: label on the left, value on the right, one hairline between
+   each pair. The rows are sized to a Pill, because that is the tallest thing
+   the real rows put in them. */
+const SkelSummary = ({ rows = 8 }) => (
+  <div className="pf-sec" aria-hidden="true">
+    {Array.from({ length: rows }, (_, i) => (
+      <div className="pf-sec-row pf-skel-sec-row" key={i}>
+        <Bar w={i % 3 === 0 ? 104 : 82} h={8} />
+        <Bar w={i % 2 ? 54 : 70} h={8} />
+      </div>
+    ))}
+  </div>
+)
+
+/* The tabs, as the address knows them. Anything else in the first segment is
+   somebody's stale link, and lands on the profile rather than on nothing. */
+const TAB_IDS = ['personal', 'security', 'access', 'privacy', 'preferences', 'activity']
+
+export default function ProfilePage({ segments = [] }) {
   const { toast, confirm, navigate, setDrawer } = useApp()
-  const [tab, setTab] = useState('personal')
+  const wanted = TAB_IDS.includes(segments[0]) ? segments[0] : 'personal'
+  const [tab, setTab] = useState(wanted)
+
+  /* Following /iam/profile/security from the account menu while the profile is
+     already open changes the address and nothing else, so the tab is pulled
+     from it rather than only seeded by it. */
+  useEffect(() => { setTab(wanted) }, [wanted])
+
+  /* One settle for the screen, keyed on the tab.
+     On arrival the whole profile is waiting on the same record, so it resolves
+     as one thing — masthead, identity card, counters, panel and rails together
+     — rather than each block appearing as it is ready.
+     Changing tab is the one thing a deployment would go back to the server
+     for, and only the panel under the tab bar is what it would fetch. So the
+     same flag serves both, and `booting` marks the first pass: after it, the
+     masthead, the identity card, the counters and the rails stay put and only
+     the panel settles again. A tab click that blanked the person's own name
+     and photo would read as a page reload, not as a tab. */
+  const loading = useLoading(tab)
+  const [booted, setBooted] = useState(false)
+  useEffect(() => { if (!loading) setBooted(true) }, [loading])
+  const booting = loading && !booted
   // The profile picture is per-identity, not per-session, so it persists.
   const [photo, setPhoto] = useLocalState('tf-idam-profile-photo', '')
 
@@ -196,13 +347,167 @@ export default function ProfilePage() {
     )
   }
 
+  /* The panel under the tab bar. Every count below is the count the real panel
+     will render, so the list that arrives is the length of the list that was
+     held for it. */
+  const panelSkeleton = () => {
+    if (tab === 'personal') {
+      return (
+        <div className="stack">
+          {/* The governed-fields notice: two lines in a `.banner` box. */}
+          <Bar h={59} r="var(--r)" />
+          {PROFILE_SECTIONS.map((sec) => {
+            const fields = ATTRS
+              .filter((a) => a.section === sec.id && !HIDDEN_ATTRS.has(a.id))
+              .sort((a, b) => a.order - b.order)
+            return (
+              <SkeletonCard key={sec.id} className="pf-skel-card">
+                <div className="grid grid-2">
+                  {fields.map((a) => (
+                    <SkelField
+                      key={a.id}
+                      hint={!EDITABLE.has(a.id)}
+                      span={a.type === 'textarea' ? 2 : undefined}
+                      h={a.type === 'textarea' ? '4.75rem' : undefined}
+                    />
+                  ))}
+                </div>
+              </SkeletonCard>
+            )
+          })}
+        </div>
+      )
+    }
+
+    if (tab === 'security') {
+      return (
+        <>
+          {/* The three password boxes hold nothing that loads — they are the
+              operator's own typing. They are drawn anyway because they sit in
+              a card whose header states the policy, the expiry and the age of
+              the current credential, and a card that arrived in halves would
+              be worse than one that arrives whole. */}
+          <SkeletonCard className="pf-skel-card">
+            <div className="grid grid-3"><SkelField /><SkelField /><SkelField /></div>
+            <div className="row" style={{ marginTop: 12 }}>
+              <Bar w={156} h="1.875rem" r="var(--r-sm)" />
+              <Bar w="44%" h={8} />
+            </div>
+          </SkeletonCard>
+          <SkeletonCard className="pf-skel-card">
+            <SkelFeed rows={Math.max(factors.length, 1)} lines={2} />
+          </SkeletonCard>
+          <SkeletonCard className="pf-skel-card">
+            <SkelFeed rows={sessions.length} lines={1} />
+          </SkeletonCard>
+        </>
+      )
+    }
+
+    if (tab === 'access') {
+      return (
+        <>
+          <SkeletonCard className="pf-skel-card">
+            <SkelFeed rows={MY_GROUPS.length} lines={2} trail={{ w: 104, h: 9 }} />
+          </SkeletonCard>
+          <SkeletonCard className="pf-skel-card">
+            <SkelFeed rows={Math.min(MY_ASSIGNED_APPS.length, 8)} lines={1} />
+          </SkeletonCard>
+        </>
+      )
+    }
+
+    if (tab === 'privacy') {
+      return (
+        <div className="stack">
+          <SkelStatCards count={6} />
+          {/* The re-consent warning, when the record carries one: a single line
+              in a `.banner` box — 19.5px of --t-sm at 1.5, 10px of padding
+              above and below and the hairline. Leaving it out would drop the
+              filter row and the whole list by that much on arrival. */}
+          {MY_CONSENT_SUMMARY.reconsent > 0 && <Bar h={41} r="var(--r)" />}
+          {/* `.cns-bar` — the status segment, which is as tall as a small
+              control and as wide as its four labels and counts. */}
+          <Bar w={332} h="1.875rem" r="var(--r-sm)" />
+          <div className="pf-skel-consent" aria-hidden="true">
+            {Array.from({ length: MY_CONSENTS.length }, (_, i) => (
+              <SkeletonTile key={i} media={null} layout="stacked" lines={1} foot={false} />
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    if (tab === 'preferences') {
+      return (
+        <div className="stack">
+          <SkeletonCard className="pf-skel-card">
+            <div className="grid grid-3"><SkelField /><SkelField hint /><SkelField hint /></div>
+          </SkeletonCard>
+          <SkeletonCard className="pf-skel-card">
+            {NOTIFY_ROWS.map((r, i) => (
+              <div className="pref-toggle row-between pf-skel-toggle" key={r.id}>
+                <div className="pf-skel-toggle-m">
+                  <span className="pf-skel-feed-t"><Bar w={i % 2 ? '38%' : '48%'} h={9} /></span>
+                  <span className="pf-skel-feed-s"><Bar w="74%" h={8} /></span>
+                </div>
+                <Bar w={34} h={18} r="var(--r-pill)" />
+              </div>
+            ))}
+          </SkeletonCard>
+        </div>
+      )
+    }
+
+    return (
+      <SkeletonCard className="pf-skel-card">
+        <SkelTimeline rows={MY_EVENTS.length} />
+      </SkeletonCard>
+    )
+  }
+
   return (
     <>
-      <PageBar
-        title="My Profile"
-        sub="Your account details, roles, groups, sessions and access windows."
-      />
+      {booting ? <SkeletonPageBar actions={0} crumbs={1} /> : (
+        <PageBar
+          title="My Profile"
+          sub="Your account details, roles, groups, sessions and access windows."
+        />
+      )}
 
+      {/* The identity card is this page's masthead record: the picture, the
+          name and the facts that say whose account this is. Its skeleton is
+          built from the card's own classes, so the avatar column, the name row
+          and the fact strip are already at their final size and nothing under
+          them moves when the record lands. */}
+      {booting ? (
+        <SkeletonCard className="pf-id pf-skel-card" head={false}>
+          <div className="pf-hero">
+            <div className="pf-av">
+              <Bar w={76} h={76} r="50%" />
+              <Bar w={118} h="1.625rem" r="var(--r-sm)" />
+            </div>
+            <div className="pf-hero-meta">
+              <div className="pf-hero-name pf-skel-name">
+                <Bar w={172} h={17} r="var(--r-sm)" />
+                <Bar w={98} h={11} />
+                <Bar w={88} h="1.25rem" r="var(--r-xs)" />
+                <Bar w={64} h="1.25rem" r="var(--r-xs)" />
+                <Bar w={58} h="1.1875rem" r="var(--r-xs)" />
+              </div>
+              <div className="pf-facts">
+                {[140, 206, 164, 188].map((w) => (
+                  <span className="pf-skel-fact" key={w}><Bar w={w} h={8} /></span>
+                ))}
+              </div>
+            </div>
+            <div className="pf-hero-actions">
+              <Bar w={132} h="1.875rem" r="var(--r-sm)" />
+              <Bar w={132} h="1.875rem" r="var(--r-sm)" />
+            </div>
+          </div>
+        </SkeletonCard>
+      ) : (
       <Card className="pf-id">
         <div className="pf-hero">
           <div className="pf-av">
@@ -252,7 +557,21 @@ export default function ProfilePage() {
           </div>
         </div>
       </Card>
+      )}
 
+      {booting ? (
+        /* The same `.kpi-row` grid the counters land in, so the five tiles do
+           not reflow under the reader when the figures arrive. */
+        <div className="kpi-row cols-5 pf-skel-kpi" style={{ marginTop: 10 }} aria-hidden="true">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div className="kpi" key={i}>
+              <span className="k-label"><Bar w={i % 2 ? 78 : 104} h={8} /></span>
+              <span className="k-val"><Bar w={i === 4 ? 82 : 46} h={14} r="var(--r-sm)" /></span>
+              <span className="k-foot"><Bar w={i % 2 ? 96 : 112} h={8} /></span>
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="kpi-row cols-5" style={{ marginTop: 10 }}>
         <button type="button" className="kpi" onClick={() => setTab('access')}>
           <span className="k-label"><Icon name="roles" size={12} />Roles</span>
@@ -280,7 +599,11 @@ export default function ProfilePage() {
           <span className="k-foot">{factors.length ? factors[0].name : 'Enrol from Security'}</span>
         </button>
       </div>
+      )}
 
+      {/* The tab bar is chrome: it is the same six tabs whatever is settling
+          under it, and taking it away would take away the control the reader
+          just used. */}
       <Tabs
         value={tab}
         onChange={setTab}
@@ -296,7 +619,26 @@ export default function ProfilePage() {
 
       <div className="pf-body detail-cols">
         <div className="stack">
-              {tab === 'personal' && (
+              {/* The screen's one announcing region, and the only place a
+                  skeleton is swapped in for something the reader may have just
+                  touched. Everything above — the masthead, the identity card,
+                  the counters, the tab bar — stays mounted across a tab change,
+                  so the tab that was clicked keeps keyboard focus and no live
+                  region is ever wrapped around the controls themselves. The
+                  shapes elsewhere on the page are `aria-hidden` on their own,
+                  so one region carries the sentence for all of them.
+                  It is a `.stack` as well as a region because it stands in the
+                  place of panels the stack was spacing; a bare wrapper would
+                  close the gaps between the cards it holds. */}
+              {loading && (
+                <Skeleton
+                  className="stack"
+                  label={booting ? 'Loading your profile' : `Loading ${TAB_LOADING[tab]}`}
+                >
+                  {panelSkeleton()}
+                </Skeleton>
+              )}
+              {!loading && tab === 'personal' && (
                 <div className="stack">
                   <Banner tone="info">
                     Fields marked <b>Managed by HR</b> are sourced from Workday and read-only here. Corrections to
@@ -322,7 +664,7 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {tab === 'security' && (
+              {!loading && tab === 'security' && (
                 <>
                   <Card
                     title="Change password"
@@ -447,7 +789,7 @@ export default function ProfilePage() {
                 </>
               )}
 
-              {tab === 'access' && (
+              {!loading && tab === 'access' && (
                 <>
                   <Card title="Entitlements" sub="Groups and access this identity holds today.">
                   <div className="feed">
@@ -505,9 +847,9 @@ export default function ProfilePage() {
               {/* Consent is the one part of a profile the person answers for
                   themselves: it can be given and withdrawn here, and the
                   record of both is kept as evidence. */}
-              {tab === 'privacy' && <UserConsentPanel username={ME.username} self />}
+              {!loading && tab === 'privacy' && <UserConsentPanel username={ME.username} self />}
 
-              {tab === 'preferences' && (
+              {!loading && tab === 'preferences' && (
                 <div className="stack">
                   {/* Language is applied. Time zone and date format are stored
                       against the account but the console still renders every
@@ -544,7 +886,7 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {tab === 'activity' && (
+              {!loading && tab === 'activity' && (
                 <>
                   <Card
                     title="Recent activity"
@@ -575,6 +917,25 @@ export default function ProfilePage() {
         </div>
 
         <aside className="stack">
+          {booting ? (
+            /* Nine rows and five, which is what the two rails hold. */
+            <>
+              <SkeletonCard className="pf-skel-card">
+                <SkelSummary rows={9} />
+                <div className="row" style={{ gap: 7, marginTop: 12 }}>
+                  <Bar w={136} h="1.625rem" r="var(--r-sm)" />
+                  <Bar w={112} h="1.625rem" r="var(--r-sm)" />
+                </div>
+              </SkeletonCard>
+              <SkeletonCard className="pf-skel-card">
+                <SkelSummary rows={5} />
+                <div className="row" style={{ gap: 7, marginTop: 12 }}>
+                  <Bar w={118} h="1.625rem" r="var(--r-sm)" />
+                </div>
+              </SkeletonCard>
+            </>
+          ) : (
+          <>
           <Card title="Security &amp; sign-in" sub="Authentication and account safety">
             <div className="pf-sec">
               <div className="pf-sec-row">
@@ -634,17 +995,19 @@ export default function ProfilePage() {
               <Button size="sm" icon="group" onClick={() => setTab('access')}>Review access</Button>
             </div>
           </Card>
+          </>
+          )}
         </aside>
       </div>
 
-      {tab === 'personal' && (
+      {!loading && tab === 'personal' && (
         <StickyActions dirty={profileDirty} message={profileDirty ? 'Unsaved profile changes' : 'No changes'}>
           <Button disabled={!profileDirty} onClick={discardProfile}>Discard</Button>
           <Button variant="pri" icon="save" disabled={!profileDirty} onClick={saveProfile}>Save profile</Button>
         </StickyActions>
       )}
 
-      {tab === 'preferences' && (
+      {!loading && tab === 'preferences' && (
         <StickyActions dirty={prefsDirty} message={prefsDirty ? 'Unsaved preferences' : 'No changes'}>
           <Button disabled={!prefsDirty} onClick={() => setPrefs(savedPrefs)}>Discard</Button>
           <Button

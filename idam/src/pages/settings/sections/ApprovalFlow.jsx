@@ -9,7 +9,9 @@ import Select from '../../../components/primitives/Select'
 import Tag from '../../../components/primitives/Tag'
 import TextInput from '../../../components/primitives/TextInput'
 import EmptyState from '../../../components/primitives/EmptyState'
+import { SkeletonLine } from '../../../components/primitives/Skeleton'
 import { useApp } from '../../../store/AppContext'
+import SectionSkeleton, { TableSkeleton } from './SectionSkeleton'
 import { LOOKUPS } from '../../../data/seed'
 import { writeSection } from '../settingsStore'
 import { useApprovalLevels } from '../settingsStore'
@@ -58,7 +60,7 @@ const scopeTone = (scope) => (scope === 'none' ? 'bad' : scope === 'entire' ? 'w
 
 const blankRule = () => ({ level: HIERARCHY[0], applies: 'requesting', scope: 'own', below: 1 })
 
-export default function ApprovalFlow({ value }) {
+export default function ApprovalFlow({ value, loading = false }) {
   const { toast, confirm } = useApp()
   const levels = useApprovalLevels()
   const [editing, setEditing] = useState(null)
@@ -152,6 +154,25 @@ export default function ApprovalFlow({ value }) {
       </td>
     </>
   )
+
+/* Held while Settings settles. This section is a register of stored rows, not
+   a form the operator arrives already typing into: the add row above the table
+   appends to rows that are still on their way, so it holds its place with
+   them. */
+  if (loading) {
+    return (
+      <div className="stack">
+        {/* Scope picker and chain, the office hierarchy, then the level rules
+            the brief names — three cards, in the order they land. */}
+        <SectionSkeleton><SkeletonLine height={148} /></SectionSkeleton>
+        <SectionSkeleton><SkeletonLine height={120} /></SectionSkeleton>
+        {/* At the number of rules the stored flow holds: the configuration is
+            one document and it is in hand before the settle starts, so the
+            table is the height it will be. */}
+        <SectionSkeleton><TableSkeleton rows={flow.rules.length || 4} cols={5} /></SectionSkeleton>
+      </div>
+    )
+  }
 
   return (
     <div className="stack">

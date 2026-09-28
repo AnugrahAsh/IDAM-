@@ -128,6 +128,19 @@
 .rl-card-footer>.btn-danger:disabled{color:var(--faint);opacity:.5}
 .rl-note{display:flex;align-items:center;gap:7px;margin:18px 0 0;font-size:.625rem;color:var(--mut)}
 .rl-workspace button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* --- Skeleton ---------------------------------------------------------------
+   The catalog sets its own masthead spacing, so the skeleton masthead has to
+   take the same 22px the real `.pagebar` is given here — without it the four
+   figures start higher than they finish and the whole page steps down when the
+   roles land. The card shapes carry `.rl-card`'s own rule, so they must not
+   also offer its hover lift: nothing here is a control. */
+.rl-workspace .skel-pagebar{margin-bottom:22px}
+.rl-workspace .skel-block .rl-card:hover{border-color:var(--line);box-shadow:none}
+/* The metric figure, at the line box `.rl-metric > strong` prints — including
+   the step down it takes on a phone, which an inline height could not follow. */
+.rl-skel-v{display:flex;align-items:center;min-height:calc(1.75rem * 1.1)}
+@media(max-width:520px){.rl-skel-v{min-height:calc(1.5625rem * 1.1)}}
 @media(max-width:1150px){.rl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rl-metric{padding:17px}.rl-metric-label{align-items:flex-start}}
 @media(max-width:760px){.rl-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.rl-metric:nth-child(3){border-left:0}.rl-metric:nth-child(n+3){border-top:1px solid var(--line)}.rl-section-head{align-items:flex-start}.rl-governance{display:none}.rl-card{padding:18px 18px 0}.rl-grid{gap:12px}}
 @media(max-width:520px){.rl-grid{grid-template-columns:1fr}.rl-metric{padding:16px}.rl-metric>strong{font-size:1.5625rem}.rl-metric-label{font-size:.625rem}}
@@ -150,3 +163,19 @@
   transition:background var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
 .mp-clear:hover{background:var(--surface-2);color:var(--ink)}
 .mp-clear svg{color:var(--faint)}
+
+/* --- A panel header, holding the height it will print -----------------------
+   `.card-h` stacks `.card-h-title` over `.card-h-sub`, so it runs past its own
+   42px floor; the kit's `.skel-card-h` draws a flat 11px bar over a flat 9px
+   one and lands about 13px short of it. The kit is shared and frozen, and its
+   bar heights are inline styles, so the gap between them is the only thing a
+   page can move. Neither title nor sub states a line height, so both take the
+   body's: --t-h3 at --t-body-lh over --t-xs at --t-body-lh with the sub-line's
+   1px lead, less the 20px the two bars already occupy. Written from the tokens
+   rather than as that number, because the header's Text size control scales the
+   root and the bars do not follow it. The skeletons in this folder mark their
+   announcing region with the class; ProfilePage.css carries the same rule for
+   its own. */
+.skel-head-type .skel-card-h{
+  gap:calc(var(--t-h3) * var(--t-body-lh) + 1px + var(--t-xs) * var(--t-body-lh) - 20px);
+}

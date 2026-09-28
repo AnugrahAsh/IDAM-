@@ -10,8 +10,12 @@ import Pill from '../../components/primitives/Pill'
 import Tag from '../../components/primitives/Tag'
 import KeyValue from '../../components/primitives/KeyValue'
 import EmptyState from '../../components/primitives/EmptyState'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue, SkeletonPageBar, SkeletonText,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { stampText } from '../../lib/clock'
+import { useLoading } from '../../lib/useLoading'
 import { serialColumn } from '../../lib/format'
 import { SMS_QUEUE } from '../shared/comms/commsData'
 
@@ -29,12 +33,19 @@ const SCOPES = [
 // `rows` and `setRows` come from the section above when SMS Management owns the
 // queue, so the delivery cards and this register never disagree about how many
 // messages are still waiting. The local fallback keeps the page usable alone.
-export default function SmsPage({ segments = [], embedded, rows: rowsProp, onRowsChange }) {
+export default function SmsPage({ segments = [], embedded, rows: rowsProp, onRowsChange, loading: loadingProp }) {
   const { navigate, toast, confirm } = useApp()
   const [ownRows, setOwnRows] = useState(() => SMS_QUEUE.map((r) => ({ ...r })))
   const rows = rowsProp || ownRows
   const setRows = onRowsChange || setOwnRows
   const [scope, setScope] = useState('all')
+  /* Embedded in SMS Management the section above owns the settle, so the log
+     lands with the tabs and the page bar rather than a frame after them. On
+     its own route there is nothing above it, so it settles for itself — keyed
+     on the message id, because opening one is the round trip a real deployment
+     would make. */
+  const ownLoading = useLoading(segments[0] || 'queue')
+  const loading = loadingProp === undefined ? ownLoading : loadingProp
 
   const record = useMemo(
     () => (segments[0] ? rows.find((r) => String(r.id) === String(segments[0])) : null),
@@ -67,6 +78,23 @@ export default function SmsPage({ segments = [], embedded, rows: rowsProp, onRow
   })
 
   if (segments[0]) {
+    /* A message is a record page: masthead, the rendered text on the left and
+       the envelope's nine facts on the right. Held in that shape so the two
+       columns do not swap width when the record lands. */
+    if (loading) {
+      return (
+        <Skeleton label="Loading the message">
+          <SkeletonDetailHeader facts={5} actions={2} />
+          <div className="detail-body">
+            <div className="detail-cols">
+              <SkeletonCard><SkeletonText lines={5} /></SkeletonCard>
+              <SkeletonCard><SkeletonKeyValue rows={9} cols={1} /></SkeletonCard>
+            </div>
+          </div>
+        </Skeleton>
+      )
+    }
+
     if (!record) {
       return (
         <>
@@ -153,7 +181,16 @@ export default function SmsPage({ segments = [], embedded, rows: rowsProp, onRow
 
   return (
     <>
-      {!embedded && (
+      {/* Embedded, the masthead belongs to the section above and is already
+          being held there; on its own route this page owns it. One announcing
+          region either way — the register's own body skeleton is decoration. */}
+      {!embedded && loading && (
+        <Skeleton label="Loading the SMS delivery log">
+          <SkeletonPageBar actions={2} crumbs={1} />
+        </Skeleton>
+      )}
+
+      {!embedded && !loading && (
         <PageBar
           title="SMS"
           sub="Outbound text messages waiting on a gateway, with per-message delivery detail."
@@ -172,6 +209,7 @@ export default function SmsPage({ segments = [], embedded, rows: rowsProp, onRow
       <DataWorkbench
         id="sms-queue"
         rows={visible}
+        loading={loading}
         columns={[
           serialColumn('S.No'),
           {

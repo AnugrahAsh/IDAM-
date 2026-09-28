@@ -15,8 +15,13 @@ import Tag from '../../components/primitives/Tag'
 import Tabs from '../../components/primitives/Tabs'
 import KeyValue from '../../components/primitives/KeyValue'
 import EmptyState from '../../components/primitives/EmptyState'
+import {
+  Skeleton, SkeletonCard, SkeletonDetailHeader, SkeletonKeyValue, SkeletonPageBar,
+  SkeletonStats, SkeletonText,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { stampText } from '../../lib/clock'
+import { useLoading } from '../../lib/useLoading'
 import { num, serialColumn } from '../../lib/format'
 import { OUTBOX, TEMPLATES } from '../shared/comms/commsData'
 import { DELIVERY_LOG } from '../../data/seed'
@@ -121,12 +126,22 @@ function MessageDetail({ record, onBack, onSend, onRemove }) {
    the outbox, so the summary cards and this register never disagree about how
    many messages are still waiting. The local fallback keeps the page usable
    alone. */
-export default function EmailsPage({ segments = [], embedded, rows: rowsProp, onRowsChange }) {
+export default function EmailsPage({ segments = [], embedded, rows: rowsProp, onRowsChange, loading: loadingProp }) {
   const { navigate, toast, confirm } = useApp()
   const [ownRows, setOwnRows] = useState(() => OUTBOX.map((o) => ({ ...o })))
   const rows = rowsProp || ownRows
   const setRows = onRowsChange || setOwnRows
+  /* Outbox and Delivery log, not two arrivals: both lists are already in hand
+     when the register lands, so moving between them fetches nothing and the
+     tab is not part of any settle. */
   const [tab, setTab] = useState('outbox')
+  /* Embedded in Email Management the section above owns the settle, so the log
+     lands with the tabs and the page bar rather than a frame after them. On its
+     own route there is nothing above it, so it settles for itself — keyed on
+     the message id, because opening one is the round trip a real deployment
+     would make. */
+  const ownLoading = useLoading(segments[0] || 'outbox')
+  const loading = loadingProp === undefined ? ownLoading : loadingProp
 
   const record = useMemo(
     () => (segments[0] ? rows.find((r) => String(r.id) === String(segments[0])) : null),
@@ -159,6 +174,26 @@ export default function EmailsPage({ segments = [], embedded, rows: rowsProp, on
   })
 
   if (segments[0]) {
+    /* A message is a record page: the masthead lands first, so it is held
+       first. The body is the rendered mail beside the attempt timeline and the
+       envelope — three boxes, at the heights they land at. */
+    if (loading) {
+      return (
+        <Skeleton label="Loading the message">
+          <SkeletonDetailHeader facts={4} actions={2} />
+          <div className="detail-body">
+            <div className="detail-cols">
+              <SkeletonCard><SkeletonText lines={7} /></SkeletonCard>
+              <div className="stack">
+                <SkeletonCard lines={5} />
+                <SkeletonCard><SkeletonKeyValue rows={6} cols={1} /></SkeletonCard>
+              </div>
+            </div>
+          </div>
+        </Skeleton>
+      )
+    }
+
     if (!record) {
       return (
         <>
@@ -195,7 +230,15 @@ export default function EmailsPage({ segments = [], embedded, rows: rowsProp, on
 
   return (
     <>
-      {!embedded && (
+      {/* One announcing region for the page. The register below keeps its own
+          panel, toolbar and tab strip while the rows settle inside it. */}
+      {!embedded && loading && (
+        <Skeleton label="Loading the email delivery log">
+          <SkeletonPageBar actions={2} crumbs={1} />
+        </Skeleton>
+      )}
+
+      {!embedded && !loading && (
         <PageBar
           title="Emails"
           sub="The outbound queue and the delivery record for every transactional message the platform generates."
@@ -223,6 +266,7 @@ export default function EmailsPage({ segments = [], embedded, rows: rowsProp, on
 
         {tab === 'outbox' ? (
           <>
+          {loading ? <SkeletonStats count={4} /> : (
           <StatCards
             items={[
               { key: 'total', icon: 'mail', label: 'In outbox', value: rows.length, chip: `${num(rows.filter((r) => r.status === 'Sent').length)} sent`, sub: 'messages dispatched by the platform' },
@@ -232,11 +276,13 @@ export default function EmailsPage({ segments = [], embedded, rows: rowsProp, on
             ]}
             label="Outbox summary"
           />
+          )}
 
           <DataWorkbench
             id="email-outbox"
             rows={rows}
             columns={outboxColumns}
+            loading={loading}
             selectable
             searchPlaceholder="Search by template, recipient or subject…"
             onRowClick={(r) => navigate(`/iam/emails/${r.id}`)}
@@ -298,6 +344,7 @@ export default function EmailsPage({ segments = [], embedded, rows: rowsProp, on
             id="email-delivery-log"
             rows={DELIVERY_LOG}
             columns={logColumns}
+            loading={loading}
             searchPlaceholder="Search the delivery log…"
             toolbar={<Button size="sm" icon="download" onClick={() => toast('ok', 'Export queued', 'Delivery log exported as CSV.')}>Export</Button>}
             emptyTitle="No deliveries"

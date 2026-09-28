@@ -10,7 +10,11 @@ import TextInput from '../../components/primitives/TextInput'
 import Select from '../../components/primitives/Select'
 import KeyValue from '../../components/primitives/KeyValue'
 import Banner from '../../components/primitives/Banner'
+import {
+  Skeleton, SkeletonCard, SkeletonKeyValue, SkeletonLine, SkeletonPageBar,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { dateText, since } from '../../lib/clock'
 import './SettingsPage.css'
 import Toggle from './Toggle'
@@ -71,9 +75,36 @@ const DRAFT_SECTIONS = ['datetime', 'security', 'lifetimes', 'signout', 'provisi
 
 const LABELS = Object.fromEntries(SECTION_META.map((s) => [s.id, s.label]))
 
+/* The masthead, with the rail of counts the kit's `SkeletonPageBar` has no slot
+   for. Rather than restate the whole bar here, the rail is drawn under it and
+   pulled back up into the bar's own bottom padding by the two rules in
+   SettingsPage.css, so the chips land on the line the real ones land on. Four
+   of them, because the bar carries four and a bar that gains a chip when the
+   figures arrive moves the rail below it. */
+function SettingsBarSkeleton() {
+  return (
+    <>
+      <SkeletonPageBar actions={4} crumbs={2} />
+      <div className="pagebar-rail set-skel-rail" aria-hidden="true">
+        {[104, 156, 172, 132].map((w) => (
+          <span className="skel set-skel-chip" key={w} style={{ width: w }} />
+        ))}
+      </div>
+    </>
+  )
+}
+
 export default function SettingsPage() {
   const { toast, confirm, navigate } = useApp()
   const settings = useSettings()
+  /* One settle for the page, and only on arrival.
+
+     Tenant configuration is one document: every section on the rail is a part
+     of the same object, so moving between them reads what is already in hand
+     and is not a round trip to pretend about. Keying this on the rail would
+     make the masthead grey on every click of a fifteen-item list, which is a
+     flicker rather than a wait. */
+  const loading = useLoading()
   const [draft, setDraft] = useState(() => Object.fromEntries(DRAFT_SECTIONS.map((k) => [k, settings[k]])))
   // The rail's first section, whatever it is — General has gone, and hardcoding
   // a section id here is how a removed section becomes a blank panel.
@@ -135,6 +166,15 @@ export default function SettingsPage() {
 
   return (
     <>
+      {/* One announcing region for the page. The rail below is navigation and
+          stays put; what is held is the masthead's counts, the change record,
+          and whichever section panel reads a register rather than offering a
+          form to type into. */}
+      {loading ? (
+        <Skeleton label="Loading tenant settings">
+          <SettingsBarSkeleton />
+        </Skeleton>
+      ) : (
       <PageBar
         title="Settings"
         sub="Tenant-wide platform configuration. Changes apply to every organization unless an override is set at the organization level."
@@ -161,6 +201,7 @@ export default function SettingsPage() {
           </>
         }
       />
+      )}
 
       <div className="set-shell">
         <nav className="set-rail" aria-label="Settings categories">
@@ -291,20 +332,20 @@ export default function SettingsPage() {
               </Card>
             )}
 
-            {active === 'redirectUris' && <RedirectUris value={settings.redirectUris} />}
+            {active === 'redirectUris' && <RedirectUris value={settings.redirectUris} loading={loading} />}
 
             {active === 'passwordFlows' && <PasswordFlows value={settings.passwordFlows} />}
 
             {active === 'regionFlows' && (
-              <Regions regions={settings.regions} regionFlows={settings.regionFlows} settings={settings} />
+              <Regions regions={settings.regions} regionFlows={settings.regionFlows} settings={settings} loading={loading} />
             )}
 
-            {active === 'approvalLevels' && <ApprovalLevels value={settings.approvalLevels} />}
-            {active === 'approvalFlow' && <ApprovalFlow value={settings.approvalFlow} />}
+            {active === 'approvalLevels' && <ApprovalLevels value={settings.approvalLevels} loading={loading} />}
+            {active === 'approvalFlow' && <ApprovalFlow value={settings.approvalFlow} loading={loading} />}
 
-            {active === 'notificationTaxonomy' && <NotificationTaxonomy value={settings.notificationTaxonomy} />}
+            {active === 'notificationTaxonomy' && <NotificationTaxonomy value={settings.notificationTaxonomy} loading={loading} />}
 
-            {active === 'sodSeverities' && <SodSeverities value={settings.sodSeverities} />}
+            {active === 'sodSeverities' && <SodSeverities value={settings.sodSeverities} loading={loading} />}
 
             {active === 'provisioning' && (
               <Card title="Provisioning" sub="How the platform reconciles target systems and handles identities that leave." actions={<DirtyPill dirty={dirty('provisioning')} />} footer={foot('provisioning')}>
@@ -436,6 +477,17 @@ export default function SettingsPage() {
           </div>
 
           <div className="stack">
+            {/* The change record reads the audit log rather than offering
+                anything to edit, so it holds its place while the page
+                settles. */}
+            {loading ? (
+              <SkeletonCard head foot={false}>
+                <SkeletonKeyValue rows={4} cols={1} />
+                {/* The standing note about the audit log sits under the four
+                    facts, and the card is that much taller for it. */}
+                <div style={{ marginTop: 14 }}><SkeletonLine height={62} /></div>
+              </SkeletonCard>
+            ) : (
             <Card
               title="Change control"
               sub={`Who last touched ${LABELS[active] || 'this section'}`}
@@ -463,6 +515,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             </Card>
+            )}
           </div>
         </div>
       </div>

@@ -594,6 +594,69 @@ button.legend-it:hover{border-color:var(--line-2)}
   :root[data-density="compact"] .rcard-tags{display:none}
 }
 
+/* --- Field help: the `?` beside a label ------------------------------------
+   Field renders this only for a call site that passes `help`, but the markup
+   belongs to the primitive, so its rules belong beside the primitive's — a
+   second page that asks for help must not have to import a third page's
+   stylesheet to get it drawn. */
+.field-labelrow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field-labelrow > .field-label { min-width: 0 }
+
+/* Quiet until it is wanted. At --faint it reads as punctuation after the label
+   rather than as a second control competing with the input below it. */
+.field-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-left: 1px;
+  border-radius: 50%;
+  color: var(--faint);
+  transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+
+.field-help:hover,
+.field-help[aria-expanded="true"] {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.field-help:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Fixed, and placed from the button's own rect by Field. Two reasons, both of
+   which bite on a four-column grid: the canvas clips horizontal overflow, so a
+   bubble anchored inside a right-hand column would be sliced in half, and a
+   bubble wide enough to read is wider than the column it belongs to. The width
+   is capped against the viewport as well as in rem, so the narrowest phone
+   still gets a bubble that fits rather than one that pushes the page sideways. */
+.field-help-tip {
+  position: fixed;
+  z-index: var(--z-menu);
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 24px));
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--sh-lg);
+  color: var(--ink-2);
+  font-size: var(--t-xs);
+  line-height: var(--t-xs-lh);
+  font-weight: var(--w-reg);
+  letter-spacing: normal;
+  text-transform: none;
+}
 /* --- Stat cards: headline metrics above a register -------------------------- */
 .scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
   gap:var(--sp-3);margin-bottom:var(--sp-3)}

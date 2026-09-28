@@ -10,7 +10,9 @@ import { useState } from 'react'
 import { RULES_BASE, allRules, countRules, modelText, ruleText } from './orphanedData'
 import AccountsTable from './AccountsTable'
 import StatCards from '../../components/workbench/StatCards'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import { useLocalState } from '../../lib/useLocalState'
+import { useLoading } from '../../lib/useLoading'
 
 /* Table and Grouped, on both tabs. Cards are gone — an orphan rule and an
    orphaned account are each a row of short fields, and a tile per row turned a
@@ -24,6 +26,10 @@ export default function OrphanList({ rows, rules, stats, ruleRows, actions }) {
   const { toast, navigate } = useApp()
   const [tab, setTab] = useState('rules')
   const [ruleView, setRuleView] = useLocalState('tf-idam-orphan-rules-view', 'table')
+  /* One flag for the page. Switching between Rules and Discovered accounts is
+     not a second load — both tabs are already in hand when the sweep's results
+     arrive, and the tab bar is chrome that stays put while the panel settles. */
+  const loading = useLoading()
 
   const ruleColumns = [
     serialColumn('S.No'),
@@ -61,38 +67,49 @@ export default function OrphanList({ rows, rules, stats, ruleRows, actions }) {
 
   return (
     <>
-      <PageBar
-        title="Orphan Accounts"
-        sub="The rules that decide when a target account counts as orphaned, and every account those rules have surfaced for triage."
-        crumbs={[{ label: 'Core' }, { label: 'Orphan Accounts' }]}
-        actions={
-          <>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', 'The orphan register is being exported as CSV.')}>Export</Button>
-            <Button icon="plus" onClick={() => navigate(`${RULES_BASE}/add`)}>Add Rule</Button>
-            <Button variant="pri" icon="recon" onClick={() => toast('ok', 'Discovery queued', 'A reconciliation sweep is running across every connected target.')}>Run discovery</Button>
-          </>
-        }
-      />
+      {/* One region for the page: the registers below keep their toolbars and
+          draw their own aria-hidden body skeletons from `loading`. */}
+      {loading ? (
+        <Skeleton label="Loading the orphan register">
+          <SkeletonPageBar actions={3} crumbs={2} />
+          <SkeletonStats count={4} />
+        </Skeleton>
+      ) : (
+        <>
+          <PageBar
+            title="Orphan Accounts"
+            sub="The rules that decide when a target account counts as orphaned, and every account those rules have surfaced for triage."
+            crumbs={[{ label: 'Core' }, { label: 'Orphan Accounts' }]}
+            actions={
+              <>
+                <Button icon="download" onClick={() => toast('ok', 'Export queued', 'The orphan register is being exported as CSV.')}>Export</Button>
+                <Button icon="plus" onClick={() => navigate(`${RULES_BASE}/add`)}>Add Rule</Button>
+                <Button variant="pri" icon="recon" onClick={() => toast('ok', 'Discovery queued', 'A reconciliation sweep is running across every connected target.')}>Run discovery</Button>
+              </>
+            }
+          />
 
-      <StatCards
-        items={[
-          { key: 'rules', icon: 'policy', label: 'Active rules', value: stats.activeRules, chip: `${num(rules.length)} defined`, sub: 'evaluated on every reconciliation' },
-          { key: 'open', icon: 'orphan', label: 'Open orphans', value: stats.open, chip: stats.open ? 'unowned accounts' : 'none', chipTone: stats.open ? 'warn' : 'ok', sub: 'no matching identity' },
-          { key: 'suppressed', icon: 'eyeoff', label: 'Suppressed', value: stats.suppressed, chip: 'accepted', sub: 'known and signed off' },
-          // Anything above the 30-day triage window has stopped being recent,
-          // which is what a 63-day finding was previously called.
-          {
-            key: 'oldest',
-            icon: 'clock',
-            label: 'Oldest finding',
-            value: `${stats.oldest}d`,
-            chip: stats.oldest > 90 ? 'ageing' : stats.oldest > 30 ? 'overdue' : 'recent',
-            chipTone: stats.oldest > 90 ? 'bad' : stats.oldest > 30 ? 'warn' : undefined,
-            sub: 'since first discovery',
-          },
-        ]}
-        label="Orphaned account summary"
-      />
+          <StatCards
+            items={[
+              { key: 'rules', icon: 'policy', label: 'Active rules', value: stats.activeRules, chip: `${num(rules.length)} defined`, sub: 'evaluated on every reconciliation' },
+              { key: 'open', icon: 'orphan', label: 'Open orphans', value: stats.open, chip: stats.open ? 'unowned accounts' : 'none', chipTone: stats.open ? 'warn' : 'ok', sub: 'no matching identity' },
+              { key: 'suppressed', icon: 'eyeoff', label: 'Suppressed', value: stats.suppressed, chip: 'accepted', sub: 'known and signed off' },
+              // Anything above the 30-day triage window has stopped being recent,
+              // which is what a 63-day finding was previously called.
+              {
+                key: 'oldest',
+                icon: 'clock',
+                label: 'Oldest finding',
+                value: `${stats.oldest}d`,
+                chip: stats.oldest > 90 ? 'ageing' : stats.oldest > 30 ? 'overdue' : 'recent',
+                chipTone: stats.oldest > 90 ? 'bad' : stats.oldest > 30 ? 'warn' : undefined,
+                sub: 'since first discovery',
+              },
+            ]}
+            label="Orphaned account summary"
+          />
+        </>
+      )}
 
       <div className="stack">
         <Tabs
@@ -108,6 +125,7 @@ export default function OrphanList({ rows, rules, stats, ruleRows, actions }) {
           <DataWorkbench
             id="orphan-rules"
             rows={ruleRows}
+            loading={loading}
             columns={ruleColumns}
             selectable
             views={VIEWS}
@@ -134,7 +152,7 @@ export default function OrphanList({ rows, rules, stats, ruleRows, actions }) {
               { divider: true },
               { id: 'del', label: 'Delete', icon: 'trash', danger: true, onSelect: () => actions.deleteRules([r]) },
             ]}
-emptyTitle="No detection rules"
+            emptyTitle="No detection rules"
             emptyBody="Without a rule nothing is ever flagged as orphaned. Add a rule to describe the accounts reconciliation should surface."
             emptyIcon="policy"
             footNote="Rules are evaluated by the nightly orphan detection sweep"
@@ -143,6 +161,7 @@ emptyTitle="No detection rules"
           <AccountsTable
             id="orphaned"
             rows={rows}
+            loading={loading}
             onAssign={actions.openAssign}
             onDisable={actions.disable}
             onSuppress={actions.suppress}

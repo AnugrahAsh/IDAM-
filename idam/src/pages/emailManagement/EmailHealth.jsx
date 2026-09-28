@@ -5,6 +5,9 @@ import Card from '../../components/primitives/Card'
 import Icon from '../../components/primitives/Icon'
 import KeyValue from '../../components/primitives/KeyValue'
 import Pill from '../../components/primitives/Pill'
+import {
+  SkeletonCard, SkeletonKeyValue, SkeletonLine,
+} from '../../components/primitives/Skeleton'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
 import { Section } from './EmailForms'
@@ -209,7 +212,62 @@ function ClientAccordion({ client, open, checkedAt, onToggle, onRecheck }) {
   )
 }
 
-export default function EmailHealth({ smtp, messages = [] }) {
+/* The wait, drawn against the real geometry: a key/value panel and a banner in
+   the first card, four tiles in the second, and the collapsed accordion heads
+   in the third — heads only, because that is what the card lands as.
+   `SkeletonCard` is the `Card` frame, so the three panels occupy the same three
+   boxes they will be replaced by. */
+function HealthSkeleton() {
+  return (
+    <div className="stack">
+      <SkeletonCard>
+        <div className="stack">
+          <SkeletonKeyValue rows={4} cols={2} />
+          <SkeletonLine height={38} />
+        </div>
+      </SkeletonCard>
+      <SkeletonCard>
+        <div className="stack">
+          <div className="grid grid-4">
+            {QUEUE_TILES.map((t) => (
+              <div className="tile" key={t.id} data-tone="mut">
+                <div className="tile-k"><SkeletonLine width="52%" height={8} /></div>
+                <div className="tile-v"><SkeletonLine width={62} height={20} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </SkeletonCard>
+      {/* The card these rows land in is `flush` — a row runs to the card's own
+          edge — so the waiting card gives up its body padding too. Left on,
+          it stands 32px taller than the card that replaces it and insets every
+          row a gutter further in than the row it holds space for. */}
+      <SkeletonCard className="em-skel-flush">
+        {EMAIL_HEALTH_CLIENTS.map((c) => (
+          <div className="em-acc em-acc-skel" key={c.id}>
+            <div className="em-acc-h">
+              <span className="skel em-acc-skel-chev" />
+              <span className="em-acc-meta">
+                <SkeletonLine width="42%" height={12} />
+                <SkeletonLine width="28%" height={9} />
+              </span>
+              <span className="em-acc-figs">
+                {HEAD_FIGURES.map((f) => (
+                  <span className="em-acc-fig" key={f.id}>
+                    <SkeletonLine width={46} height={14} />
+                  </span>
+                ))}
+                <span className="skel skel-chip" style={{ width: 72 }} />
+              </span>
+            </div>
+          </div>
+        ))}
+      </SkeletonCard>
+    </div>
+  )
+}
+
+export default function EmailHealth({ smtp, messages = [], loading = false }) {
   const { toast, navigate } = useApp()
   /* The check is re-run on demand rather than polled: it opens a real
      connection, and a screen left open should not keep dialling the relay. */
@@ -268,6 +326,12 @@ export default function EmailHealth({ smtp, messages = [] }) {
       body,
     )
   }
+
+  /* The section above owns the settle, so the three panels are held and
+     released together with the page bar and the tabs rather than a frame after
+     them — and it has already announced the wait, so these shapes are
+     decoration under its region rather than a second one. */
+  if (loading) return <HealthSkeleton />
 
   return (
     <div className="stack">

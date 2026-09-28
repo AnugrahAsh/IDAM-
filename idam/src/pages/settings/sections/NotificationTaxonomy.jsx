@@ -11,7 +11,9 @@ import Pill from '../../../components/primitives/Pill'
 import Banner from '../../../components/primitives/Banner'
 import SeverityBadge from '../../../components/primitives/SeverityBadge'
 import EmptyState from '../../../components/primitives/EmptyState'
+import { SkeletonLine } from '../../../components/primitives/Skeleton'
 import { useApp } from '../../../store/AppContext'
+import SectionSkeleton, { LevelListSkeleton } from './SectionSkeleton'
 import { useAnnouncements } from '../../notificationCenter/announcementStore'
 import { writeSection } from '../settingsStore'
 
@@ -58,7 +60,7 @@ const BLANK_SEVERITY = { label: '', level: 'info' }
 
 const slug = (kind, label) => `${kind}-${label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || Date.now()}`
 
-export default function NotificationTaxonomy({ value }) {
+export default function NotificationTaxonomy({ value, loading = false }) {
   const { toast, confirm } = useApp()
   const announcements = useAnnouncements()
   const [adding, setAdding] = useState(null)   // 'categories' | 'severities' | null
@@ -279,6 +281,27 @@ export default function NotificationTaxonomy({ value }) {
       )}
     </Card>
   )
+
+/* Held while Settings settles. This section is a register of stored rows, not
+   a form the operator arrives already typing into: the add row above the table
+   appends to rows that are still on their way, so it holds its place with
+   them. */
+  if (loading) {
+    return (
+      <div className="stack">
+        <SkeletonLine height={60} />
+        {/* Both lists are drawn at the count the tenant actually stores — the
+            vocabulary is in hand before the settle starts, so a guessed count
+            is only a card that jumps when the options land. */}
+        <SectionSkeleton foot>
+          <LevelListSkeleton rows={categories.length || 4} />
+        </SectionSkeleton>
+        <SectionSkeleton foot>
+          <LevelListSkeleton rows={severities.length || 3} />
+        </SectionSkeleton>
+      </div>
+    )
+  }
 
   return (
     <div className="stack">

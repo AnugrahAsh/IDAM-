@@ -509,3 +509,119 @@ export const resolveTokens = (text) => String(text || '')
   .replace(/\{\{\s*([A-Za-z0-9_.]+)\s*\}\}/g, (whole, key) => (
     TEMPLATE_TOKENS[key] === undefined ? whole : TEMPLATE_TOKENS[key]
   ))
+
+/* ---------------------------------------------------------------------------
+   Per-client health.
+
+   A client is the tenant whose texts a binding carries, and each one posts to
+   its own gateway. The health screen answered for the default gateway and
+   nothing else, so "is this tenant's OTP going out" had five answers and the
+   screen gave one of them — the other four meant signing into four other
+   tenants.
+
+   A client carries exactly the connection facts and the delivery outcomes the
+   default gateway reports, and nothing extra, so the two readouts cannot drift
+   into different answers to the same question. The codes and the routing match
+   SMS_CLIENTS in the shared seed: a tenant that reads Inactive on the clients
+   register must not read Active here.
+   --------------------------------------------------------------------------- */
+
+export const SMS_HEALTH_CLIENTS = [
+  {
+    id: 'bescom', code: 'BESCOM', name: 'Bangalore Electricity Supply Company',
+    gateway: 'BESCOM1', method: 'POST', serializer: 'application/x-www-form-urlencoded',
+    encryption: '', auth: 'HMAC_SHA512',
+    status: 'Active', checkedAt: '2 minutes ago',
+    queue: { Queued: 4, Delivered: 1624, Failed: 1 },
+  },
+  {
+    id: 'upcl', code: 'UPCL', name: 'Uttarakhand Power Corporation',
+    gateway: 'UPCL', method: 'POST', serializer: 'text/plain',
+    encryption: 'AES-256-CBC', auth: 'NONE',
+    status: 'Active', checkedAt: '4 minutes ago',
+    queue: { Queued: 186, Delivered: 742, Failed: 5 },
+  },
+  {
+    id: 'bts', code: 'BTS', name: 'Bitchief Technology Services',
+    gateway: 'BTS', method: 'POST', serializer: 'application/json',
+    encryption: '', auth: 'NONE',
+    status: 'Active', checkedAt: 'a minute ago',
+    queue: { Queued: 318, Delivered: 61, Failed: 402 },
+  },
+  {
+    id: 're', code: 'RE', name: 'Royal Enfield',
+    gateway: 'RE', method: 'POST', serializer: 'application/json',
+    encryption: '', auth: 'OAUTH_TOKEN',
+    status: 'Active', checkedAt: '9 minutes ago',
+    queue: { Queued: 0, Delivered: 2318, Failed: 31 },
+  },
+  {
+    id: 'bsphcl', code: 'BSPHCL', name: 'Bihar State Power Holding Company',
+    gateway: 'BSPHCL', method: 'POST', serializer: 'application/json',
+    encryption: '', auth: 'NONE',
+    status: 'Inactive', checkedAt: '31 minutes ago',
+    queue: { Queued: 63, Delivered: 0, Failed: 0 },
+  },
+]
+
+/* The head says what is happening to the traffic, not what the socket did: a
+   gateway that answers 200 and then returns four failed receipts in ten is
+   failing, however healthy the handshake looked. `attention` is what the
+   summary counts — a binding somebody switched off is a decision, not an
+   incident, so it reads the way every other inactive record in the console
+   reads and is not counted against the tenant. */
+export const HEALTH_STATES = {
+  ok: { id: 'ok', label: 'Healthy', tone: 'ok', attention: false },
+  warn: { id: 'warn', label: 'Degraded', tone: 'warn', attention: true },
+  bad: { id: 'bad', label: 'Failing', tone: 'bad', attention: true },
+  off: { id: 'off', label: 'Inactive', tone: 'mut', attention: false },
+}
+
+/* The thresholds operations triages on. A binding whose receipts come back
+   undelivered a quarter of the time is failing whatever it answered on the
+   wire; one in a hundred is worth a look; and a queue this deep means texts
+   are arriving faster than the gateway is clearing them. */
+const FAIL_FAILING = 0.25
+const FAIL_DEGRADED = 0.01
+const BACKLOG_DEGRADED = 50
+
+/* Counting is done here rather than in the seed so the tiles and the head
+   figure are the same arithmetic, and so a client whose queue is edited cannot
+   end up with a total that no longer adds up. */
+export const queueCounts = (queue = {}) => {
+  const Queued = Number(queue.Queued) || 0
+  const Delivered = Number(queue.Delivered) || 0
+  const Failed = Number(queue.Failed) || 0
+  return { Queued, Delivered, Failed, Total: Queued + Delivered + Failed }
+}
+
+/* Read from the figures, never stored beside them: a seeded "degraded" flag
+   disagrees with the tiles under it the first time either is touched, and the
+   flag is what an operator would believe.
+
+   `drivers` is why this returns an object rather than a label. Two independent
+   thresholds raise the same amber pill, so the state alone does not say which
+   figure tripped it — a binding whose receipts are fine and whose queue holds
+   two hundred messages is amber for the backlog alone. A head showing the
+   handful of failures, coloured, tells the operator the opposite of what the
+   arithmetic said. So the keys that actually crossed a threshold come back with
+   the state: the head colours those and leaves every other figure neutral, and
+   the recheck toast names the same cause the head did. They are queue keys, so
+   they index `queueCounts` directly. */
+export const clientHealth = (c) => {
+  const settled = (state) => ({ ...state, drivers: [] })
+  if (!c) return settled(HEALTH_STATES.bad)
+  if (c.status !== 'Active') return settled(HEALTH_STATES.off)
+  // Nothing in the queue explains this one: there is no gateway to blame it on.
+  if (!c.gateway) return settled(HEALTH_STATES.bad)
+  const q = queueCounts(c.queue)
+  const rate = q.Total ? q.Failed / q.Total : 0
+  // Both are collected rather than the first to match: a binding can be
+  // rejecting and backed up at once, and the head has room to say so.
+  const drivers = []
+  if (rate >= FAIL_DEGRADED) drivers.push('Failed')
+  if (q.Queued > BACKLOG_DEGRADED) drivers.push('Queued')
+  if (rate >= FAIL_FAILING) return { ...HEALTH_STATES.bad, drivers }
+  if (drivers.length) return { ...HEALTH_STATES.warn, drivers }
+  return { ...HEALTH_STATES.ok, drivers }
+}

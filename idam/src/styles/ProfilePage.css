@@ -1,4 +1,8 @@
+/* Empty on purpose.
 
-/* Avatar plus its own controls, so changing a picture is where the picture is. */
-.pf-av{display:flex;flex-direction:column;align-items:center;gap:9px;flex:none}
-.pf-av-acts{display:flex;align-items:center;gap:5px}
+   This file was never imported — styles/index.css does not list it and no page
+   pulls it in — so the two avatar rules it held were loaded by nothing. They
+   now sit with the rest of the page's styles, in
+   pages/myProfile/ProfilePage.css, which is the file ProfilePage.jsx imports.
+
+   Nothing should be added here. Page-owned styles belong beside their page. */

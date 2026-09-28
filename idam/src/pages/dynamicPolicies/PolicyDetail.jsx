@@ -10,6 +10,8 @@ import Tag from '../../components/primitives/Tag'
 import Tabs from '../../components/primitives/Tabs'
 import { Fact } from '../../components/shell/DetailHeader'
 import { num } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
+import { PolicyPanelSkeleton, PolicyRecordSkeleton } from './PoliciesSkeleton'
 import { BASE, CYCLE, NOW_MS, assignedIds, countRules, fmtStamp, groupLabel, groupList, groupPhrase, groupRecords, matchUsers, metaFor, modelText, parseExpression } from './policyPageData'
 import ConditionBuilder from './ConditionBuilder'
 import EvaluationPanel from './EvaluationPanel'
@@ -29,6 +31,11 @@ export default function PolicyDetail({ policy, tab, setRows, onDelete }) {
   const meta = metaFor(policy)
   const targets = groupRecords(policy)
   const dirty = pending != null && modelText(pending) !== modelText(saved)
+  /* Two scopes off one timer. `arriving` is the record — masthead, tab strip
+     and panel resolve on the same tick. `settling` is the panel alone, which
+     is all a tab change fetches: the tab bar is chrome and stays put. */
+  const arriving = useLoading(policy.id)
+  const settling = useLoading(`${policy.id}:${tab}`)
 
   const goTab = (t) => navigate(t === 'overview' ? `${BASE}/${policy.id}` : `${BASE}/${policy.id}/${t}`, { replace: true })
 
@@ -54,6 +61,8 @@ export default function PolicyDetail({ policy, tab, setRows, onDelete }) {
     patch({ condition: expression }, 'Condition saved', `${policy.name} takes effect at the next evaluation.`)
     setPending(null)
   }
+
+  if (arriving) return <PolicyRecordSkeleton tab={tab} />
 
   return (
     <>
@@ -102,9 +111,13 @@ export default function PolicyDetail({ policy, tab, setRows, onDelete }) {
       />
 
       <div className="detail-body">
-        {tab === 'overview' && <OverviewTab policy={policy} model={saved} matched={matched} assigned={assigned} meta={meta} targets={targets} />}
+        {/* The card tabs are redrawn as shapes while they settle; simulation
+            and history keep their own controls and settle their rows. */}
+        {settling && (tab === 'overview' || tab === 'condition') && <PolicyPanelSkeleton tab={tab} />}
 
-        {tab === 'condition' && (
+        {tab === 'overview' && !settling && <OverviewTab policy={policy} model={saved} matched={matched} assigned={assigned} meta={meta} targets={targets} />}
+
+        {tab === 'condition' && !settling && (
           <>
             <div className="cstudio">
               <div className="cstudio-pair">
@@ -133,10 +146,10 @@ export default function PolicyDetail({ policy, tab, setRows, onDelete }) {
         )}
 
         {tab === 'simulation' && (
-          <SimulationTab policy={policy} model={saved} />
+          <SimulationTab policy={policy} model={saved} loading={settling} />
         )}
 
-        {tab === 'history' && <HistoryTab policy={policy} matchedCount={matched.length} />}
+        {tab === 'history' && <HistoryTab policy={policy} matchedCount={matched.length} loading={settling} />}
       </div>
     </>
   )

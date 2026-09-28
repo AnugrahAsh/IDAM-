@@ -67,7 +67,7 @@ export function ParamChips({ params }) {
  * when it matches. A row opens its configuration — the register is read far
  * more than it is edited, so the switch is the only control on the row itself.
  */
-export default function DetectionRules({ rules, setRules }) {
+export default function DetectionRules({ rules, setRules, loading = false }) {
   const { toast, setDrawer } = useApp()
   const [status, setStatus] = useState('all')
 
@@ -291,6 +291,7 @@ export default function DetectionRules({ rules, setRules }) {
   return (
     <DataWorkbench
       id="itdr-rules"
+      loading={loading}
       rows={visible}
       columns={columns}
       selectable

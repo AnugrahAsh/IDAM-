@@ -11,14 +11,17 @@ import Tag from '../../components/primitives/Tag'
 import TextInput from '../../components/primitives/TextInput'
 import DetailHeader, { Fact } from '../../components/shell/DetailHeader'
 import StickyActions from '../../components/shell/StickyActions'
+import { SchedulerFormSkeleton } from './SchedulersSkeleton'
 import { useApp } from '../../store/AppContext'
+import { useLoading } from '../../lib/useLoading'
 import { SERVICE_OPTIONS, applicationRequired, configIssues, serviceFor } from './serviceCatalog'
 import ExecutionPanel from './ExecutionPanel'
 import ScheduleFields from './ScheduleFields'
 import ServiceConfigPanel from './ServiceConfigPanel'
 import {
   BASE, SCHEDULE_TYPES, applicationOptions, bindService, blankScheduler,
-  nextRunAt, relFuture, scheduleDescription, schedulerIssues, stamp, withDerived,
+  nextRunAt, relFuture, scheduleDescription, schedulerIssues, stamp,
+  withApplicationBinding, withDerived,
 } from './schedulerModel'
 
 /**
@@ -43,13 +46,24 @@ export default function SchedulerForm({ record, onSave }) {
   const { toast, navigate } = useApp()
   const isNew = !record
 
-  const [draft, setDraft] = useState(() => (record ? { ...record } : blankScheduler()))
+  /* Hydrated through the binding migration: a service whose application picker
+     became a multi-select declares where the record's single `application_id`
+     now lives, and the draft opens holding it as the first selection instead of
+     an empty required field. */
+  const [draft, setDraft] = useState(() => (record ? withApplicationBinding({ ...record }) : blankScheduler()))
   const [touched, setTouched] = useState(false)
   const [dirty, setDirty] = useState(false)
+  /* Modify is hydrated from a record a deployment goes and reads, so it waits.
+     Create is a blank form the operator starts typing into — `ms: 0` because
+     there is nothing on its way, and a wait invented for an empty form is just
+     a delay. */
+  const loading = useLoading(record ? record.id : null, record ? undefined : 0)
   /* Seeded from the record being edited so returning to its own service shows
      the values it was saved with, not the catalogue defaults. */
   const configByService = useRef(
-    record?.service_code ? { [record.service_code]: { ...record.service_config } } : {},
+    record?.service_code
+      ? { [record.service_code]: { ...withApplicationBinding({ ...record }).service_config } }
+      : {},
   )
 
   const svc = serviceFor(draft.service_code)
@@ -96,6 +110,8 @@ export default function SchedulerForm({ record, onSave }) {
   }
 
   const cancel = () => navigate(BASE)
+
+  if (loading) return <SchedulerFormSkeleton />
 
   return (
     <>
@@ -152,7 +168,10 @@ export default function SchedulerForm({ record, onSave }) {
                   <Field
                     label={appField.label}
                     required={appRequired}
-                    hint={appRequired ? appField.help : `${appField.help} Not needed while every active application is reconciled.`}
+                    /* A service may declare its application optional under some
+                       configurations; the hint says so rather than leaving a
+                       field that looks required and is not. */
+                    hint={appRequired ? appField.help : `${appField.help} Not needed with the options selected below.`}
                     keepHint
                     error={touched && appRequired && !draft.application_id ? `${appField.label} is required.` : undefined}
                     htmlFor="applicationId"

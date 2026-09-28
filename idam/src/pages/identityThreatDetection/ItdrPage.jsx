@@ -1,9 +1,11 @@
 import './ItdrPage.css'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PageBar from '../../components/shell/PageBar'
 import Button from '../../components/primitives/Button'
 import Tabs from '../../components/primitives/Tabs'
+import { Skeleton, SkeletonPageBar, SkeletonStats } from '../../components/primitives/Skeleton'
 import StatCards from '../../components/workbench/StatCards'
+import { useLoading } from '../../lib/useLoading'
 import { useApp } from '../../store/AppContext'
 import { num } from '../../lib/format'
 import { NOW_MS, stampText } from '../../lib/clock'
@@ -14,6 +16,13 @@ import AlertRegister from './AlertRegister'
 import BlockedIps from './BlockedIps'
 
 const TAB_IDS = ['rules', 'alerts', 'blocked']
+
+/* What the reader is told is on its way, in the words the tab itself uses. */
+const WAITING = {
+  rules: 'Loading the detection rules',
+  alerts: 'Loading the alert queue',
+  blocked: 'Loading the blocked addresses',
+}
 
 /**
  * Identity Threat Detection & Response.
@@ -31,6 +40,15 @@ export default function ItdrPage({ segments = [] }) {
 
   // Routed rather than local, so a link to the alert queue lands on it.
   const tab = TAB_IDS.includes(segments[0]) ? segments[0] : 'rules'
+
+  /* One flag for the screen, keyed on the tab. The masthead and the four tiles
+     are painted once — the tiles are counted across all three lists, so they
+     do not change when someone moves between the registers and re-drawing them
+     each time would say otherwise. The register under the tab bar is what a
+     deployment goes back for, and it is what waits. */
+  const loading = useLoading(tab)
+  const [booted, setBooted] = useState(false)
+  useEffect(() => { if (!loading) setBooted(true) }, [loading])
 
   const enabled = rules.filter((r) => r.enabled).length
   const openAlerts = alerts.filter((a) => a.status === 'Open').length
@@ -56,6 +74,46 @@ export default function ItdrPage({ segments = [] }) {
     toast('ok', `${ip} blocked`, expiresAt
       ? `Refused before authentication until ${expiresAt}.`
       : 'Refused before authentication until someone unblocks it.')
+  }
+
+  const panel = (
+    <>
+      {tab === 'rules' && <DetectionRules rules={rules} setRules={setRules} loading={loading} />}
+      {tab === 'alerts' && (
+        <AlertRegister
+          alerts={alerts}
+          setAlerts={setAlerts}
+          rules={rules}
+          blocks={blocks}
+          onBlockIp={blockIp}
+          loading={loading}
+        />
+      )}
+      {tab === 'blocked' && <BlockedIps blocks={blocks} setBlocks={setBlocks} onBlockIp={blockIp} loading={loading} />}
+    </>
+  )
+
+  if (!booted) {
+    return (
+      <>
+        <SkeletonPageBar actions={1} crumbs={2} />
+        <SkeletonStats count={4} />
+        <div className="stack">
+          <Tabs
+            value={tab}
+            onChange={(id) => navigate(`${BASE}/${id}`)}
+            tabs={[
+              { id: 'rules', label: 'Detection Rules', icon: 'sliders' },
+              { id: 'alerts', label: 'Alerts', icon: 'bell' },
+              { id: 'blocked', label: 'Blocked IPs', icon: 'ban' },
+            ]}
+          />
+          {/* The counts are left off the tabs until the lists land: a strip
+              reading "0 / 0 / 0" is a figure, and a wrong one. */}
+          <Skeleton label={WAITING[tab]}>{panel}</Skeleton>
+        </div>
+      </>
+    )
   }
 
   return (
@@ -107,11 +165,9 @@ export default function ItdrPage({ segments = [] }) {
             { id: 'blocked', label: 'Blocked IPs', icon: 'ban', count: activeBlocks },
           ]}
         />
-        {tab === 'rules' && <DetectionRules rules={rules} setRules={setRules} />}
-        {tab === 'alerts' && (
-          <AlertRegister alerts={alerts} setAlerts={setAlerts} rules={rules} blocks={blocks} onBlockIp={blockIp} />
-        )}
-        {tab === 'blocked' && <BlockedIps blocks={blocks} setBlocks={setBlocks} onBlockIp={blockIp} />}
+        {/* The one announcing region on this screen: the register under the
+            tab bar is the only thing that settles once the page is up. */}
+        {loading ? <Skeleton label={WAITING[tab]}>{panel}</Skeleton> : panel}
       </div>
     </>
   )

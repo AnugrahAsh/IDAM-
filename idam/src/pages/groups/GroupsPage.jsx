@@ -19,6 +19,8 @@ import {
 } from './groupsData'
 import { useApp } from '../../store/AppContext'
 import { num, serialColumn } from '../../lib/format'
+import { useLoading } from '../../lib/useLoading'
+import { GroupFormSkeleton, GroupListSkeleton } from './GroupsSkeleton'
 import { CAMPAIGNS, CONNECTOR_TYPES, nextId } from '../../data/seed'
 import SelectionSync from './SelectionSync'
 import GroupRecord from './GroupRecord'
@@ -49,6 +51,18 @@ export default function GroupsPage({ segments = [] }) {
   // The drawer's footer button reads the chosen file, and the drawer is not
   // re-rendered by this component, so the choice cannot live in state.
   const bulkFileRef = useRef({ file: '' })
+  /* Which screen this address resolves to, as one primitive.
+
+     Every record view collapses to the same `rec` key on purpose. The record
+     settles on its own timer inside GroupDetail — masthead, tab strip and panel
+     together — and a tab here is a URL segment, so keying this on the address
+     would settle the page once for the record and then again for every tab the
+     operator opened. Changing the kind filter is not in the key either:
+     filtering a register already on screen is not a round trip. */
+  const branch = segments[0]
+    ? (segments[1] === 'edit' ? `edit:${segments[0]}` : 'rec')
+    : 'list'
+  const loading = useLoading(branch)
 
   const syncSelection = useCallback((ids, clear) => setSelection({ ids, clear }), [])
 
@@ -251,6 +265,10 @@ export default function GroupsPage({ segments = [] }) {
     }
 
     if (sub === 'edit') {
+      /* The editor waits on the group it edits. The add screen above does not:
+         it opens on an empty definition, so a skeleton there would be a wait
+         invented for its own sake. */
+      if (loading) return <GroupFormSkeleton />
       return (
         <GroupForm
           mode="edit"
@@ -427,39 +445,46 @@ export default function GroupsPage({ segments = [] }) {
 
   return (
     <>
-      <PageBar
-        title="Groups"
-        sub="Application, access and SSO entitlement groups in one register — searchable, certifiable and provisioned from a single place."
-        crumbs={[{ label: 'Groups' }]}
-        actions={
-          <>
-            <Button icon="upload" onClick={openImport}>Import Groups</Button>
-            <Button icon="download" onClick={() => toast('ok', 'Export queued', `${num(visible.length)} groups queued for CSV export.`)}>Export Groups</Button>
-            <Button icon="kebab" onClick={openMore}>More Actions</Button>
-            <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE_PATH}/add`)}>Add Group</Button>
-          </>
-        }
-      />
+      {/* One announcing region for the screen. The register below draws its own
+          rows from `loading`, and those shapes are decoration. */}
+      {loading ? <GroupListSkeleton /> : (
+        <>
+          <PageBar
+            title="Groups"
+            sub="Application, access and SSO entitlement groups in one register — searchable, certifiable and provisioned from a single place."
+            crumbs={[{ label: 'Groups' }]}
+            actions={
+              <>
+                <Button icon="upload" onClick={openImport}>Import Groups</Button>
+                <Button icon="download" onClick={() => toast('ok', 'Export queued', `${num(visible.length)} groups queued for CSV export.`)}>Export Groups</Button>
+                <Button icon="kebab" onClick={openMore}>More Actions</Button>
+                <Button variant="pri" icon="plus" onClick={() => navigate(`${BASE_PATH}/add`)}>Add Group</Button>
+              </>
+            }
+          />
 
-      <RegisterSummary
-        ariaLabel="Entitlement register"
-        icon="group"
-        label="All groups"
-        value={stats.total}
-        caption="entitlement register"
-        facts={[
-          { k: 'Members', v: stats.members },
-          { k: 'Privileged', v: stats.privileged },
-        ]}
-        segments={kindSegments}
-        active={kind}
-        allId="All"
-        onSelect={setKind}
-      />
+          <RegisterSummary
+            ariaLabel="Entitlement register"
+            icon="group"
+            label="All groups"
+            value={stats.total}
+            caption="entitlement register"
+            facts={[
+              { k: 'Members', v: stats.members },
+              { k: 'Privileged', v: stats.privileged },
+            ]}
+            segments={kindSegments}
+            active={kind}
+            allId="All"
+            onSelect={setKind}
+          />
+        </>
+      )}
 
       <DataWorkbench
         id="groups-register"
         rows={visible}
+        loading={loading}
         columns={columns}
         selectable
         searchPlaceholder="Search by group name, description, application or owner…"
