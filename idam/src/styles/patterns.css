@@ -108,7 +108,13 @@
 .wiz-step[data-state="active"] .wiz-t{color:var(--ink)}
 .wiz-s{display:block;font-size:var(--t-xs);color:var(--mut);margin-top:1px;line-height:1.45}
 .wiz-body{flex:1;min-width:0}
+/* Stacked, the rail sits above the body rather than beside it. Both need their
+   width stated: `.wizard` aligns its children to flex-start, which in a column
+   sizes them to their content, so the body — a card of form fields — collapsed
+   to the width of its longest label and left a third of the screen empty
+   beside it on every phone. */
 @media(max-width:1080px){.wizard{flex-direction:column}.wiz-rail{width:100%;position:static;display:flex;gap:var(--sp-4);overflow-x:auto}
+  .wiz-body{width:100%}
   .wiz-step::before{display:none}}
 
 /* Role cards are a directory of roles, not a dashboard: tightened padding, a

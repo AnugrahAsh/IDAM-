@@ -6,7 +6,8 @@ import PageBar from '../../components/shell/PageBar'
 import { useApp } from '../../store/AppContext'
 import { nextId } from '../../data/seed'
 import ProviderList from './ProviderList'
-import EditProvider, { AddProvider } from './ProviderForm'
+import EditProviderSections from './EditProviderSections'
+import AddProviderWizard from './AddProviderWizard'
 import { BASE, recordOf } from './federationData'
 import { FEDERATIONS } from './federationSeed'
 
@@ -22,7 +23,7 @@ import { FEDERATIONS } from './federationSeed'
    it now reaches Add Provider rather than a hub of connectors.
    ------------------------------------------------------------------------- */
 export default function ExternalUserFederationPage({ segments = [] }) {
-  const { toast, navigate } = useApp()
+  const { toast, navigate, confirm } = useApp()
   const [rows, setRows] = useState(() => FEDERATIONS.map((r) => ({ ...r })))
 
   const create = (draft) => {
@@ -37,7 +38,7 @@ export default function ExternalUserFederationPage({ segments = [] }) {
 
   /* The revision is what tells the open form that its draft has been committed;
      the form rebases on the saved record itself, without being remounted, so
-     the sections the operator opened and the test they just ran stay put. */
+     the tab the operator is on and the test they just ran stay put. */
   const save = (id, draft) => {
     setRows((rs) => rs.map((r) => {
       if (String(r.id) !== String(id)) return r
@@ -65,9 +66,22 @@ export default function ExternalUserFederationPage({ segments = [] }) {
     )
   }
 
+  /* The one destructive action on this page, so it is the one that stops to
+     ask — the same confirm() every other register's Delete raises. */
+  const removeProvider = (p) => confirm({
+    title: `Delete ${p.name}?`,
+    body: 'The provider is removed from federation. Identities already imported from it stay in the directory; this only stops further sync. This cannot be undone.',
+    confirmLabel: 'Delete provider',
+    onConfirm: () => {
+      setRows((rs) => rs.filter((r) => r.id !== p.id))
+      toast('ok', 'Provider deleted', p.name)
+      navigate(BASE)
+    },
+  })
+
   const [mode] = segments
 
-  if (mode === 'new') return <AddProvider rows={rows} onCreate={create} />
+  if (mode === 'new') return <AddProviderWizard rows={rows} onCreate={create} />
 
   if (mode) {
     const record = rows.find((r) => String(r.id) === String(mode))
@@ -90,7 +104,7 @@ export default function ExternalUserFederationPage({ segments = [] }) {
     /* Keyed on the provider alone: moving to a different provider is a
        different form and starts clean, but saving this one is not. */
     return (
-      <EditProvider
+      <EditProviderSections
         key={record.id}
         record={record}
         rows={rows}
@@ -99,5 +113,5 @@ export default function ExternalUserFederationPage({ segments = [] }) {
     )
   }
 
-  return <ProviderList rows={rows} onToggle={toggleEnabled} />
+  return <ProviderList rows={rows} onToggle={toggleEnabled} onDelete={removeProvider} />
 }
